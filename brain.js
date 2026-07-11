@@ -1,0 +1,252 @@
+/* brain.js - fast storage/retrieval path for the JARVIS memory store.
+   Zero deps. Used directly by agents (one command instead of a grep-and-read
+   expedition) and by bench/bench.js to prove the speedup.
+
+   node brain.js recall "what price is the community locked at"
+   node brain.js store "fact text" --type feedback --name my-slug [--why "..."] [--sandbox]
+
+   recall: index-first. Reads MEMORY.md (+ category indexes), scores pointers,
+   opens ONLY the best file(s), prints the relevant slice. Reports bytes + ms.
+   store: writes a convention-correct memory file + appends the index line in
+   one step. No exploration reads. Reports bytes + ms.
+*/
+'use strict';
+const fs = require('fs');
+const path = require('path');
+const { performance } = require('perf_hooks');
+
+const WS = (() => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'config', 'workspace.json'), 'utf8')); } catch { return {}; } })();
+const ROOT = path.resolve(__dirname, WS.root || '..');
+const MEM = path.join(ROOT, ...(WS.memoryDir || 'shared/memory').split('/'));
+const MEM_INDEX = WS.memoryIndex || 'MEMORY.md';
+const SANDBOX = path.join(__dirname, '.cache', 'sandbox-memory');
+
+const STOP = new Set(['the', 'a', 'an', 'is', 'are', 'was', 'what', 'whats', 'which', 'who', 'when', 'where', 'how', 'do', 'does', 'did', 'i', 'my', 'we', 'our', 'of', 'for', 'to', 'in', 'on', 'at', 'and', 'or', 'with', 'about', 'it', 'this', 'that', 'you', 'your', 'me', 'jay', 'jays', 'one', 'thing', 'things', 'current', 'new', 'best', 'main', 'use', 'get', 'set']);
+
+function words(s, keepStop) {
+  return s.toLowerCase().replace(/[^a-z0-9\s-]/g, ' ').split(/[\s]+/)
+    .filter(w => w.length > 2 && (keepStop || !STOP.has(w)));
+}
+
+// Root docs own certain question domains - the one piece of routing knowledge
+// the CLI encodes (same thing CLAUDE.md's Map teaches an agent once).
+// which root doc owns which topic - filled per workspace during setup (Step 1)
+const ROOT_DOC_HINTS = WS.routing || {
+  'CLAUDE.md': ['goal', 'goals', 'rule', 'rules', 'workspace', 'folder', 'folders', 'map'],
+};
+
+// ---------- recall ----------
+function recall(query, opts) {
+  opts = opts || {};
+  const t0 = performance.now();
+  let bytes = 0;
+  const read = p => { const s = fs.readFileSync(p, 'utf8'); bytes += Buffer.byteLength(s); return s; };
+  const qw = words(query);
+
+  // 1) index hop: MEMORY.md is the hub and the ONLY always-read file
+  //    (category indexes stay closed - filenames cover their contents)
+  const pointers = []; // {file, score, line}
+  const hub = path.join(MEM, MEM_INDEX);
+  if (fs.existsSync(hub)) {
+    for (const line of read(hub).split('\n')) {
+      const m = line.match(/\[([^\]]+)\]\(([^)]+)\)/);
+      if (!m) continue;
+      const lw = words(line);
+      let score = 0;
+      for (const w of qw) {
+        if (lw.includes(w)) score += 3;
+        else if (lw.some(x => x.startsWith(w) || w.startsWith(x))) score += 1;
+      }
+      if (score > 0) pointers.push({ file: path.resolve(MEM, m[2]), score, line: line.trim() });
+    }
+  }
+  // 2) filename sweep (names only - no content reads)
+  for (const f of fs.readdirSync(MEM)) {
+    if (!f.endsWith('.md')) continue;
+    const fw = words(f.replace(/\.md$/, ''));
+    let score = 0;
+    for (const w of qw) {
+      if (fw.includes(w)) score += 4;
+      else if (fw.some(x => x.includes(w) || w.includes(x))) score += 1;
+    }
+    if (score > 0) pointers.push({ file: path.join(MEM, f), score, line: '(filename match) ' + f });
+  }
+  // 3) root ALLCAPS docs answer identity/goal/tool questions
+  for (const [f, hints] of Object.entries(ROOT_DOC_HINTS)) {
+    const p = path.join(ROOT, f);
+    if (!fs.existsSync(p)) continue;
+    let score = 0;
+    for (const w of qw) if (hints.includes(w)) score += 4;
+    if (score > 0) pointers.push({ file: p, score, line: '(root doc) ' + f });
+  }
+
+  pointers.sort((a, b) => b.score - a.score);
+  // dedupe by file
+  const seen = new Set(), top = [];
+  for (const p of pointers) {
+    if (seen.has(p.file)) continue;
+    seen.add(p.file); top.push(p);
+    if (top.length >= (opts.k || 3)) break;
+  }
+
+  // 3) open only the winners; return the most relevant slice of each.
+  // opts.answerRe: stop reading further files once the answer is on screen
+  // (mirrors a real agent - it stops when it has what it needs).
+  const qrawAll = words(query, true);
+  const sliceOf = (body) => {
+    const lines = body.split('\n');
+    // a section heading that names the question wins outright - it slices the
+    // whole relevant section instead of a window around one keyword-dense line
+    let hStart = -1, hBest = 0;
+    lines.forEach((line, i) => {
+      if (!/^#{2,4}\s/.test(line)) return;
+      const hw = words(line, true); // exact tokens - 'one' must not match 'Done'
+      const s = qrawAll.filter(w => hw.includes(w)).length;
+      if (s > hBest) { hBest = s; hStart = i; }
+    });
+    if (hStart >= 0 && hBest >= 1) return lines.slice(hStart, Math.min(lines.length, hStart + 26)).join('\n');
+    let bestI = 0, bestS = -1;
+    lines.forEach((line, i) => {
+      const lw = line.toLowerCase();
+      let s = 0;
+      for (const w of qw) if (lw.includes(w)) s++;
+      if (s > bestS) { bestS = s; bestI = i; }
+    });
+    const lo = Math.max(0, bestI - 10), hi = Math.min(lines.length, bestI + 16);
+    return lines.slice(lo, hi).join('\n');
+  };
+  const hits = [];
+  let found = false;
+  for (const t of top) {
+    if (!fs.existsSync(t.file)) continue;
+    if (found) break;
+    const body = read(t.file);
+    if (opts.answerRe && opts.answerRe.test(body)) found = true;
+    hits.push({ file: path.relative(ROOT, t.file), score: t.score, pointer: t.line, slice: sliceOf(body) });
+  }
+  // 4) one pointer hop: if the best slice NAMES another md file (indexes and
+  //    memories often point instead of containing), open that too - the
+  //    evidence should hold the fact, not just the address of the fact
+  if (hits.length && opts.hop !== false && !found) {
+    const m = hits[0].slice.match(/[\w][\w\/.-]*\.md/g);
+    for (const cand of (m || [])) {
+      if (/^(MEMORY|memory-)/.test(cand)) continue;
+      const p1 = path.resolve(ROOT, cand);
+      const p2 = path.resolve(path.dirname(path.join(ROOT, hits[0].file)), cand);
+      const hp = fs.existsSync(p1) ? p1 : (fs.existsSync(p2) ? p2 : null);
+      if (!hp || hits.some(h => path.resolve(ROOT, h.file) === hp)) continue;
+      const body = read(hp);
+      if (opts.answerRe && opts.answerRe.test(body)) found = true;
+      // we arrived via an explicit pointer, so serve the document generously:
+      // jump to the first heading that matches the question (stop words count
+      // here - 'one thing' IS the heading), else take the head
+      const qraw = words(query, true);
+      const blines = body.split('\n');
+      let start = 0, bestH = 0;
+      for (let i = 0; i < blines.length; i++) {
+        const l = blines[i];
+        const hm = l.match(/^(#{2,4})\s/); // section headings only - the doc
+        if (!hm) continue;                 // title restates everything and lies
+        const hw = words(l, true); // exact tokens, same rule as sliceOf
+        const s2 = qraw.filter(w => hw.includes(w)).length;
+        if (s2 > bestH && s2 >= 1) { bestH = s2; start = Math.max(0, i - 1); }
+      }
+      const head = blines.slice(start, start + 45).join('\n').slice(0, 3500);
+      hits.push({ file: path.relative(ROOT, hp), score: 0, pointer: '(followed from ' + hits[0].file + ')', slice: head });
+      break;
+    }
+  }
+  return { hits, bytes, ms: +(performance.now() - t0).toFixed(2), found };
+}
+
+// ---------- store ----------
+function store(fact, opts) {
+  opts = opts || {};
+  const t0 = performance.now();
+  const type = opts.type || 'project';
+  const name = (opts.name || words(fact).slice(0, 4).join('-') || 'note').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  const dir = opts.sandbox ? SANDBOX : MEM;
+  fs.mkdirSync(dir, { recursive: true });
+  const prefix = { feedback: 'feedback_', project: 'project_', user: 'user_', reference: 'reference_' }[type] || '';
+  const file = path.join(dir, prefix + name.replace(/-/g, '_') + '.md');
+  const today = new Date().toISOString().slice(0, 10);
+  const desc = fact.length > 110 ? fact.slice(0, 107) + '...' : fact;
+  const body = `---
+name: ${name}
+description: ${desc}
+metadata:
+  type: ${type}
+---
+
+${fact}
+${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
+*Saved ${today} via brain store.*
+`;
+  fs.writeFileSync(file, body);
+  // one index line - append-only, no reads needed beyond the index itself
+  const index = path.join(dir, MEM_INDEX);
+  const title = name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const entry = `- [${title}](${path.basename(file)}) — ${today} ${desc}\n`;
+  if (opts.sandbox && !fs.existsSync(index)) fs.writeFileSync(index, '# Sandbox Memory Index\n\n');
+  fs.appendFileSync(index, entry);
+  const bytes = Buffer.byteLength(body) + Buffer.byteLength(entry);
+  return { file: path.relative(ROOT, file), indexLine: entry.trim(), bytes, ms: +(performance.now() - t0).toFixed(2) };
+}
+
+// builds the one-turn prompt (question + recall evidence). NO LLM here -
+// the caller pastes it into their own session, so nothing bills as API usage.
+function buildAsk(question, k, recallQuery) {
+  const r = recall(recallQuery || question, { k: k || 1 });
+  const evidence = r.hits.map(h => `=== ${h.file}\n${h.slice}`).join('\n\n').slice(0, 9000);
+  const prompt = `${question}\n\nEvidence pulled by the workspace brain (brain.js recall):\n${evidence}\n\nAnswer from this evidence only: quote the key line, name the source file. One short answer, no preamble.`;
+  return { prompt, recallBytes: r.bytes, recallMs: r.ms, hits: r.hits.map(h => h.file) };
+}
+
+// cross-platform clipboard: Windows clip / macOS pbcopy / Linux xclip-or-xsel
+function copyToClipboard(text) {
+  const { spawnSync } = require('child_process');
+  const tries = process.platform === 'win32' ? [['clip', []]]
+    : process.platform === 'darwin' ? [['pbcopy', []]]
+      : [['xclip', ['-selection', 'clipboard']], ['xsel', ['-ib']]];
+  for (const [cmd, args] of tries) {
+    const r = spawnSync(cmd, args, { input: text });
+    if (r.status === 0) return r;
+  }
+  return { status: 1 };
+}
+
+module.exports = { recall, store, buildAsk, ROOT, MEM, SANDBOX };
+
+// ---------- CLI ----------
+if (require.main === module) {
+  const [, , cmd, ...rest] = process.argv;
+  const args = [], flags = {};
+  for (let i = 0; i < rest.length; i++) {
+    if (rest[i].startsWith('--')) { flags[rest[i].slice(2)] = rest[i + 1] && !rest[i + 1].startsWith('--') ? rest[++i] : true; }
+    else args.push(rest[i]);
+  }
+  if (cmd === 'recall') {
+    const r = recall(args.join(' '), { k: Number(flags.k) || 3 });
+    for (const h of r.hits) {
+      console.log(`\n=== ${h.file}  (score ${h.score})`);
+      console.log(h.slice);
+    }
+    console.log(`\n[brain] ${r.hits.length} hits · ${r.bytes.toLocaleString()} bytes read · ${r.ms}ms`);
+  } else if (cmd === 'store') {
+    const r = store(args.join(' '), flags);
+    console.log(`[brain] stored -> ${r.file}`);
+    console.log(`[brain] index += ${r.indexLine}`);
+    console.log(`[brain] ${r.bytes.toLocaleString()} bytes written · ${r.ms}ms · zero exploration reads`);
+  } else if (cmd === 'ask') {
+    // ZERO-LLM by design (Jay): builds the one-turn prompt and copies it to
+    // the clipboard - paste it into your own Claude session. brain.js never
+    // invokes claude itself, so nothing can bill as API usage.
+    const { prompt, recallBytes, recallMs, hits } = buildAsk(args.join(' '), Number(flags.k) || 1);
+    const cp = copyToClipboard(prompt);
+    console.log(prompt);
+    console.log(`\n[brain] one-turn prompt built from ${hits.join(', ') || 'no hits'} · ${recallBytes.toLocaleString()} bytes read in ${recallMs}ms · 0 tokens${cp.status === 0 ? ' · COPIED TO CLIPBOARD' : ''}`);
+    console.log('[brain] paste it into your Claude session for the one-turn answer.');
+  } else {
+    console.log('usage: node brain.js recall "question" [--k 3] | node brain.js store "fact" [--type feedback|project|user|reference] [--name slug] [--why "..."] [--sandbox] | node brain.js ask "question" (builds + copies the one-turn prompt, no LLM)');
+  }
+}

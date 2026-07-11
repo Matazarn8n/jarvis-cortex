@@ -1,0 +1,4 @@
+{
+  "_note": "Optional. VPS/edge agents get kind 'vps' + access 'synced' (reach computed from shared prefixes); scoped employee agents get explicit skills/memory grant lists.",
+  "agents": []
+}

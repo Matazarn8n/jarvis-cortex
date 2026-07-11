@@ -1,0 +1,24 @@
+{
+  "_note": "Only REAL connections: MCP servers, CLIs that talk to a service, APIs with credentials. No local runtimes (node, python, ffmpeg do not belong here). iconSlug uses baked brand paths in public/_icons.js; add your own via BRAIN_ICON_PATHS.",
+  "apps": [
+    { "id": "app:gh", "label": "GitHub CLI", "kind": "cli", "access": "claude", "status": "live", "desc": "gh - repos, PRs, issues (moltbotassistant1)", "links": [], "iconSlug": "github" },
+    { "id": "app:mcp-n8n", "label": "n8n", "kind": "mcp", "access": "claude", "status": "live", "desc": "MCP local - workflows nuveo-growth-os", "links": [], "iconSlug": "n8n" },
+    { "id": "app:mcp-firecrawl", "label": "Firecrawl", "kind": "mcp", "access": "claude", "status": "live", "desc": "MCP local - scrape/crawl/search web", "links": [], "iconSlug": "firecrawl" },
+    { "id": "app:mcp-crawl4ai", "label": "Crawl4AI", "kind": "mcp", "access": "claude", "status": "live", "desc": "MCP local, sse-only 127.0.0.1", "links": [], "iconSlug": "crawl4ai" },
+    { "id": "app:mcp-obsidian", "label": "Obsidian Vault", "kind": "mcp", "access": "claude", "status": "live", "desc": "MCP local - obsidian-codex vault", "links": [], "iconSlug": "obsidian" },
+    { "id": "app:mcp-context7", "label": "Context7", "kind": "mcp", "access": "claude", "status": "live", "desc": "MCP local - docs lookup", "links": [], "iconSlug": "context7" },
+    { "id": "app:airtable-connector", "label": "Airtable", "kind": "mcp", "access": "claude", "status": "live", "desc": "claude.ai connector - nuveo-growth-os base", "links": [], "iconSlug": "airtable" },
+    { "id": "app:gmail-connector", "label": "Gmail", "kind": "mcp", "access": "claude", "status": "live", "desc": "claude.ai connector - moltbot.assistant1@gmail.com", "links": [], "iconSlug": "gmail" },
+    { "id": "app:gdrive", "label": "Google Drive", "kind": "mcp", "access": "claude", "status": "live", "desc": "claude.ai connector", "links": [], "iconSlug": "google-drive" },
+    { "id": "app:slack", "label": "Slack", "kind": "mcp", "access": "claude", "status": "live", "desc": "claude.ai connector", "links": [], "iconSlug": "slack" },
+    { "id": "app:canva", "label": "Canva", "kind": "mcp", "access": "claude", "status": "live", "desc": "claude.ai connector", "links": [], "iconSlug": "canva" },
+    { "id": "app:higgsfield", "label": "Higgsfield", "kind": "mcp", "access": "claude", "status": "live", "desc": "claude.ai connector - image/video gen", "links": [], "iconSlug": "higgsfield" },
+    { "id": "app:elevenlabs", "label": "ElevenLabs", "kind": "api", "access": "claude", "status": "live", "desc": "TTS - ELEVENLABS_API_KEY in ~/.openclaw/.env", "links": [], "iconSlug": "elevenlabs" },
+    { "id": "app:exa", "label": "Exa", "kind": "api", "access": "claude", "status": "live", "desc": "search API - EXA_API_KEY", "links": [], "iconSlug": "exa" },
+    { "id": "app:brave-search", "label": "Brave Search", "kind": "api", "access": "claude", "status": "live", "desc": "search API - BRAVE_SEARCH_KEY", "links": [], "iconSlug": "brave" },
+    { "id": "app:fal", "label": "fal.ai", "kind": "api", "access": "claude", "status": "live", "desc": "video gen - auto-video pipeline", "links": [], "iconSlug": "fal" },
+    { "id": "app:telegram", "label": "Telegram Bot", "kind": "api", "access": "claude", "status": "live", "desc": "TELEGRAM_* tokens - notifications", "links": [], "iconSlug": "telegram" },
+    { "id": "app:discord-bot", "label": "Discord Bot", "kind": "api", "access": "claude", "status": "live", "desc": "DISCORD_* tokens - antfarm bridge, Guild 1472921209502040086", "links": [], "iconSlug": "discord" },
+    { "id": "app:ibkr-gateway", "label": "IBKR Gateway", "kind": "api", "access": "claude", "status": "live", "desc": "Client Portal Web API - localhost:5000, nuveo-finance", "links": [], "iconSlug": "ibkr" }
+  ]
+}

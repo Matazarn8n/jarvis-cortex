@@ -1,0 +1,91 @@
+{
+  "_note": "STEP 1: your agent proposes 3-6 departments from real workspace evidence, then fills prefixes/rules/keywords. Colors: keep them saturated and distinct.",
+  "departments": [
+    {
+      "key": "hermes-os",
+      "label": "Hermes-OS",
+      "color": "#00bfa5",
+      "icon": "pulse"
+    },
+    {
+      "key": "nuveo-growth",
+      "label": "Nuveo Growth",
+      "color": "#ff2d78",
+      "icon": "coin"
+    },
+    {
+      "key": "projects-dev",
+      "label": "Projects Dev",
+      "color": "#43d67d",
+      "icon": "build"
+    },
+    {
+      "key": "infra",
+      "label": "Infra",
+      "color": "#ff4444",
+      "icon": "api"
+    },
+    {
+      "key": "perso",
+      "label": "Perso",
+      "color": "#22d3ee",
+      "icon": "book"
+    }
+  ],
+  "layers": [
+    {
+      "key": "A",
+      "label": "Applications",
+      "color": "#3f8fd4",
+      "shape": "hex",
+      "blurb": "MCP servers, CLIs and APIs the agents can reach"
+    },
+    {
+      "key": "R",
+      "label": "Routines",
+      "color": "#d99a1f",
+      "shape": "ringdot",
+      "blurb": "Scheduled automations that run without being asked"
+    },
+    {
+      "key": "M",
+      "label": "Memory",
+      "color": "#9a66e0",
+      "shape": "chip",
+      "blurb": "Every file of context, clustered by department"
+    },
+    {
+      "key": "S",
+      "label": "Skills",
+      "color": "#ff6b1a",
+      "shape": "diamond",
+      "blurb": "Capabilities the agents can run on demand"
+    }
+  ],
+  "projectPrefixes": {
+    "Hermes": "hermes-os",
+    "hermes-os-planning": "hermes-os",
+    "jarvis-os": "hermes-os",
+    "instagram-pipeline": "hermes-os",
+    "youtube-automation-agent": "hermes-os",
+    "nuveo-growth-os": "nuveo-growth"
+  },
+  "pathRules": [
+    { "prefix": "hermes-os", "dept": "hermes-os" },
+    { "prefix": "hermes_core", "dept": "hermes-os" },
+    { "prefix": "nuveo-finance", "dept": "nuveo-growth" },
+    { "prefix": "scripts", "dept": "infra" },
+    { "prefix": "monitoring", "dept": "infra" },
+    { "prefix": ".claude", "dept": "infra" },
+    { "prefix": "geekom-infra", "dept": "infra" },
+    { "prefix": "obsidian-codex", "dept": "perso" },
+    { "prefix": "personality-codex", "dept": "perso" }
+  ],
+  "memoryKeywords": [
+    { "match": ["hermes", "jarvis", "agentic-os", "instagram", "youtube", "antfarm", "openclaw", "mcp-", "cloudflared", "channels", "control-room", "context-saturation"], "dept": "hermes-os" },
+    { "match": ["nuveo", "praxis", "swiss-job", "ai-fallback"], "dept": "nuveo-growth" },
+    { "match": ["smart-router", "ruflo", "figma-mcp", "firecrawl", "matazarn8n", "llm-cron", "claude-cli-model", "gsd-plan-session", "workspace-audit", "phase2-skills", "project-prompt-factory"], "dept": "infra" },
+    { "match": ["personality-codex", "veille-franchise"], "dept": "perso" }
+  ],
+  "default": "projects-dev"
+}

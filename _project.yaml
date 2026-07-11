@@ -1,0 +1,12 @@
+id: jarvis-cortex
+name: JARVIS Cortex
+type: tool
+status: active
+repo: Matazarn8n/jarvis-cortex
+workflows: []
+docs:
+  - README.md
+  - NOTICE
+outputs:
+  - server.js (workspace-graph engine, http://127.0.0.1:5210, systemd jarvis-cortex.service)
+  - brain.js (recall/store CLI)

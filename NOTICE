@@ -1,0 +1,14 @@
+NOTICE — Attribution
+
+The workspace-graph visualization engine in this repository
+(public/index.html, public/_core.js, public/_core.css, public/_flows2.js,
+public/_icons.js, server.js, scan.js) is a derivative work of the
+"Second Brain" visualizer by Jay E / RoboNuggets, used under the
+Creative Commons Attribution 4.0 International license (CC BY 4.0).
+
+Original author: Jay E / RoboNuggets — https://skool.com/robonuggets
+License: CC BY 4.0 — https://creativecommons.org/licenses/by/4.0/
+
+Modifications: rebranded as "JARVIS · Cortex" (titles, HUD strings,
+favicon, dark-theme palette) and configured for the local GEEKOM
+workspace. Engine logic unchanged.

@@ -1,0 +1,69 @@
+{
+  "_note": "Filled by your agent in Step 1. All paths are relative to the workspace root; root is relative to this repo folder.",
+  "root": "../..",
+  "memoryDir": ".claude/projects/-home-nuveo/memory",
+  "memoryIndex": "MEMORY.md",
+  "skillDirs": [
+    ".claude/skills",
+    ".agents/skills",
+    ".claude/commands"
+  ],
+  "projectsDir": "projects",
+  "sharedPrefixes": [
+    "obsidian-codex"
+  ],
+  "visibleRoots": [
+    "projects",
+    "hermes-os",
+    "obsidian-codex",
+    "scripts",
+    "monitoring",
+    ".claude",
+    "hermes-os-prod"
+  ],
+  "routing": {
+    ".claude/CLAUDE.md": [
+      "goal",
+      "goals",
+      "rule",
+      "rules",
+      "workspace",
+      "folder",
+      "folders",
+      "map",
+      "auth",
+      "oauth",
+      "token",
+      "gateway",
+      "smart-router",
+      "router",
+      "gsd",
+      "manifest",
+      "handoff"
+    ],
+    ".claude/projects/-home-nuveo/memory/pieges-connus.md": [
+      "piege",
+      "pieges",
+      "trap",
+      "gotcha",
+      "bug",
+      "connu"
+    ],
+    ".claude/projects/-home-nuveo/memory/MEMORY.md": [
+      "port",
+      "credential",
+      "credentials",
+      "service",
+      "services",
+      "chromadb",
+      "openclaw",
+      "ntfy",
+      "grafana",
+      "prometheus",
+      "ssh",
+      "docker",
+      "tailscale",
+      "cloudflare"
+    ]
+  }
+}

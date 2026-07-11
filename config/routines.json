@@ -1,0 +1,14 @@
+{
+  "_note": "Anything that runs on a schedule: OS schedulers (cron / Task Scheduler), agent-app scheduled tasks, cloud crons (GitHub Actions...), and skills fired on a rhythm.",
+  "routines": [
+    { "id": "rt:hermes-instagram", "label": "Instagram saves+pipeline", "schedule": "daily 03:00 + 23:30", "runner": "local", "access": "claude", "desc": "systemd timers hermes-instagram-saves + hermes-instagram", "links": [] },
+    { "id": "rt:hermes-youtube", "label": "YouTube pipeline", "schedule": "daily 02:00", "runner": "local", "access": "claude", "desc": "systemd timer hermes-youtube", "links": [] },
+    { "id": "rt:veille-virale", "label": "Veille virale multi-niche", "schedule": "daily 03:30 + 03:45", "runner": "local", "access": "claude", "desc": "systemd timers hermes-viral + hermes-analysis", "links": [] },
+    { "id": "rt:backup", "label": "Backup GPG", "schedule": "daily 02:00", "runner": "local", "access": "claude", "desc": "cron - ~/scripts/backup.sh, rotation 7j", "links": [] },
+    { "id": "rt:coach-cron", "label": "Behavioral coach", "schedule": "every minute", "runner": "local", "access": "claude", "desc": "cron - ~/scripts/coach-cron.sh, antfarm heartbeat poll", "links": [] },
+    { "id": "rt:health-check", "label": "Health check", "schedule": "every 6h", "runner": "local", "access": "claude", "desc": "cron - ~/scripts/health-check.sh, 24/24 checks", "links": [] },
+    { "id": "rt:token-audit", "label": "Token audit", "schedule": "daily 09:00", "runner": "local", "access": "claude", "desc": "cron - ~/.claude/scripts/token-audit.sh, startup budget guard", "links": [] },
+    { "id": "rt:hubcity6-enrich", "label": "HUB-CITY6 enrich", "schedule": "daily", "runner": "local", "access": "claude", "desc": "cron GEEKOM - articles enrichment, localhost-only gateway", "links": [] },
+    { "id": "rt:module-delta", "label": "Module Delta", "schedule": "tue/thu 15:00", "runner": "local", "access": "claude", "desc": "kimi-k2.5, sessionKey agent:module-delta:main", "links": [] }
+  ]
+}

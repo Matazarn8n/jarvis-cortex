@@ -1,0 +1,6 @@
+{
+  "_note": "Optional per-prefix access overrides. Secrets (.env, *.key, *.pem, credentials, tokens, apikeys) are auto-excluded from sharing by scan.js's SECRET_RE regardless of this file. This file pins additional sensitive prefixes to claude-only even if sharedPrefixes ever widens.",
+  "overrides": [
+    { "prefix": "personality-codex", "access": "claude" }
+  ]
+}
