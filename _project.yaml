@@ -2,7 +2,10 @@ id: jarvis-cortex
 name: JARVIS Cortex
 type: tool
 status: active
-repo: Matazarn8n/jarvis-cortex
+repo: /home/nuveo/projects/jarvis-cortex
+# R7 goal auditor: workspace-graph engine must answer on :5210 (systemd jarvis-cortex.service).
+verify:
+  - curl -sf --max-time 5 -o /dev/null http://127.0.0.1:5210/
 workflows: []
 docs:
   - README.md
