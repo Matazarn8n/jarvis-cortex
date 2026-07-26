@@ -46,7 +46,7 @@ window.BrainCore = (function () {
     splash(true, 'Scanning the workspace');
     let data;
     try {
-      const r = await fetch('/api/graph?fresh=1');
+      const r = await fetch('api/graph?fresh=1');
       data = await r.json();
       if (data.error) throw new Error(data.error);
     } catch (e) {
@@ -197,7 +197,7 @@ window.BrainCore = (function () {
     if (!dir || dir.type !== 'dir' || dir.expanded) return;
     let data;
     try {
-      const r = await fetch('/api/expand?path=' + encodeURIComponent(id));
+      const r = await fetch('api/expand?path=' + encodeURIComponent(id));
       data = await r.json();
       if (data.error) { toast(data.error); return; }
     } catch (e) { toast('Expand failed: ' + e.message); return; }
@@ -240,7 +240,7 @@ window.BrainCore = (function () {
     if (projected > 6500 && !confirm('This expands roughly ' + projected + ' nodes and may get heavy. Continue?')) return;
     splash(true, 'Expanding ' + targets.length + ' folders');
     const results = await Promise.all(targets.map(d =>
-      fetch('/api/expand?path=' + encodeURIComponent(d.id)).then(r => r.json()).catch(() => null)));
+      fetch('api/expand?path=' + encodeURIComponent(d.id)).then(r => r.json()).catch(() => null)));
     targets.forEach((dir, i) => {
       const data = results[i];
       if (!data || data.error) return;
@@ -1202,12 +1202,12 @@ window.BrainCore = (function () {
         const label = prompt('Label for this item:', n.label);
         if (label === null) return;
         const desc = prompt('Description (blank to keep):', n.desc || '');
-        await fetch('/api/tweak', { method: 'POST', body: JSON.stringify({ action: 'edit', id: n.id, label: label.trim() || n.label, desc: desc === null ? n.desc : desc }) });
+        await fetch('api/tweak', { method: 'POST', body: JSON.stringify({ action: 'edit', id: n.id, label: label.trim() || n.label, desc: desc === null ? n.desc : desc }) });
         select(null); S.refreshData('Saving edit');
       }
       if (act === 'remove') { // /tweak principle: delete items you don't want on the map
         if (!confirm(`Remove "${n.label}" from the brain map?\n(Nothing is deleted on disk - restore any time from Tweak > Restore.)`)) return;
-        await fetch('/api/tweak', { method: 'POST', body: JSON.stringify({ action: 'hide', id: n.id }) });
+        await fetch('api/tweak', { method: 'POST', body: JSON.stringify({ action: 'hide', id: n.id }) });
         select(null); S.refreshData('Removing from the map');
       }
     });
@@ -1222,7 +1222,7 @@ window.BrainCore = (function () {
   async function apiOpen(path) {
     if (!path) return;
     try {
-      const r = await fetch('/api/open', { method: 'POST', body: JSON.stringify({ path }) });
+      const r = await fetch('api/open', { method: 'POST', body: JSON.stringify({ path }) });
       const d = await r.json();
       toast(d.ok ? 'Opened on device' : (d.error || 'Could not open'));
     } catch (e) { toast('Open failed'); }
@@ -1242,7 +1242,7 @@ window.BrainCore = (function () {
     drawer.querySelector('.v-open').onclick = () => apiOpen(path);
     drawer.querySelector('.v-copy').onclick = () => { navigator.clipboard.writeText('C:/ROBO/' + path); toast('Path copied'); };
     try {
-      const r = await fetch('/api/file?path=' + encodeURIComponent(path));
+      const r = await fetch('api/file?path=' + encodeURIComponent(path));
       const d = await r.json();
       if (d.error === 'binary') { body.innerHTML = '<div class="v-loading">Binary file - opening on device instead.</div>'; apiOpen(path); return; }
       if (d.error) { body.innerHTML = '<div class="v-loading">' + d.error + '</div>'; return; }
@@ -1452,7 +1452,7 @@ window.BrainCore = (function () {
       const json = JSON.stringify(bake, null, 2);
       try { await navigator.clipboard.writeText(json); } catch { }
       try {
-        const r = await fetch('/api/bake', { method: 'POST', body: json });
+        const r = await fetch('api/bake', { method: 'POST', body: json });
         const d = await r.json();
         toast(d.ok ? 'Baked → ' + d.path.split(/[\\/]/).slice(-2).join('/') + ' (also on clipboard)' : 'Bake failed: ' + (d.error || ''));
       } catch { toast('Copied to clipboard (server save failed)'); }
@@ -1460,8 +1460,8 @@ window.BrainCore = (function () {
     async function refreshData(msg) {
       splash(true, msg || 'Rescanning the workspace');
       try {
-        await fetch('/api/rescan', { method: 'POST' });
-        const r = await fetch('/api/graph');
+        await fetch('api/rescan', { method: 'POST' });
+        const r = await fetch('api/graph');
         const data = await r.json();
         const keep = { cam: { ...S.cam } };
         S.nodes = []; S.byId.clear(); S.repCache.clear();
@@ -1481,7 +1481,7 @@ window.BrainCore = (function () {
     S.refreshData = refreshData;
     document.getElementById('btn-rescan').onclick = () => refreshData();
     document.getElementById('tweak-restore').onclick = async () => {
-      await fetch('/api/tweak', { method: 'POST', body: JSON.stringify({ action: 'unhide-all' }) });
+      await fetch('api/tweak', { method: 'POST', body: JSON.stringify({ action: 'unhide-all' }) });
       refreshData('Restoring removed items');
     };
     themeButtonLabel();
@@ -1495,7 +1495,7 @@ window.BrainCore = (function () {
       debounce = setTimeout(async () => {
         const q = input.value.trim();
         if (!q) { results.innerHTML = ''; results.style.display = 'none'; return; }
-        const r = await fetch('/api/search?q=' + encodeURIComponent(q));
+        const r = await fetch('api/search?q=' + encodeURIComponent(q));
         const d = await r.json();
         results.style.display = 'block';
         results.innerHTML = d.results.slice(0, 14).map(x => `
