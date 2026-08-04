@@ -1,6 +1,6 @@
 id: jarvis-cortex
 name: JARVIS Cortex
-type: tool
+type: module
 status: active
 repo: /home/nuveo/projects/jarvis-cortex
 # R7 goal auditor: workspace-graph engine must answer on :5210 (systemd jarvis-cortex.service).
@@ -10,6 +10,10 @@ workflows: []
 docs:
   - README.md
   - NOTICE
+# outputs = des CHEMINS (le validator fait Path(...).exists()). Le role de
+# chaque fichier va en commentaire, pas dans la valeur.
+#   server.js : moteur workspace-graph, http://127.0.0.1:5210 (systemd jarvis-cortex.service)
+#   brain.js  : CLI recall/store
 outputs:
-  - server.js (workspace-graph engine, http://127.0.0.1:5210, systemd jarvis-cortex.service)
-  - brain.js (recall/store CLI)
+  - server.js
+  - brain.js
