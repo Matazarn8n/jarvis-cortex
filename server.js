@@ -132,8 +132,14 @@ const handle = async (req, res) => {
       const abs = safeResolve(body.path || '');
       if (!abs || !fs.existsSync(abs)) return sendJSON(res, { error: 'Not found' }, 404);
       const ext = path.extname(abs).toLowerCase();
-      if (ext === '.html' || ext === '.htm') spawn('cmd', ['/c', 'start', 'chrome', abs], { detached: true, stdio: 'ignore' }).unref();
-      else spawn('cmd', ['/c', 'start', '', abs], { detached: true, stdio: 'ignore' }).unref();
+      const isHtml = (ext === '.html' || ext === '.htm');
+      let cmd, args;
+      if (process.platform === 'win32') { cmd = 'cmd'; args = isHtml ? ['/c', 'start', 'chrome', abs] : ['/c', 'start', '', abs]; }
+      else if (process.platform === 'darwin') { cmd = 'open'; args = [abs]; }
+      else { cmd = 'xdg-open'; args = [abs]; }
+      const child = spawn(cmd, args, { detached: true, stdio: 'ignore' });
+      child.on('error', (e) => { console.error('[open] spawn failed:', cmd, e.message); });
+      child.unref();
       return sendJSON(res, { ok: true });
     }
 
