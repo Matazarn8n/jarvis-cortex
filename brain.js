@@ -168,7 +168,12 @@ function store(fact, opts) {
   const dir = opts.sandbox ? SANDBOX : MEM;
   fs.mkdirSync(dir, { recursive: true });
   const prefix = { feedback: 'feedback_', project: 'project_', user: 'user_', reference: 'reference_' }[type] || '';
-  const file = path.join(dir, prefix + name.replace(/-/g, '_') + '.md');
+  // Le slug passé par --name porte souvent DÉJÀ son préfixe de type (c'est la
+  // convention des memories écrites à la main, et celle des pointeurs [[...]]).
+  // Le recoller aveuglément a produit 63 `feedback_feedback_*` et un pointeur
+  // mort dans CLAUDE.md racine — vérifié le 2026-08-11.
+  const base = name.replace(/-/g, '_');
+  const file = path.join(dir, (prefix && base.startsWith(prefix) ? '' : prefix) + base + '.md');
   const today = new Date().toISOString().slice(0, 10);
   const desc = fact.length > 110 ? fact.slice(0, 107) + '...' : fact;
   const body = `---
@@ -186,9 +191,23 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
   // one index line - append-only, no reads needed beyond the index itself
   const index = path.join(dir, MEM_INDEX);
   const title = name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  const entry = `- [${title}](${path.basename(file)}) — ${today} ${desc}\n`;
+  // Budget d'index EXÉCUTOIRE. memory-gc porte déjà la règle « une entrée ≤ 200
+  // caractères, le détail vit dans les fichiers » — mais en audit sur demande,
+  // que personne ne lance : 30 des 134 lignes de MEMORY.md la violaient au
+  // 2026-08-11. Un index toujours chargé qui grossit sans plafond finit par
+  // coûter plus cher que ce qu'il fait gagner, donc on tronque à l'écriture.
+  const ENTRY_MAX = 200;
+  let entry = `- [${title}](${path.basename(file)}) — ${today} ${desc}\n`;
+  if (entry.length - 1 > ENTRY_MAX) entry = entry.slice(0, ENTRY_MAX - 1).trimEnd() + '…\n';
   if (opts.sandbox && !fs.existsSync(index)) fs.writeFileSync(index, '# Sandbox Memory Index\n\n');
   fs.appendFileSync(index, entry);
+  // Le fait n'est jamais perdu (il est dans son fichier) — mais l'index qui
+  // déborde doit se voir, sinon la dérive reprend. Alerte, pas exception.
+  const indexBytes = fs.statSync(index).size;
+  const INDEX_MAX = 16000;
+  if (indexBytes > INDEX_MAX) {
+    console.error(`[brain] MEMORY.md ${indexBytes} c > budget ${INDEX_MAX} c — lancer la skill memory-gc`);
+  }
   const bytes = Buffer.byteLength(body) + Buffer.byteLength(entry);
   return { file: path.relative(ROOT, file), indexLine: entry.trim(), bytes, ms: +(performance.now() - t0).toFixed(2) };
 }
