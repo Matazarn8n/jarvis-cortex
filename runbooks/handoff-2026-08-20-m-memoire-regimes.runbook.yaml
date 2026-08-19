@@ -1,0 +1,138 @@
+# Runbook M — Trois régimes d'écriture sur la mémoire (C5).
+#
+# Source : contre-audit du 2026-08-19 (artifact c35f327c). Codex gpt-5.6-sol et
+# Fable 5, sans contact, ont tous deux classé C5 « INTÉGRER » et en tête du
+# classement valeur/effort. C'est le seul élément du lot Instagram qui nomme un
+# manque que l'inventaire interne reconnaît lui-même mot pour mot.
+#
+# LE DÉFAUT, MESURÉ. `brain.js:176` fait `fs.writeFileSync(file, body)` sans
+# condition. Les 431 fichiers de ~/.claude/projects/-home-nuveo/memory/ sont donc
+# tous écrits en écrasement, quel que soit leur `metadata.type`. Un `project`
+# daté (un événement passé) et un `user` (un fait durable) subissent le même
+# traitement. Le frontmatter `type:` existe déjà et distingue
+# user|feedback|project|reference — il ne pilote simplement RIEN.
+#
+# LA CORRECTION EST UN BRANCHEMENT, PAS UNE REFONTE :
+#   sémantique  (user, reference) → upsert, l'écrasement reste le comportement.
+#   épisodique  (project)         → append-only : écraser un fichier existant est
+#                                   REFUSÉ (exit non nul), jamais silencieux.
+#   procédural  (feedback)        → remplacement VERSIONNÉ : l'ancienne version
+#                                   est copiée en <nom>.v<N>.md avant écriture.
+#
+# ⚠️ CE QUE CE PLAN NE FAIT PAS. Il ne touche pas MEMORY.md au-delà de ce que
+# `store` y écrit déjà, ne migre aucun fichier existant, ne merge ni ne pousse
+# rien. Le dépôt de mémoire est DÉJÀ sous git (branche
+# fix/orchestration-2026-08-06) : la précaution « git init d'abord » proposée au
+# contre-audit est sans objet, le rollback existe.
+#
+# ⚠️ ANTI FAUX-POSITIF. Le `check:` de M-T1 ne lit aucun marqueur imprimé par la
+# session. Il exécute la suite de tests DEUX FOIS : contre le code du ticket (elle
+# doit passer) et contre `brain.js` tel qu'il était au branchement du worktree
+# (sha 507f278 — elle doit ÉCHOUER). Une suite qui passe des deux côtés ne teste
+# rien : c'est le test de mutation, intégré au critère.
+#
+# `effort:` est DÉCLARATIF (protocole GSD maison) : l'exécuteur ne le lit pas.
+
+project: jarvis-cortex-m-memoire-regimes
+phase: M
+repo: /home/nuveo/projects/jarvis-cortex-plan-m
+max_sessions_per_day: 4
+
+chain:
+  next_phase: "B"
+  generator_ticket: "M-TGEN"
+  require_codex_go: true
+  max_chain_depth: 2
+  final_gate: human
+
+requires_access:
+  - cmd: "test -f brain.js"
+  - cmd: "test -d /home/nuveo/.claude/projects/-home-nuveo/memory"
+  - cmd: "git -C /home/nuveo/.claude/projects/-home-nuveo/memory rev-parse --is-inside-work-tree"
+  - cmd: "node --version"
+
+tickets:
+  - id: M-T1
+    why: >-
+      `brain.js:176` écrase sans condition. Trois régimes doivent être branchés
+      sur `metadata.type`, et le refus épisodique doit être BRUYANT (exit non nul)
+      — un refus silencieux recréerait exactement la classe de panne consignée
+      dans instagram-pipeline-silent-failure. Travail d'implémentation borné à une
+      fonction et à son test : sonnet-5.
+    kind: session
+    model: claude-sonnet-5
+    effort: medium
+    prompt_file: tickets/M-T1-regimes-ecriture.md
+    produces:
+      - tests/test_store_regimes.mjs
+    check: |-
+      test -s tests/test_store_regimes.mjs \
+      && node --test tests/test_store_regimes.mjs \
+      && tmp=$(mktemp -d) \
+      && git show 507f278:brain.js > "$tmp/brain.js" \
+      && cp tests/test_store_regimes.mjs "$tmp/suite.mjs" \
+      && if (cd "$tmp" && BRAIN_UNDER_TEST="$tmp/brain.js" node --test suite.mjs >/dev/null 2>&1); then \
+           echo "MUTATION-KO: la suite passe aussi contre le brain.js d'avant le ticket" >&2; \
+           rm -rf "$tmp"; exit 1; \
+         fi \
+      && rm -rf "$tmp" \
+      && "$HERMES_CHECK_PYTHON" - <<'PY'
+      import json, os, sys
+      faits = json.load(open(os.environ["HERMES_TICKET_FACTS"], encoding="utf-8"))
+      # Le moteur est la source de verite sur ce qui a ete fait, pas le state.json.
+      assert faits.get("ticket_id") == "M-T1", faits.get("ticket_id")
+      print("M_T1 mutation=prouvee ticket=%s" % faits["ticket_id"])
+      PY
+    codex_gate: true
+    max_turns: 60
+    max_budget_usd: 4
+    timeout_minutes: 45
+
+  - id: M-TGEN
+    why: >-
+      M-T1 pose les régimes ; il ne dit pas encore ce que la mémoire EXISTANTE
+      contient de contradictoire (des `project` déjà écrasés, des `feedback` sans
+      historique). Ce ticket établit ce constat sur les 431 fichiers et écrit le
+      maillon B — la boucle verdict de gate → règle — à la lumière de ce qu'il
+      voit, puisque B écrira des fichiers `feedback` au régime procédural défini
+      ici. Écrire le maillon suivant est un ticket du maillon courant, jamais une
+      session humaine (règle du 2026-08-10, 8 runbooks sur 11 sans `chain:`).
+      Choix d'architecture du programme : opus-5.
+    kind: session
+    depends_on: [M-T1]
+    model: claude-opus-5
+    effort: high
+    prompt_file: tickets/M-TGEN-ecrire-b.md
+    consumes:
+      - tests/test_store_regimes.mjs
+    produces:
+      - docs/plans/2026-08-20-m-constat-memoire.md
+      - runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml
+    generates_runbook: runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml
+    check: |-
+      test -s docs/plans/2026-08-20-m-constat-memoire.md \
+      && test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml \
+      && "$HERMES_CHECK_PYTHON" - <<'PY'
+      import json, os, pathlib, re, sys, yaml
+      rb = yaml.safe_load(open("runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml", encoding="utf-8"))
+      assert rb.get("phase") == "B", rb.get("phase")
+      tks = rb.get("tickets") or []
+      assert tks, "aucun ticket dans B"
+      # Un runbook ou TOUS les tickets portent le meme modele est un signal
+      # d'alarme a l'ecriture (regle du 2026-08-08), pas une convention.
+      modeles = {t.get("model") for t in tks}
+      assert len(tks) == 1 or len(modeles) > 1, "modele identique sur tous les tickets: %s" % modeles
+      # Le constat doit citer des fichiers de memoire REELS, pas des noms plausibles.
+      mem = pathlib.Path("/home/nuveo/.claude/projects/-home-nuveo/memory")
+      reels = {p.name for p in mem.glob("*.md")}
+      doc = pathlib.Path("docs/plans/2026-08-20-m-constat-memoire.md").read_text(encoding="utf-8")
+      cites = [n for n in reels if n in doc]
+      assert len(cites) >= 3, "constat cite %d fichiers reels (>=3 attendus)" % len(cites)
+      faits = json.load(open(os.environ["HERMES_TICKET_FACTS"], encoding="utf-8"))
+      print("M_TGEN b_tickets=%d modeles=%d cites=%d ticket=%s"
+            % (len(tks), len(modeles), len(cites), faits["ticket_id"]))
+      PY
+    codex_gate: true
+    max_turns: 80
+    max_budget_usd: 6
+    timeout_minutes: 60
