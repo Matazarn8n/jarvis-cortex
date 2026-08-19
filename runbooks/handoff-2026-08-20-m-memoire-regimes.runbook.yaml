@@ -2,34 +2,43 @@
 #
 # Source : contre-audit du 2026-08-19 (artifact c35f327c). Codex gpt-5.6-sol et
 # Fable 5, sans contact, ont tous deux classé C5 « INTÉGRER » et en tête du
-# classement valeur/effort. C'est le seul élément du lot Instagram qui nomme un
-# manque que l'inventaire interne reconnaît lui-même mot pour mot.
+# classement valeur/effort.
 #
-# LE DÉFAUT, MESURÉ. `brain.js:176` fait `fs.writeFileSync(file, body)` sans
-# condition. Les 431 fichiers de ~/.claude/projects/-home-nuveo/memory/ sont donc
-# tous écrits en écrasement, quel que soit leur `metadata.type`. Un `project`
-# daté (un événement passé) et un `user` (un fait durable) subissent le même
-# traitement. Le frontmatter `type:` existe déjà et distingue
-# user|feedback|project|reference — il ne pilote simplement RIEN.
+# LE DÉFAUT, MESURÉ. `brain.js` fait `fs.writeFileSync(file, body)` sans
+# condition. Les fichiers de ~/.claude/projects/-home-nuveo/memory/ sont donc
+# tous écrits en écrasement, quel que soit leur `metadata.type`. Le frontmatter
+# `type:` existe déjà et distingue user|feedback|project|reference — il ne pilote
+# simplement RIEN.
 #
 # LA CORRECTION EST UN BRANCHEMENT, PAS UNE REFONTE :
 #   sémantique  (user, reference) → upsert, l'écrasement reste le comportement.
 #   épisodique  (project)         → append-only : écraser un fichier existant est
-#                                   REFUSÉ (exit non nul), jamais silencieux.
+#                                   REFUSÉ (exception + exit non nul), jamais
+#                                   silencieux. `--force` est l'échappatoire
+#                                   explicite.
 #   procédural  (feedback)        → remplacement VERSIONNÉ : l'ancienne version
-#                                   est copiée en <nom>.v<N>.md avant écriture.
+#                                   est copiée en <base>.v<N>.md avant écriture.
 #
-# ⚠️ CE QUE CE PLAN NE FAIT PAS. Il ne touche pas MEMORY.md au-delà de ce que
-# `store` y écrit déjà, ne migre aucun fichier existant, ne merge ni ne pousse
-# rien. Le dépôt de mémoire est DÉJÀ sous git (branche
-# fix/orchestration-2026-08-06) : la précaution « git init d'abord » proposée au
-# contre-audit est sans objet, le rollback existe.
+# ⚠️ ISOLATION — CORRIGÉE APRÈS L'AUDIT CODEX DU 2026-08-20 (défaut CRITIQUE).
+# La première rédaction faisait tourner la suite ROUGE avant que `store()` ne
+# sache s'isoler : elle aurait écrit `project_evt_1.md`, `feedback_regle_a.md`,
+# `user_fait_a.md` et des lignes d'index dans la VRAIE mémoire, et le `check:`
+# aurait rejoué cette écriture à chaque tentative. L'isolation ne repose plus sur
+# un paramètre que le code ne connaît pas encore : `brain.js` dérive `MEM` de
+# `config/workspace.json` pris à côté de lui (`__dirname`), donc on copie
+# `brain.js` dans un répertoire temporaire AVEC son propre `workspace.json`. Le
+# code d'avant le ticket comme celui d'après écrivent alors dans le bac à sable,
+# sans qu'aucune ligne de brain.js ait à changer pour ça.
 #
-# ⚠️ ANTI FAUX-POSITIF. Le `check:` de M-T1 ne lit aucun marqueur imprimé par la
-# session. Il exécute la suite de tests DEUX FOIS : contre le code du ticket (elle
-# doit passer) et contre `brain.js` tel qu'il était au branchement du worktree
-# (sha 507f278 — elle doit ÉCHOUER). Une suite qui passe des deux côtés ne teste
-# rien : c'est le test de mutation, intégré au critère.
+# ⚠️ ANTI FAUX-POSITIF. Le `check:` de M-T1 ne se contente pas de lancer la suite
+# écrite par la session — cette suite est juge et partie. Il exécute en plus une
+# SONDE COMPORTEMENTALE indépendante, écrite ici, qui pilote la CLI et vérifie
+# les trois régimes et le code de sortie ; puis il rejoue la suite de la session
+# contre `brain.js` au sha du branchement (507f278) et exige qu'elle échoue.
+#
+# ⚠️ VIE PRIVÉE. Le constat de M-TGEN ne recopie AUCUN nom de fichier de mémoire
+# dans le dépôt : ces noms portent des clients, des personnes et des projets
+# privés. La preuve de lecture est un condensé recalculé pendant le `check:`.
 #
 # `effort:` est DÉCLARATIF (protocole GSD maison) : l'exécuteur ne le lit pas.
 
@@ -54,10 +63,10 @@ requires_access:
 tickets:
   - id: M-T1
     why: >-
-      `brain.js:176` écrase sans condition. Trois régimes doivent être branchés
-      sur `metadata.type`, et le refus épisodique doit être BRUYANT (exit non nul)
-      — un refus silencieux recréerait exactement la classe de panne consignée
-      dans instagram-pipeline-silent-failure. Travail d'implémentation borné à une
+      `brain.js` écrase sans condition. Trois régimes doivent être branchés sur
+      `metadata.type`, et le refus épisodique doit être BRUYANT — un refus
+      silencieux recréerait la classe de panne consignée dans
+      instagram-pipeline-silent-failure. Travail d'implémentation borné à une
       fonction et à son test : sonnet-5.
     kind: session
     model: claude-sonnet-5
@@ -67,21 +76,108 @@ tickets:
       - tests/test_store_regimes.mjs
     check: |-
       test -s tests/test_store_regimes.mjs \
-      && node --test tests/test_store_regimes.mjs \
-      && tmp=$(mktemp -d) \
-      && git show 507f278:brain.js > "$tmp/brain.js" \
-      && cp tests/test_store_regimes.mjs "$tmp/suite.mjs" \
-      && if (cd "$tmp" && BRAIN_UNDER_TEST="$tmp/brain.js" node --test suite.mjs >/dev/null 2>&1); then \
-           echo "MUTATION-KO: la suite passe aussi contre le brain.js d'avant le ticket" >&2; \
-           rm -rf "$tmp"; exit 1; \
-         fi \
-      && rm -rf "$tmp" \
       && "$HERMES_CHECK_PYTHON" - <<'PY'
-      import json, os, sys
+      import json, os, pathlib, shutil, subprocess, sys, tempfile
+
+      REPO = pathlib.Path.cwd()
+      SUITE = REPO / "tests" / "test_store_regimes.mjs"
+      BASE_SHA = "507f278"   # HEAD du worktree au branchement
+
+      def bac_a_sable(src_brain: pathlib.Path, tmp: pathlib.Path) -> pathlib.Path:
+          """Copie brain.js avec SON workspace.json : MEM tombe alors sous tmp.
+          C'est la seule isolation qui vaille AVANT que le ticket soit ecrit,
+          puisque le code d'origine ne connait aucun parametre de repertoire."""
+          d = tmp / "bac"
+          (d / "config").mkdir(parents=True)
+          shutil.copy2(src_brain, d / "brain.js")
+          # brain.js: ROOT = resolve(__dirname, WS.root), MEM = ROOT/WS.memoryDir
+          (d / "config" / "workspace.json").write_text(
+              json.dumps({"root": ".", "memoryDir": "memoire", "memoryIndex": "MEMORY.md"}),
+              encoding="utf-8")
+          return d
+
+      def cli(bac: pathlib.Path, *args):
+          return subprocess.run([shutil.which("node") or "node", str(bac / "brain.js"), *args],
+                                capture_output=True, text=True, cwd=str(bac))
+
+      echecs = []
+      with tempfile.TemporaryDirectory() as t:
+          tmp = pathlib.Path(t)
+
+          # ---- 1. SONDE COMPORTEMENTALE, independante de la suite de la session.
+          bac = bac_a_sable(REPO / "brain.js", tmp)
+          mem = bac / "memoire"
+
+          r1 = cli(bac, "store", "premier evenement", "--type", "project", "--name", "sonde-evt")
+          if r1.returncode != 0:
+              echecs.append("episodique: 1re ecriture refusee (%s)" % (r1.stderr.strip()[:200] or r1.returncode))
+          r2 = cli(bac, "store", "reecriture", "--type", "project", "--name", "sonde-evt")
+          if r2.returncode == 0:
+              echecs.append("episodique: la 2e ecriture a ete ACCEPTEE (exit 0) — pas de refus")
+          f_evt = mem / "project_sonde_evt.md"
+          if f_evt.is_file() and "premier evenement" not in f_evt.read_text(encoding="utf-8"):
+              echecs.append("episodique: le contenu d'origine a ete ecrase")
+
+          r3 = cli(bac, "store", "avec force", "--type", "project", "--name", "sonde-evt", "--force")
+          if r3.returncode != 0:
+              echecs.append("episodique: --force n'ouvre pas l'echappatoire explicite")
+
+          cli(bac, "store", "regle v1", "--type", "feedback", "--name", "sonde-regle")
+          cli(bac, "store", "regle v2", "--type", "feedback", "--name", "sonde-regle")
+          courant = mem / "feedback_sonde_regle.md"
+          versions = sorted(mem.glob("feedback_sonde_regle.v*.md"))
+          if not versions:
+              echecs.append("procedural: aucune version conservee avant remplacement")
+          elif "regle v1" not in versions[0].read_text(encoding="utf-8"):
+              echecs.append("procedural: la version conservee ne porte pas l'ancien contenu")
+          if courant.is_file() and "regle v2" not in courant.read_text(encoding="utf-8"):
+              echecs.append("procedural: le fichier courant ne porte pas la nouvelle version")
+
+          for t_sem in ("user", "reference"):
+              cli(bac, "store", "fait v1", "--type", t_sem, "--name", "sonde-%s" % t_sem)
+              cli(bac, "store", "fait v2", "--type", t_sem, "--name", "sonde-%s" % t_sem)
+              f = mem / ("%s_sonde_%s.md" % (t_sem, t_sem))
+              if not f.is_file() or "fait v2" not in f.read_text(encoding="utf-8"):
+                  echecs.append("semantique(%s): l'upsert ne remplace plus" % t_sem)
+              if list(mem.glob("%s_sonde_%s.v*.md" % (t_sem, t_sem))):
+                  echecs.append("semantique(%s): une version a ete creee, ce n'est pas un upsert" % t_sem)
+
+          # Rien n'a du fuir hors du bac : la vraie memoire ne doit porter aucune sonde.
+          vraie = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
+          fuites = sorted(p.name for p in vraie.glob("*sonde-*")) + sorted(p.name for p in vraie.glob("*sonde_*"))
+          if fuites:
+              echecs.append("FUITE dans la vraie memoire: %s" % fuites[:5])
+
+          # ---- 2. La suite de la session passe sur le code courant.
+          r = subprocess.run([shutil.which("node") or "node", "--test", str(SUITE)],
+                             capture_output=True, text=True, cwd=str(REPO))
+          if r.returncode != 0:
+              echecs.append("suite de la session ROUGE sur le code courant")
+
+          # ---- 3. Mutation : la meme suite doit ECHOUER contre le code d'avant.
+          vieux = tmp / "brain-%s.js" % BASE_SHA
+          g = subprocess.run(["git", "show", "%s:brain.js" % BASE_SHA],
+                             capture_output=True, text=True, cwd=str(REPO))
+          if g.returncode != 0:
+              echecs.append("git show %s:brain.js indisponible — mutation non prouvable" % BASE_SHA)
+          else:
+              vieux.write_text(g.stdout, encoding="utf-8")
+              bac_v = bac_a_sable(vieux, tmp / "mutation")
+              suite_v = bac_v / "suite.mjs"
+              suite_v.write_text(SUITE.read_text(encoding="utf-8"), encoding="utf-8")
+              env = dict(os.environ, BRAIN_UNDER_TEST=str(bac_v / "brain.js"))
+              m = subprocess.run([shutil.which("node") or "node", "--test", str(suite_v)],
+                                 capture_output=True, text=True, cwd=str(bac_v), env=env)
+              if m.returncode == 0:
+                  echecs.append("MUTATION-KO: la suite passe aussi contre brain.js@%s" % BASE_SHA)
+
+      if echecs:
+          for e in echecs:
+              print("ECHEC:", e, file=sys.stderr)
+          sys.exit(1)
+
       faits = json.load(open(os.environ["HERMES_TICKET_FACTS"], encoding="utf-8"))
-      # Le moteur est la source de verite sur ce qui a ete fait, pas le state.json.
-      assert faits.get("ticket_id") == "M-T1", faits.get("ticket_id")
-      print("M_T1 mutation=prouvee ticket=%s" % faits["ticket_id"])
+      print("M_T1 sonde=ok suite=ok mutation=prouvee fuite=aucune ticket=%s" % faits["ticket_id"])
       PY
     codex_gate: true
     max_turns: 60
@@ -90,14 +186,12 @@ tickets:
 
   - id: M-TGEN
     why: >-
-      M-T1 pose les régimes ; il ne dit pas encore ce que la mémoire EXISTANTE
-      contient de contradictoire (des `project` déjà écrasés, des `feedback` sans
-      historique). Ce ticket établit ce constat sur les 431 fichiers et écrit le
-      maillon B — la boucle verdict de gate → règle — à la lumière de ce qu'il
-      voit, puisque B écrira des fichiers `feedback` au régime procédural défini
-      ici. Écrire le maillon suivant est un ticket du maillon courant, jamais une
-      session humaine (règle du 2026-08-10, 8 runbooks sur 11 sans `chain:`).
-      Choix d'architecture du programme : opus-5.
+      M-T1 pose les régimes ; il ne dit pas ce que la mémoire EXISTANTE contient
+      de contradictoire. Ce ticket établit ce constat et écrit le maillon B — la
+      boucle verdict de gate → règle — à la lumière de ce qu'il voit, puisque B
+      écrira des fichiers `feedback` au régime procédural défini ici. Écrire le
+      maillon suivant est un ticket du maillon courant, jamais une session
+      humaine (règle du 2026-08-10). Choix d'architecture : opus-5.
     kind: session
     depends_on: [M-T1]
     model: claude-opus-5
@@ -108,29 +202,90 @@ tickets:
     produces:
       - docs/plans/2026-08-20-m-constat-memoire.md
       - runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml
-    generates_runbook: runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml
+    # Le moteur joint ce chemin sous `<repo>/runbooks` (_generated_runbook_path) :
+    # un `runbooks/...` ici serait cherche sous `runbooks/runbooks/` et rejouerait
+    # la session generatrice payante a chaque approbation (audit Codex 2026-08-20).
+    generates_runbook: handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml
     check: |-
       test -s docs/plans/2026-08-20-m-constat-memoire.md \
       && test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml \
       && "$HERMES_CHECK_PYTHON" - <<'PY'
-      import json, os, pathlib, re, sys, yaml
-      rb = yaml.safe_load(open("runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml", encoding="utf-8"))
-      assert rb.get("phase") == "B", rb.get("phase")
-      tks = rb.get("tickets") or []
-      assert tks, "aucun ticket dans B"
-      # Un runbook ou TOUS les tickets portent le meme modele est un signal
-      # d'alarme a l'ecriture (regle du 2026-08-08), pas une convention.
-      modeles = {t.get("model") for t in tks}
-      assert len(tks) == 1 or len(modeles) > 1, "modele identique sur tous les tickets: %s" % modeles
-      # Le constat doit citer des fichiers de memoire REELS, pas des noms plausibles.
-      mem = pathlib.Path("/home/nuveo/.claude/projects/-home-nuveo/memory")
-      reels = {p.name for p in mem.glob("*.md")}
+      import hashlib, json, os, pathlib, re, sys, yaml
+
+      echecs = []
       doc = pathlib.Path("docs/plans/2026-08-20-m-constat-memoire.md").read_text(encoding="utf-8")
-      cites = [n for n in reels if n in doc]
-      assert len(cites) >= 3, "constat cite %d fichiers reels (>=3 attendus)" % len(cites)
+
+      # ---- 1. Les CINQ rubriques du constat, chacune avec un chiffre.
+      RUBRIQUES = {
+          "repartition":  r"(r[ée]partition|par\s+`?metadata\.type`?|par type)",
+          "revisions":    r"(r[ée]vision|mis[e]?\s+[àa]\s+jour|R[ÉE]VOQU|CORRECTION)",
+          "dates":        r"(plusieurs dates|deux dates|dat[ée]s? plusieurs)",
+          "index":        r"MEMORY\.md",
+          "migration":    r"(migration|migrer|ne rien migrer)",
+      }
+      for nom, motif in RUBRIQUES.items():
+          bloc = re.search(motif, doc, re.I)
+          if not bloc:
+              echecs.append("rubrique absente du constat: %s" % nom)
+              continue
+          fenetre = doc[max(0, bloc.start() - 400): bloc.end() + 400]
+          if not re.search(r"\b\d+\b", fenetre):
+              echecs.append("rubrique sans chiffre: %s" % nom)
+
+      # ---- 2. Preuve de lecture SANS recopier de nom de fichier prive.
+      # Le constat porte un condensé recalculé ici ; les noms restent hors du depot.
+      mem = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
+      noms = sorted(p.name for p in mem.glob("*.md"))
+      attendu = hashlib.sha256("\n".join(noms).encode("utf-8")).hexdigest()[:16]
+      if attendu not in doc:
+          echecs.append("empreinte de lecture absente ou fausse (attendu %s sur %d fichiers)"
+                        % (attendu, len(noms)))
+      fuites = [n for n in noms if n in doc]
+      if fuites:
+          echecs.append("noms de fichiers de memoire recopies dans le depot: %d" % len(fuites))
+
+      # ---- 3. Le runbook B est reellement lancable par le moteur.
+      rb_path = pathlib.Path("runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml")
+      rb = yaml.safe_load(rb_path.read_text(encoding="utf-8"))
+      if rb.get("phase") != "B":
+          echecs.append("phase de B = %r" % rb.get("phase"))
+      tks = rb.get("tickets") or []
+      if not tks:
+          echecs.append("B n'a aucun ticket")
+      modeles = {t.get("model") for t in tks}
+      if len(tks) > 1 and len(modeles) == 1:
+          echecs.append("modele identique sur tous les tickets de B: %s" % modeles)
+      for t in tks:
+          tid = t.get("id", "?")
+          if not t.get("model"):
+              echecs.append("%s: model absent" % tid)
+          if t.get("codex_gate") is not True:
+              echecs.append("%s: codex_gate n'est pas `true` litteral" % tid)
+          pf = t.get("prompt_file")
+          if not pf:
+              echecs.append("%s: prompt_file absent" % tid)
+          elif not (rb_path.parent / pf).is_file():
+              # meme resolution que _prompt_file_path : sous le DOSSIER du runbook.
+              echecs.append("%s: prompt_file introuvable sous %s/" % (tid, rb_path.parent))
+          chk = t.get("check") or ""
+          if not chk:
+              echecs.append("%s: check absent" % tid)
+          else:
+              if "HERMES_CHECK_PYTHON" not in chk:
+                  echecs.append("%s: check n'emploie pas $HERMES_CHECK_PYTHON" % tid)
+              if "HERMES_TICKET_FACTS" not in chk:
+                  echecs.append("%s: check ne lit pas $HERMES_TICKET_FACTS" % tid)
+              if "state.json" in chk:
+                  echecs.append("%s: check rouvre un state.json (falsifiable)" % tid)
+
+      if echecs:
+          for e in echecs:
+              print("ECHEC:", e, file=sys.stderr)
+          sys.exit(1)
+
       faits = json.load(open(os.environ["HERMES_TICKET_FACTS"], encoding="utf-8"))
-      print("M_TGEN b_tickets=%d modeles=%d cites=%d ticket=%s"
-            % (len(tks), len(modeles), len(cites), faits["ticket_id"]))
+      print("M_TGEN rubriques=5 empreinte=%s b_tickets=%d modeles=%d ticket=%s"
+            % (attendu, len(tks), len(modeles), faits["ticket_id"]))
       PY
     codex_gate: true
     max_turns: 80

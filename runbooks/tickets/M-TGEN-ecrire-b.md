@@ -1,0 +1,153 @@
+# M-TGEN — Constater l'état réel de la mémoire, puis écrire le maillon B
+
+**Modèle : `claude-opus-5` · effort : `high`.** Choix d'architecture du
+programme, pas de l'implémentation.
+
+Tu travailles dans `/home/nuveo/jarvis-cortex-plan-m`. Ne merge pas, ne pousse pas.
+
+## Pourquoi ce ticket existe
+
+M-T1 a posé les régimes d'écriture pour l'**avenir**. Il ne dit rien de ce que les
+fichiers déjà écrits contiennent de contradictoire avec ces régimes. Or B — la
+boucle « verdict de gate → règle » — écrira des fichiers `feedback` au régime
+procédural défini en M-T1. L'écrire à l'aveugle produirait un plan qui suppose au
+lieu de mesurer.
+
+Un maillon qui finirait sans écrire son successeur finirait `done` **muet** —
+défaut consigné le 2026-08-10 (8 runbooks sur 11 sans `chain:`, et une phase P2
+jamais écrite après G3).
+
+## Partie 1 — Le constat
+
+Écris `docs/plans/2026-08-20-m-constat-memoire.md` en lisant réellement
+`/home/nuveo/.claude/projects/-home-nuveo/memory/*.md`. **Cinq rubriques, chacune
+avec ses chiffres** — le `check:` exige un nombre dans chacune :
+
+1. **Répartition par `metadata.type`** — combien de `user`, `feedback`,
+   `project`, `reference`, et combien sans `type` exploitable.
+2. **Révisions** — combien de `feedback` (procédural) portent déjà une trace de
+   révision (« mis à jour », « RÉVOQUÉE », « CORRECTION », une seconde date).
+   Ces fichiers ont été révisés à la main, sans version conservée : ils prouvent
+   que le régime procédural manquait.
+3. **Dates multiples** — combien de `project` portent plusieurs dates dans leur
+   corps, signe d'un événement réécrit plutôt qu'ajouté.
+4. **Index `MEMORY.md`** — combien de lignes, combien pointent vers un fichier
+   disparu, combien de fichiers n'ont aucune ligne d'index.
+5. **Migration** — ce qu'elle coûterait, si elle vaut le coup, et pourquoi.
+   « Ne rien migrer » est une réponse valide si les chiffres la soutiennent. Ne
+   fabrique pas un chantier.
+
+### Interdiction : aucun nom de fichier de mémoire dans le dépôt
+
+Ces noms portent des clients, des personnes et des projets privés. Le constat est
+commité dans un dépôt git — **n'y recopie aucun `*.md` du dossier de mémoire**,
+ni en exemple, ni en annexe. Le `check:` compte les fuites et fait échouer le
+ticket s'il en trouve une.
+
+La preuve de lecture est une **empreinte**, pas une liste. Calcule-la ainsi et
+inscris-la dans le document :
+
+```bash
+"$HERMES_CHECK_PYTHON" - <<'PY'
+import hashlib, pathlib
+mem = pathlib.Path.home()/".claude"/"projects"/"-home-nuveo"/"memory"
+noms = sorted(p.name for p in mem.glob("*.md"))
+print("fichiers=%d empreinte=%s" % (len(noms), hashlib.sha256("\n".join(noms).encode()).hexdigest()[:16]))
+PY
+```
+
+Le `check:` recalcule la même empreinte et exige de la retrouver dans le document.
+Elle prouve que tu as lu le dossier entier sans en divulguer le contenu.
+
+Les agrégats (compteurs, pourcentages, exemples **anonymisés** du type « un
+feedback de juillet porte trois dates ») sont bienvenus.
+
+## Partie 2 — Écrire le runbook B
+
+Écris `runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml` et ses
+prompts sous `runbooks/tickets/`.
+
+**Objet de B :** aujourd'hui les gates Codex rendent des verdicts et les fichiers
+de règles (`feedback_*.md`) sont écrits **à la main, après coup**. B câble la
+réinjection : un verdict de gate qui révèle un défaut écrit lui-même sa règle via
+`brain.js store --type feedback`, donc au régime procédural versionné posé en
+M-T1.
+
+### Le dépôt de B est déjà préparé — ne le choisis pas
+
+`repo: /home/nuveo/hermes-os-plan-b`, worktree de `~/hermes-os` **déjà créé et
+déjà inscrit à l'allowlist du runner**. N'invente pas un autre chemin : un
+`repo:` absent de l'allowlist, ou inexistant sur le disque, rend B inlançable et
+la chaîne se bloque au pré-vol. Déclare-le en plus dans `requires_access` :
+
+```yaml
+requires_access:
+  - cmd: "test -d /home/nuveo/hermes-os-plan-b/.git || test -f /home/nuveo/hermes-os-plan-b/.git"
+```
+
+### Contraintes de forme — le moteur refuse le runbook sinon
+
+- `phase: "B"`.
+- Chaque ticket `kind: session` porte `model:` **explicite**, `effort:`,
+  `prompt_file:` et `check:`.
+- **`prompt_file:` est résolu sous le DOSSIER DU RUNBOOK**, pas sous le dépôt.
+  Un runbook dans `runbooks/` avec `prompt_file: tickets/B-T1.md` fait chercher
+  `runbooks/tickets/B-T1.md`. Écris les prompts là, et vérifie leur présence.
+- **`generates_runbook:` est joint sous `<repo>/runbooks`** : mets un nom de
+  fichier nu, jamais `runbooks/...` — sinon le moteur cherche sous
+  `runbooks/runbooks/` et rejoue la session génératrice à chaque approbation.
+  `produces:`, lui, se résout depuis la racine du dépôt : `runbooks/xxx.yaml`.
+- **`model:` se choisit par ticket, jamais par runbook.** Un runbook dont tous
+  les tickets portent le même modèle est un signal d'alarme à l'écriture, pas une
+  convention (règle du 2026-08-08). Le `check:` refuse un B multi-tickets à
+  modèle unique.
+- `codex_gate: true` sur **chaque** ticket — l'Owner a demandé une revue Codex à
+  chaque étape.
+- Tout `check:` emploie `"$HERMES_CHECK_PYTHON"` et lit `$HERMES_TICKET_FACTS`.
+  Jamais `.venv/bin/python`, jamais un `*.state.json` rouvert à la main — le
+  `check:` de ce ticket refuse les trois.
+- Aucun `check:` ne fait confiance à un marqueur imprimé par la session. Prévois
+  une sonde comportementale indépendante, comme celle de M-T1.
+- `max_budget_usd` dimensionné sur le périmètre réel du ticket. Découpe plutôt
+  que de gonfler.
+- Si B est le dernier maillon, **n'invente pas de `chain:`** — un bloc absent est
+  licite et déclenche le gate humain de fin de bloc.
+
+Piège à éviter, déjà payé ailleurs : n'écris pas dans B un critère de GO du type
+« aucun défaut CRITIQUE ni HAUTE ». C'est inatteignable et bloque le plan. Borne
+le critère au modèle de menace du ticket.
+
+## Étapes
+
+- [ ] **1.** Lire le dossier de mémoire, produire les cinq rubriques chiffrées et
+      l'empreinte.
+- [ ] **2.** Écrire `docs/plans/2026-08-20-m-constat-memoire.md` — sans aucun nom
+      de fichier de mémoire.
+- [ ] **3.** Écrire le runbook B et ses prompts sous `runbooks/tickets/`.
+- [ ] **4.** Valider la forme de ce que tu as produit :
+
+```bash
+"$HERMES_CHECK_PYTHON" - <<'PY'
+import pathlib, yaml
+p = pathlib.Path("runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml")
+d = yaml.safe_load(p.read_text(encoding="utf-8"))
+for t in d["tickets"]:
+    pf = p.parent / t["prompt_file"]
+    print(t["id"], t["model"], t.get("codex_gate"), "prompt_ok=%s" % pf.is_file())
+PY
+```
+
+- [ ] **5. Commit**
+
+```bash
+git add docs/plans/2026-08-20-m-constat-memoire.md runbooks/
+git commit -m "docs(m): constat chiffre sur la memoire + runbook B"
+```
+
+## Ce qui casse si tu te trompes
+
+Un B écrit sur des suppositions automatise l'écriture de règles à partir de
+verdicts — si le régime procédural est mal compris, la boucle écrasera des règles
+au lieu de les versionner, et à grande vitesse. C'est pourquoi B vient **après**
+M-T1. Et un nom de fichier privé recopié dans un dépôt git n'en ressort plus :
+l'historique le garde même après suppression.
