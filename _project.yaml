@@ -17,3 +17,9 @@ docs:
 outputs:
   - server.js
   - brain.js
+
+# Plans issus du contre-audit Codex/Fable du 2026-08-19 (artifact c35f327c).
+# Declarer un plan, c'est l'ARMER : il devient relancable par plan-doctor et
+# pilotable depuis le cockpit. Il n'existe pas de « declare mais dormant ».
+runbooks:
+  m-memoire-regimes: runbooks/handoff-2026-08-20-m-memoire-regimes.runbook.yaml
