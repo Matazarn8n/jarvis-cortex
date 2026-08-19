@@ -77,7 +77,7 @@ tickets:
     check: |-
       test -s tests/test_store_regimes.mjs \
       && "$HERMES_CHECK_PYTHON" - <<'PY'
-      import json, os, pathlib, shutil, subprocess, sys, tempfile
+      import hashlib, json, os, pathlib, shutil, subprocess, sys, tempfile
 
       REPO = pathlib.Path.cwd()
       SUITE = REPO / "tests" / "test_store_regimes.mjs"
@@ -115,22 +115,31 @@ tickets:
           if r2.returncode == 0:
               echecs.append("episodique: la 2e ecriture a ete ACCEPTEE (exit 0) — pas de refus")
           f_evt = mem / "project_sonde_evt.md"
-          if f_evt.is_file() and "premier evenement" not in f_evt.read_text(encoding="utf-8"):
+          if not f_evt.is_file():
+              echecs.append("episodique: aucun fichier ecrit a la 1re ecriture")
+          elif "premier evenement" not in f_evt.read_text(encoding="utf-8"):
               echecs.append("episodique: le contenu d'origine a ete ecrase")
 
           r3 = cli(bac, "store", "avec force", "--type", "project", "--name", "sonde-evt", "--force")
           if r3.returncode != 0:
               echecs.append("episodique: --force n'ouvre pas l'echappatoire explicite")
+          elif not f_evt.is_file() or "avec force" not in f_evt.read_text(encoding="utf-8"):
+              echecs.append("episodique: --force rend 0 mais n'ecrit pas le nouveau contenu")
 
-          cli(bac, "store", "regle v1", "--type", "feedback", "--name", "sonde-regle")
-          cli(bac, "store", "regle v2", "--type", "feedback", "--name", "sonde-regle")
+          rf1 = cli(bac, "store", "regle v1", "--type", "feedback", "--name", "sonde-regle")
+          rf2 = cli(bac, "store", "regle v2", "--type", "feedback", "--name", "sonde-regle")
+          if rf1.returncode != 0 or rf2.returncode != 0:
+              echecs.append("procedural: une ecriture feedback sort en erreur (%s,%s)"
+                            % (rf1.returncode, rf2.returncode))
           courant = mem / "feedback_sonde_regle.md"
           versions = sorted(mem.glob("feedback_sonde_regle.v*.md"))
           if not versions:
               echecs.append("procedural: aucune version conservee avant remplacement")
           elif "regle v1" not in versions[0].read_text(encoding="utf-8"):
               echecs.append("procedural: la version conservee ne porte pas l'ancien contenu")
-          if courant.is_file() and "regle v2" not in courant.read_text(encoding="utf-8"):
+          if not courant.is_file():
+              echecs.append("procedural: aucun fichier courant apres remplacement")
+          elif "regle v2" not in courant.read_text(encoding="utf-8"):
               echecs.append("procedural: le fichier courant ne porte pas la nouvelle version")
 
           for t_sem in ("user", "reference"):
@@ -142,17 +151,31 @@ tickets:
               if list(mem.glob("%s_sonde_%s.v*.md" % (t_sem, t_sem))):
                   echecs.append("semantique(%s): une version a ete creee, ce n'est pas un upsert" % t_sem)
 
-          # Rien n'a du fuir hors du bac : la vraie memoire ne doit porter aucune sonde.
+          # ---- 2. La suite de la session passe sur le code courant, ET n'ecrit
+          # rien dans la vraie memoire. Chercher les seuls noms de la sonde ne
+          # suffisait pas : la suite proposee ecrit `project_evt_1.md` &c. On
+          # compare donc une EMPREINTE COMPLETE du dossier avant / apres
+          # (audit Codex 2026-08-20, HAUTE).
           vraie = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
-          fuites = sorted(p.name for p in vraie.glob("*sonde-*")) + sorted(p.name for p in vraie.glob("*sonde_*"))
-          if fuites:
-              echecs.append("FUITE dans la vraie memoire: %s" % fuites[:5])
 
-          # ---- 2. La suite de la session passe sur le code courant.
+          def empreinte():
+              h = hashlib.sha256()
+              for f in sorted(vraie.rglob("*")):
+                  if f.is_file():
+                      h.update(str(f.relative_to(vraie)).encode("utf-8"))
+                      h.update(b"\0")
+                      h.update(str(f.stat().st_size).encode("utf-8"))
+                      h.update(f.read_bytes())
+              return h.hexdigest()
+
+          avant = empreinte()
           r = subprocess.run([shutil.which("node") or "node", "--test", str(SUITE)],
                              capture_output=True, text=True, cwd=str(REPO))
           if r.returncode != 0:
               echecs.append("suite de la session ROUGE sur le code courant")
+          if empreinte() != avant:
+              echecs.append("FUITE: la vraie memoire a change pendant `node --test` — "
+                            "l'isolation de la suite est cassee")
 
           # ---- 3. Mutation : la meme suite doit ECHOUER contre le code d'avant.
           vieux = tmp / "brain-%s.js" % BASE_SHA
@@ -176,8 +199,12 @@ tickets:
               print("ECHEC:", e, file=sys.stderr)
           sys.exit(1)
 
-      faits = json.load(open(os.environ["HERMES_TICKET_FACTS"], encoding="utf-8"))
-      print("M_T1 sonde=ok suite=ok mutation=prouvee fuite=aucune ticket=%s" % faits["ticket_id"])
+      # $HERMES_TICKET_FACTS est une CHAINE JSON injectee dans l'environnement
+      # (json.dumps au lancement), pas un chemin, et elle ne porte que
+      # {"tickets": {...}} — aucun `ticket_id` (audit Codex 2026-08-20).
+      faits = json.loads(os.environ["HERMES_TICKET_FACTS"])
+      print("M_T1 sonde=ok suite=ok mutation=prouvee fuite=aucune tickets_connus=%d"
+            % len(faits.get("tickets") or {}))
       PY
     codex_gate: true
     max_turns: 60
@@ -215,6 +242,27 @@ tickets:
       echecs = []
       doc = pathlib.Path("docs/plans/2026-08-20-m-constat-memoire.md").read_text(encoding="utf-8")
 
+      # ---- 0. Agregats RECALCULES ici et compares au constat : chercher cinq
+      # libelles et un chiffre a +/-400 caracteres laissait fabriquer les comptes
+      # sans lire le contenu (audit Codex 2026-08-20).
+      mem0 = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
+      compte = {"user": 0, "feedback": 0, "project": 0, "reference": 0, "sans_type": 0}
+      for f in sorted(mem0.glob("*.md")):
+          if f.name == "MEMORY.md":
+              continue
+          tete = f.read_text(encoding="utf-8", errors="ignore")[:1500]
+          m = re.search(r"^\s*type:\s*\"?(user|feedback|project|reference)\"?\s*$", tete, re.M)
+          compte[m.group(1) if m else "sans_type"] += 1
+      idx = (mem0 / "MEMORY.md")
+      idx_txt = idx.read_text(encoding="utf-8") if idx.is_file() else ""
+      pointeurs = set(re.findall(r"\(([A-Za-z0-9_.-]+\.md)\)", idx_txt))
+      presents = {p.name for p in mem0.glob("*.md")}
+      morts = len(pointeurs - presents)
+      # Le constat DOIT porter ces valeurs : on les cherche telles quelles.
+      for cle, val in list(compte.items()) + [("pointeurs_morts", morts)]:
+          if not re.search(r"\b%d\b" % val, doc):
+              echecs.append("agregat absent ou faux dans le constat: %s=%d" % (cle, val))
+
       # ---- 1. Les CINQ rubriques du constat, chacune avec un chiffre.
       RUBRIQUES = {
           "repartition":  r"(r[ée]partition|par\s+`?metadata\.type`?|par type)",
@@ -240,7 +288,9 @@ tickets:
       if attendu not in doc:
           echecs.append("empreinte de lecture absente ou fausse (attendu %s sur %d fichiers)"
                         % (attendu, len(noms)))
-      fuites = [n for n in noms if n in doc]
+      # MEMORY.md est l'INDEX, pas un fait prive : la rubrique 4 l'exige nommement,
+      # le controle de fuite l'interdisait — contradiction inatteignable (Codex).
+      fuites = [n for n in noms if n != "MEMORY.md" and n in doc]
       if fuites:
           echecs.append("noms de fichiers de memoire recopies dans le depot: %d" % len(fuites))
 
@@ -283,9 +333,9 @@ tickets:
               print("ECHEC:", e, file=sys.stderr)
           sys.exit(1)
 
-      faits = json.load(open(os.environ["HERMES_TICKET_FACTS"], encoding="utf-8"))
-      print("M_TGEN rubriques=5 empreinte=%s b_tickets=%d modeles=%d ticket=%s"
-            % (attendu, len(tks), len(modeles), faits["ticket_id"]))
+      faits = json.loads(os.environ["HERMES_TICKET_FACTS"])
+      print("M_TGEN rubriques=5 empreinte=%s b_tickets=%d modeles=%d tickets_connus=%d"
+            % (attendu, len(tks), len(modeles), len(faits.get("tickets") or {})))
       PY
     codex_gate: true
     max_turns: 80

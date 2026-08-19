@@ -32,8 +32,10 @@ Aucune autre isolation n'est acceptable : `opts.sandbox` écrit dans
 sur le chemin réel. Et surtout, ce mécanisme fonctionne **avant** que tu aies
 écrit une seule ligne — c'est ce qui rend la première exécution rouge inoffensive.
 
-Le `check:` du ticket vérifie explicitement qu'aucun fichier `*sonde-*` /
-`*sonde_*` n'est apparu dans la vraie mémoire. Une fuite fait échouer le ticket.
+Le `check:` du ticket prend une **empreinte complète** du dossier de mémoire réel
+(noms, tailles, contenus) juste avant de lancer `node --test`, et la recompare
+juste après. Le moindre octet qui bouge fait échouer le ticket. Chercher quelques
+noms de fichiers n'aurait rien prouvé : ta suite en écrit d'autres.
 
 ## Ce qui est cassé
 
@@ -128,8 +130,14 @@ Vérifie aussi que rien n'a bougé dans la vraie mémoire :
 git -C /home/nuveo/.claude/projects/-home-nuveo/memory status --short | head
 ```
 
-Attendu : **vide**. Si ce n'est pas vide, ton isolation est cassée : arrête-toi,
-annule (`git checkout .` dans ce dépôt), et corrige l'isolation avant de continuer.
+Attendu : **vide**.
+
+Si ce n'est **pas** vide : **arrête-toi et signale-le**. N'exécute aucune commande
+de restauration — surtout pas `git checkout .` : ce dépôt contient 431 fichiers
+personnels, et des modifications non commitées de l'Owner, sans aucun rapport avec
+ce ticket, peuvent s'y trouver. Les effacer serait détruire la donnée que ce plan
+existe pour protéger. Rapporte ce que tu vois, laisse l'Owner trancher, et corrige
+l'isolation de ta suite avant toute autre exécution.
 
 - [ ] **3. Implémenter le minimum dans `store()`**
 
