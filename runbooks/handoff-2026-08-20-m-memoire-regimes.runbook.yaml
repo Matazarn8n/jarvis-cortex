@@ -35,7 +35,7 @@
 
 project: jarvis-cortex-m-memoire-regimes
 phase: M
-repo: /home/nuveo/projects/jarvis-cortex-plan-m
+repo: /home/nuveo/jarvis-cortex-plan-m
 max_sessions_per_day: 4
 
 chain:

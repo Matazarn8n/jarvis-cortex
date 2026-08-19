@@ -3,7 +3,7 @@
 **Modèle : `claude-opus-5` · effort : `high`.** Choix d'architecture du
 programme, pas de l'implémentation.
 
-Tu travailles dans `/home/nuveo/projects/jarvis-cortex-plan-m`. Ne merge pas, ne pousse pas.
+Tu travailles dans `/home/nuveo/jarvis-cortex-plan-m`. Ne merge pas, ne pousse pas.
 
 ## Pourquoi ce ticket existe
 

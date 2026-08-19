@@ -3,7 +3,7 @@
 **Modèle : `claude-sonnet-5` · effort : `medium`.** Implémentation bornée à une
 fonction et à son test.
 
-Tu travailles dans `/home/nuveo/projects/jarvis-cortex-plan-m` (worktree dédié, branche
+Tu travailles dans `/home/nuveo/jarvis-cortex-plan-m` (worktree dédié, branche
 `plan/m-memoire-regimes-2026-08-20`). Ne merge pas, ne pousse pas.
 
 ## Ce qui est cassé
