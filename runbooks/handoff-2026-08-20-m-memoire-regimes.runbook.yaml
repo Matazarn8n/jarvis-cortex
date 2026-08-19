@@ -111,8 +111,25 @@ tickets:
               encoding="utf-8")
           return d
 
+      MEMOIRE = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
+
+      def confine(argv):
+          """Le `check:` tourne HORS du bac a sable du runner : sans ca, il
+          executerait le JavaScript ecrit par la session avec les droits du
+          runner, donc avec acces en ecriture aux 431 fichiers de memoire et au
+          reseau (audit Codex 2026-08-20, CRITIQUE — le pire des quatre plans).
+          Pas de repli silencieux : bwrap absent = ticket rouge."""
+          bwrap = shutil.which("bwrap")
+          if not bwrap:
+              raise SystemExit("ECHEC: bwrap introuvable — le code de la session ne peut pas "
+                               "etre execute de maniere confinee, le ticket ne peut pas passer")
+          return [bwrap, "--die-with-parent", "--unshare-net",
+                  "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc",
+                  "--bind", "/tmp", "/tmp",
+                  "--ro-bind", str(MEMOIRE), str(MEMOIRE)] + argv
+
       def cli(bac: pathlib.Path, *args):
-          return subprocess.run([shutil.which("node") or "node", str(bac / "brain.js"), *args],
+          return subprocess.run(confine([shutil.which("node") or "node", str(bac / "brain.js"), *args]),
                                 capture_output=True, text=True, cwd=str(bac))
 
       echecs = []
@@ -183,7 +200,7 @@ tickets:
           # suffisait pas : la suite proposee ecrit `project_evt_1.md` &c. On
           # compare donc une EMPREINTE COMPLETE du dossier avant / apres
           # (audit Codex 2026-08-20, HAUTE).
-          vraie = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
+          vraie = MEMOIRE
 
           def empreinte():
               h = hashlib.sha256()
@@ -196,7 +213,7 @@ tickets:
               return h.hexdigest()
 
           avant = empreinte()
-          r = subprocess.run([shutil.which("node") or "node", "--test", str(SUITE)],
+          r = subprocess.run(confine([shutil.which("node") or "node", "--test", str(SUITE)]),
                              capture_output=True, text=True, cwd=str(REPO))
           if r.returncode != 0:
               echecs.append("suite de la session ROUGE sur le code courant")
@@ -216,7 +233,7 @@ tickets:
               suite_v = bac_v / "suite.mjs"
               suite_v.write_text(SUITE.read_text(encoding="utf-8"), encoding="utf-8")
               env = dict(os.environ, BRAIN_UNDER_TEST=str(bac_v / "brain.js"))
-              m = subprocess.run([shutil.which("node") or "node", "--test", str(suite_v)],
+              m = subprocess.run(confine([shutil.which("node") or "node", "--test", str(suite_v)]),
                                  capture_output=True, text=True, cwd=str(bac_v), env=env)
               if m.returncode == 0:
                   echecs.append("MUTATION-KO: la suite passe aussi contre brain.js@%s" % BASE_SHA)
@@ -354,23 +371,18 @@ tickets:
           echecs.append("%d phrase(s) du constat recopiees depuis les fichiers de memoire "
                         "— le livrable se borne aux agregats" % empruntes)
 
-      # ---- 3. Le runbook B est reellement lancable : on demande au MOTEUR de le
-      # compiler. Le controle artisanal (phase, modeles, prompts) laissait passer
-      # un chain.require_codex_go faux, un generates_runbook mal resolu ou un
-      # graphe consumes mort (audit Codex 2026-08-20).
-      comp = subprocess.run(
-          [os.environ["HERMES_CHECK_PYTHON"],
-           str(pathlib.Path.home() / "hermes-os" / "ops" / "plan_runner.py"),
-           "--runbook", str(pathlib.Path("runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml").resolve()),
-           "--compile"],
-          capture_output=True, text=True, cwd=str(pathlib.Path.home() / "hermes-os"))
-      if comp.returncode != 0:
-          echecs.append("plan_runner --compile refuse B: %s"
-                        % ((comp.stderr or comp.stdout).strip()[:400]))
-
-
+      # ---- 3. Le runbook B est valide STATIQUEMENT. Surtout pas via l'option de
+      # compilation du moteur : le compilateur EXECUTE les `requires_access.cmd`
+      # du runbook qu'on lui donne (plan_runner.py:844). Une session sans Bash
+      # aurait donc pu placer une commande arbitraire dans B et la faire executer
+      # par son propre check, hors bac a sable (audit Codex 2026-08-20, CRITIQUE).
+      # Corollaire : B n'a pas le droit de declarer un `cmd:` du tout.
       rb_path = pathlib.Path("runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml")
       rb = yaml.safe_load(rb_path.read_text(encoding="utf-8"))
+      for acces in (rb.get("requires_access") or []):
+          if isinstance(acces, dict) and "cmd" in acces:
+              echecs.append("B declare un requires_access.cmd (%r) — interdit : le compilateur "
+                            "l'executerait" % str(acces.get("cmd"))[:80])
       if rb.get("phase") != "B":
           echecs.append("phase de B = %r" % rb.get("phase"))
       tks = rb.get("tickets") or []

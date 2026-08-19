@@ -110,11 +110,16 @@ M-T1.
 `repo: /home/nuveo/hermes-os-plan-b`, worktree de `~/hermes-os` **déjà créé et
 déjà inscrit à l'allowlist du runner**. N'invente pas un autre chemin : un
 `repo:` absent de l'allowlist, ou inexistant sur le disque, rend B inlançable et
-la chaîne se bloque au pré-vol. Déclare-le en plus dans `requires_access` :
+la chaîne se bloque au pré-vol.
+
+**N'écris aucun `requires_access` avec une clé `cmd:`.** Le compilateur du moteur
+*exécute* ces commandes ; un `cmd:` écrit par une session serait donc du code
+arbitraire lancé hors bac à sable. Seules les formes `file:` et `env:` sont
+admises, et le `check:` de ce ticket refuse B s'il contient un seul `cmd:` :
 
 ```yaml
 requires_access:
-  - cmd: "test -d /home/nuveo/hermes-os-plan-b/.git || test -f /home/nuveo/hermes-os-plan-b/.git"
+  - file: /home/nuveo/hermes-os-plan-b/.git
 ```
 
 ### Contraintes de forme — le moteur refuse le runbook sinon
@@ -156,10 +161,11 @@ le critère au modèle de menace du ticket.
 - [ ] **2.** Écrire `docs/plans/2026-08-20-m-constat-memoire.md` — sans aucun nom
       de fichier de mémoire.
 - [ ] **3.** Écrire le runbook B et ses prompts sous `runbooks/tickets/`.
-- [ ] **4.** Relire B contre ce que le `check:` va exiger. Il le **compile** avec
-      `plan_runner --compile` : un `chain.require_codex_go` non litteral, un
-      `generates_runbook` mal resolu, un `prompt_file` introuvable ou un graphe
-      `consumes` mort le feront echouer. Relis aussi, a la main :
+- [ ] **4.** Relire B contre ce que le `check:` va exiger. Il le valide
+      **statiquement** — jamais en le compilant, puisque compiler exécuterait ses
+      `requires_access.cmd`. Relis donc à la main :
+
+    - **aucun `requires_access` avec `cmd:`** — refus immédiat ;
 
     - chaque ticket porte `model`, `effort`, `prompt_file` (present sous
       `runbooks/tickets/`), `check` et `codex_gate: true` ;
