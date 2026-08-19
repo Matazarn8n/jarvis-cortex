@@ -4,7 +4,27 @@
 fonction et à son test.
 
 Tu travailles dans `/home/nuveo/jarvis-cortex-plan-m` (worktree dédié, branche
-`plan/m-memoire-regimes-2026-08-20`). Ne merge pas, ne pousse pas.
+`plan/m-memoire-regimes-2026-08-20`).
+
+## Tu n'as pas Bash — et c'est le cœur du dispositif
+
+Ce ticket déclare `allow_tools: [Read, Grep, Glob, Edit, Write]`. Tu ne peux ni
+exécuter de commande, ni lancer `node`, ni commiter.
+
+La raison est directe : le bac à sable du runner monte le système de fichiers en
+lecture-écriture. Tant qu'un ticket garde Bash, il peut écrire dans la vraie
+mémoire de l'Owner — 431 fichiers personnels — pendant toute sa session, et
+aucun contrôle a posteriori ne le rattrape. Un plan dont l'objet est de protéger
+cette mémoire ne peut pas commencer par pouvoir l'abîmer.
+
+**C'est le `check:` qui exécute tout** : ta suite de tests, la preuve de mutation
+contre `brain.js@507f278`, et une sonde comportementale indépendante qui pilote
+la CLI. Tu écris le code et le test ; le contrôle les joue et te dit précisément
+ce qui cloche — chaque défaut sort en `ECHEC: <description>`. Lis ces lignes, ce
+sont ton retour de test.
+
+Écris donc avec soin plutôt qu'en tâtonnant : tu as moins de tours qu'en TDD
+local.
 
 ## Lis ceci en premier — l'isolation n'est pas optionnelle
 
@@ -83,7 +103,7 @@ n'est pas prouvable et le ticket sera refusé.
 
 ## Étapes
 
-- [ ] **1. Écrire la suite qui échoue** — `tests/test_store_regimes.mjs`.
+- [ ] **1. Écrire la suite** — `tests/test_store_regimes.mjs`.
 
 Structure imposée (l'assistant d'isolation d'abord, les cas ensuite) :
 
@@ -115,85 +135,35 @@ Quatre cas, chacun sur son propre bac : refus épisodique · `--force` qui l'ouv
 versionnage procédural (`feedback_regle_a.v1.md` porte l'ancien contenu) · upsert
 sémantique sans version créée.
 
-- [ ] **2. La lancer et vérifier qu'elle échoue**
+Le `BRAIN_UNDER_TEST` n'est pas décoratif : c'est par lui que le `check:` rejoue
+ta suite contre `brain.js@507f278` et exige qu'elle **échoue**. Une suite qui
+passe des deux côtés ne prouve rien et fait échouer le ticket.
 
-```bash
-node --test tests/test_store_regimes.mjs
-```
-
-Attendu : les cas épisodique et procédural échouent. Si un cas passe déjà, c'est
-que le test ne teste pas ce qu'il prétend — corrige le test, pas le code.
-
-Vérifie aussi que **ton test** n'a rien fait bouger dans la vraie mémoire. Ne
-compare pas à « propre » : ce dépôt a des modifications préexistantes de l'Owner,
-sans rapport avec ce ticket, et exiger un état initial vierge serait un blocage
-que tu ne peux pas lever. Compare **avant/après** :
-
-```bash
-MEM=/home/nuveo/.claude/projects/-home-nuveo/memory
-avant=$(git -C "$MEM" status --porcelain)
-node --test tests/test_store_regimes.mjs; echo "test_exit=$?"
-apres=$(git -C "$MEM" status --porcelain)
-[ "$avant" = "$apres" ] && echo "ISOLATION OK" || { echo "FUITE — diff:"; diff <(printf '%s\n' "$avant") <(printf '%s\n' "$apres"); }
-```
-
-Si tu vois `FUITE` : **arrête-toi et signale-le**. N'exécute **aucune** commande de
-restauration — surtout pas `git checkout .` : ce dépôt contient 431 fichiers
-personnels et du travail non commité de l'Owner. Les effacer serait détruire la
-donnée que ce plan existe pour protéger. Rapporte le diff, laisse l'Owner
-trancher, et corrige l'isolation de ta suite avant toute autre exécution.
-
-Le `check:` du ticket fait la même comparaison, en empreinte complète.
-
-- [ ] **3. Implémenter le minimum dans `store()`**
+- [ ] **2. Implémenter dans `store()`**
 
 Le branchement va juste avant `fs.writeFileSync(file, body)`. Trois branches sur
 `type`, plus la copie de version pour `feedback`. Ne touche pas au calcul de
 `MEM` : c'est lui qui rend l'isolation possible.
 
-- [ ] **4. Relancer, vérifier que tout passe** — attendu 4/4, et la vraie mémoire
-      toujours propre.
+- [ ] **3. Relire contre ce que le `check:` va exiger**, dans l'ordre :
 
-- [ ] **5. Vérifier la mutation à la main**
+1. la sonde écrit un `project`, en réécrit un second → **exit non nul**, message
+   contenant `project_sonde_evt.md` **et** `--force` ;
+2. `--force` sur ce même `project` → exit 0 **et** contenu remplacé ;
+3. deux `feedback` de suite → les deux exit 0, `feedback_sonde_regle.v1.md`
+   porte l'ancien contenu, le fichier courant porte le nouveau ;
+4. deux `user` puis deux `reference` → **quatre** exit 0, contenu remplacé,
+   **aucun** `.v1.md` créé ;
+5. aucune trace des sondes dans la vraie mémoire, dont l'empreinte complète est
+   comparée avant/après ta suite.
 
-```bash
-tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-git show 507f278:brain.js > "$tmp/brain.js" || { echo "git show a echoue — mutation NON jouee"; exit 1; }
-BRAIN_UNDER_TEST="$tmp/brain.js" node --test tests/test_store_regimes.mjs
-echo "mutation_exit=$?"
-```
-
-Attendu : `mutation_exit` **non nul**. Le `git show` est testé séparément :
-sinon un `exit` non nul pouvait venir de lui, sans que la mutation ait jamais
-tourné.
-
-- [ ] **6. Vérifier le code de sortie de la CLI**, dans un bac, jamais sur la
-      vraie mémoire :
-
-```bash
-bac=$(mktemp -d) && mkdir "$bac/config" && cp brain.js "$bac/" \
-  && printf '{"root":".","memoryDir":"memoire","memoryIndex":"MEMORY.md"}' > "$bac/config/workspace.json"
-(cd "$bac" && node brain.js store "t" --type project --name evt-cli; echo "1er=$?")
-(cd "$bac" && node brain.js store "t" --type project --name evt-cli; echo "2e=$?")
-rm -rf "$bac"
-```
-
-Attendu : `1er=0`, `2e` **non nul**, message nommant le fichier et proposant
-`--force`.
-
-- [ ] **7. Commit**
-
-```bash
-git add brain.js tests/test_store_regimes.mjs
-git commit -m "feat(brain): trois regimes d'ecriture selon metadata.type
-
-Un project (episodique) ne s'ecrase plus en silence, un feedback (procedural)
-garde sa version precedente, un user/reference reste un upsert. Le refus
-episodique sort en code non nul et propose --force."
-```
+Relis ton code contre ces cinq points avant de rendre : ils sont la définition
+exacte du succès.
 
 ## Ce qui casse si tu te trompes
 
 Un régime mal branché perd des faits : un `project` écrasé est un événement
-disparu, sans trace. Le dossier de mémoire est sous git — c'est le filet. Ne le
-retire jamais, et n'écris jamais dedans depuis un test.
+disparu, sans trace. Deux filets tiennent : le dossier de mémoire est sous git,
+et ta suite écrit dans un `mkdtemp` avec son propre `workspace.json`. Le second
+est le tien — ne le retire jamais, et ne fais jamais pointer un test vers le
+`brain.js` du dépôt sans l'avoir recopié.

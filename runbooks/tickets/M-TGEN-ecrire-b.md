@@ -3,7 +3,18 @@
 **Modèle : `claude-opus-5` · effort : `high`.** Choix d'architecture du
 programme, pas de l'implémentation.
 
-Tu travailles dans `/home/nuveo/jarvis-cortex-plan-m`. Ne merge pas, ne pousse pas.
+Tu travailles dans `/home/nuveo/jarvis-cortex-plan-m`.
+
+**Tu n'as pas Bash.** Ce ticket declare `allow_tools: [Read, Grep, Glob, Edit,
+Write]` : ni commande, ni commit. Tu lis le dossier de memoire avec `Read` et
+`Grep`, tu ecris tes fichiers avec `Write`. La raison est que le bac a sable du
+runner monte le systeme en lecture-ecriture : un ticket qui garde Bash peut
+ecrire dans les 431 fichiers personnels de l'Owner pendant toute sa session, et
+aucun controle a posteriori ne le rattrape.
+
+C'est le `check:` qui recalcule les metriques, verifie l'empreinte et **compile**
+le runbook B avec le moteur. Ce que tu ecris reste un diff local, c'est normal
+ici.
 
 ## Pourquoi ce ticket existe
 
@@ -69,20 +80,15 @@ suppression.
   qu'un extrait est assez anonyme n'est pas une garantie, c'est une appréciation.
 - Le livrable se borne aux **agrégats** et à une **recommandation générique**.
 
-La preuve de lecture est une **empreinte**, pas une liste. Calcule-la ainsi et
-inscris-la dans le document :
+La preuve de lecture est une **empreinte**, pas une liste : le SHA-256 des noms
+de fichiers `*.md` du dossier, tries par ordre croissant, joints par un saut de
+ligne, tronque aux **16 premiers caracteres hexadecimaux**. Inscris-la dans le
+document sous la forme `empreinte: <16 hex>`, avec le nombre de fichiers.
 
-```bash
-"$HERMES_CHECK_PYTHON" - <<'PY'
-import hashlib, pathlib
-mem = pathlib.Path.home()/".claude"/"projects"/"-home-nuveo"/"memory"
-noms = sorted(p.name for p in mem.glob("*.md"))
-print("fichiers=%d empreinte=%s" % (len(noms), hashlib.sha256("\n".join(noms).encode()).hexdigest()[:16]))
-PY
-```
-
-Le `check:` recalcule la même empreinte et exige de la retrouver dans le document.
-Elle prouve que tu as lu le dossier entier sans en divulguer le contenu.
+Tu n'as pas Bash pour la calculer : etablis-la depuis la liste que `Glob` te
+rend. Le `check:` la recalcule et exige de la retrouver — elle prouve que tu as
+enumere le dossier entier sans en divulguer le contenu. Une empreinte fausse fait
+echouer le ticket, donc trie et joins exactement comme decrit.
 
 Les agrégats — compteurs, pourcentages, distributions — sont la matière du
 document. Une observation qualitative s'écrit sans citer la source : « une part
@@ -150,35 +156,19 @@ le critère au modèle de menace du ticket.
 - [ ] **2.** Écrire `docs/plans/2026-08-20-m-constat-memoire.md` — sans aucun nom
       de fichier de mémoire.
 - [ ] **3.** Écrire le runbook B et ses prompts sous `runbooks/tickets/`.
-- [ ] **4.** Valider que le moteur accepte B — le `check:` le compile pour de
-      bon, autant le savoir avant :
+- [ ] **4.** Relire B contre ce que le `check:` va exiger. Il le **compile** avec
+      `plan_runner --compile` : un `chain.require_codex_go` non litteral, un
+      `generates_runbook` mal resolu, un `prompt_file` introuvable ou un graphe
+      `consumes` mort le feront echouer. Relis aussi, a la main :
 
-```bash
-"$HERMES_CHECK_PYTHON" ~/hermes-os/ops/plan_runner.py \
-  --runbook "$(pwd)/runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml" --compile
-```
+    - chaque ticket porte `model`, `effort`, `prompt_file` (present sous
+      `runbooks/tickets/`), `check` et `codex_gate: true` ;
+    - les modeles ne sont pas tous identiques si B a plus d'un ticket ;
+    - chaque `check:` emploie `"$HERMES_CHECK_PYTHON"` et lit
+      `$HERMES_TICKET_FACTS`, et aucun ne rouvre un `*.state.json`.
 
-Attendu : code de retour 0.
-
-- [ ] **5.** Vérifier la forme de ce que tu as produit :
-
-```bash
-"$HERMES_CHECK_PYTHON" - <<'PY'
-import pathlib, yaml
-p = pathlib.Path("runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml")
-d = yaml.safe_load(p.read_text(encoding="utf-8"))
-for t in d["tickets"]:
-    pf = p.parent / t["prompt_file"]
-    print(t["id"], t["model"], t.get("codex_gate"), "prompt_ok=%s" % pf.is_file())
-PY
-```
-
-- [ ] **6. Commit**
-
-```bash
-git add docs/plans/2026-08-20-m-constat-memoire.md runbooks/
-git commit -m "docs(m): constat chiffre sur la memoire + runbook B"
-```
+Il n'y a pas d'etape de commit : tu n'as pas Bash, et le `check:` lit les
+fichiers du worktree, pas l'historique.
 
 ## Ce qui casse si tu te trompes
 

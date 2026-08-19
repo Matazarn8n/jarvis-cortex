@@ -30,6 +30,20 @@
 # code d'avant le ticket comme celui d'après écrivent alors dans le bac à sable,
 # sans qu'aucune ligne de brain.js ait à changer pour ça.
 #
+# ⚠️ LA MÉMOIRE N'EST PAS ÉCRIVABLE PAR LES SESSIONS (correction après le 4e tour
+# d'audit Codex, défaut CRITIQUE). Le bac à sable du runner monte `/` en
+# lecture-écriture : tant qu'un ticket garde l'outil Bash, il peut écrire dans le
+# dossier de mémoire pendant toute sa session, et l'empreinte prise autour de
+# `node --test` enregistre alors cette écriture comme référence. Aucun `check:`
+# ne rattrape ça.
+#
+# Les deux tickets déclarent donc `allow_tools` SANS Bash. M-T1 n'en a pas
+# besoin : c'est le `check:` qui exécute la suite, la mutation et la sonde
+# comportementale — la session écrit le code et le test, le contrôle les joue.
+# M-TGEN lit la mémoire avec Read et écrit ses fichiers avec Write ; c'est le
+# `check:` qui compile le runbook B. Ni l'une ni l'autre ne peut commiter : un
+# ticket qui passe laisse un diff local, comme partout ailleurs ici.
+#
 # ⚠️ ANTI FAUX-POSITIF. Le `check:` de M-T1 ne se contente pas de lancer la suite
 # écrite par la session — cette suite est juge et partie. Il exécute en plus une
 # SONDE COMPORTEMENTALE indépendante, écrite ici, qui pilote la CLI et vérifie
@@ -71,6 +85,7 @@ tickets:
     kind: session
     model: claude-sonnet-5
     effort: medium
+    allow_tools: [Read, Grep, Glob, Edit, Write]
     prompt_file: tickets/M-T1-regimes-ecriture.md
     produces:
       - tests/test_store_regimes.mjs
@@ -235,6 +250,7 @@ tickets:
     depends_on: [M-T1]
     model: claude-opus-5
     effort: high
+    allow_tools: [Read, Grep, Glob, Edit, Write]
     prompt_file: tickets/M-TGEN-ecrire-b.md
     consumes:
       - tests/test_store_regimes.mjs
