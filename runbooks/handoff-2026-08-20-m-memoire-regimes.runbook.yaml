@@ -114,6 +114,14 @@ tickets:
           r2 = cli(bac, "store", "reecriture", "--type", "project", "--name", "sonde-evt")
           if r2.returncode == 0:
               echecs.append("episodique: la 2e ecriture a ete ACCEPTEE (exit 0) — pas de refus")
+          else:
+              # Un code non nul peut venir d'un crash generique : le prompt exige
+              # un message qui NOMME le fichier et propose --force (audit Codex).
+              msg = (r2.stderr or "") + (r2.stdout or "")
+              if "project_sonde_evt.md" not in msg:
+                  echecs.append("episodique: le refus ne nomme pas le fichier (%r)" % msg.strip()[:160])
+              if "--force" not in msg:
+                  echecs.append("episodique: le refus ne propose pas --force (%r)" % msg.strip()[:160])
           f_evt = mem / "project_sonde_evt.md"
           if not f_evt.is_file():
               echecs.append("episodique: aucun fichier ecrit a la 1re ecriture")
@@ -143,8 +151,12 @@ tickets:
               echecs.append("procedural: le fichier courant ne porte pas la nouvelle version")
 
           for t_sem in ("user", "reference"):
-              cli(bac, "store", "fait v1", "--type", t_sem, "--name", "sonde-%s" % t_sem)
-              cli(bac, "store", "fait v2", "--type", t_sem, "--name", "sonde-%s" % t_sem)
+              a1 = cli(bac, "store", "fait v1", "--type", t_sem, "--name", "sonde-%s" % t_sem)
+              a2 = cli(bac, "store", "fait v2", "--type", t_sem, "--name", "sonde-%s" % t_sem)
+              # Une 1re ecriture en echec suivie d'une 2e reussie passait.
+              if a1.returncode != 0 or a2.returncode != 0:
+                  echecs.append("semantique(%s): codes de retour %s,%s (0,0 attendus)"
+                                % (t_sem, a1.returncode, a2.returncode))
               f = mem / ("%s_sonde_%s.md" % (t_sem, t_sem))
               if not f.is_file() or "fait v2" not in f.read_text(encoding="utf-8"):
                   echecs.append("semantique(%s): l'upsert ne remplace plus" % t_sem)
@@ -237,48 +249,61 @@ tickets:
       test -s docs/plans/2026-08-20-m-constat-memoire.md \
       && test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml \
       && "$HERMES_CHECK_PYTHON" - <<'PY'
-      import hashlib, json, os, pathlib, re, sys, yaml
+      import hashlib, json, os, pathlib, re, subprocess, sys, yaml
 
       echecs = []
       doc = pathlib.Path("docs/plans/2026-08-20-m-constat-memoire.md").read_text(encoding="utf-8")
 
-      # ---- 0. Agregats RECALCULES ici et compares au constat : chercher cinq
-      # libelles et un chiffre a +/-400 caracteres laissait fabriquer les comptes
-      # sans lire le contenu (audit Codex 2026-08-20).
+      # ---- 0. Neuf metriques RECALCULEES ici, comparees a un BLOC STRUCTURE du
+      # constat. Chercher chaque valeur n'importe ou laissait une date valider un
+      # compteur, et quatre des neuf metriques n'etaient pas recalculees du tout
+      # (audit Codex 2026-08-20).
       mem0 = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
-      compte = {"user": 0, "feedback": 0, "project": 0, "reference": 0, "sans_type": 0}
+      REVISE = re.compile(r"mis[e]?\s+[àa]\s+jour|R[ÉE]VOQU|CORRECTION|corrig[ée]", re.I)
+      DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
+      m = {"user": 0, "feedback": 0, "project": 0, "reference": 0, "sans_type": 0,
+           "feedback_revises": 0, "project_multidate": 0}
       for f in sorted(mem0.glob("*.md")):
           if f.name == "MEMORY.md":
               continue
-          tete = f.read_text(encoding="utf-8", errors="ignore")[:1500]
-          m = re.search(r"^\s*type:\s*\"?(user|feedback|project|reference)\"?\s*$", tete, re.M)
-          compte[m.group(1) if m else "sans_type"] += 1
-      idx = (mem0 / "MEMORY.md")
+          txt = f.read_text(encoding="utf-8", errors="ignore")
+          mt = re.search(r"^\s*type:\s*\"?(user|feedback|project|reference)\"?\s*$", txt[:1500], re.M)
+          t = mt.group(1) if mt else "sans_type"
+          m[t] += 1
+          if t == "feedback" and REVISE.search(txt):
+              m["feedback_revises"] += 1
+          if t == "project" and len(set(DATE.findall(txt))) > 1:
+              m["project_multidate"] += 1
+      idx = mem0 / "MEMORY.md"
       idx_txt = idx.read_text(encoding="utf-8") if idx.is_file() else ""
-      pointeurs = set(re.findall(r"\(([A-Za-z0-9_.-]+\.md)\)", idx_txt))
-      presents = {p.name for p in mem0.glob("*.md")}
-      morts = len(pointeurs - presents)
-      # Le constat DOIT porter ces valeurs : on les cherche telles quelles.
-      for cle, val in list(compte.items()) + [("pointeurs_morts", morts)]:
-          if not re.search(r"\b%d\b" % val, doc):
-              echecs.append("agregat absent ou faux dans le constat: %s=%d" % (cle, val))
+      pointeurs = set(re.findall(r"\(([A-Za-z0-9_.,-]+\.md)\)", idx_txt))
+      presents = {p.name for p in mem0.glob("*.md")} - {"MEMORY.md"}
+      m["index_pointeurs_morts"] = len(pointeurs - presents - {"MEMORY.md"})
+      m["fichiers_non_indexes"] = len(presents - pointeurs)
 
-      # ---- 1. Les CINQ rubriques du constat, chacune avec un chiffre.
+      # Le constat DOIT porter un bloc `cle: valeur`, une ligne par metrique.
+      declare = {}
+      for ligne in doc.splitlines():
+          mm = re.match(r"^\s*[-*|]?\s*`?([a-z_]{4,30})`?\s*[:|]\s*\|?\s*(\d+)\s*\|?\s*$", ligne)
+          if mm:
+              declare[mm.group(1)] = int(mm.group(2))
+      for cle, val in sorted(m.items()):
+          if cle not in declare:
+              echecs.append("metrique absente du bloc structure du constat: %s (attendu %d)" % (cle, val))
+          elif declare[cle] != val:
+              echecs.append("metrique %s: constat dit %d, recalcul dit %d" % (cle, declare[cle], val))
+
+      # ---- 1. Les CINQ rubriques du constat, chacune redigee.
       RUBRIQUES = {
           "repartition":  r"(r[ée]partition|par\s+`?metadata\.type`?|par type)",
           "revisions":    r"(r[ée]vision|mis[e]?\s+[àa]\s+jour|R[ÉE]VOQU|CORRECTION)",
-          "dates":        r"(plusieurs dates|deux dates|dat[ée]s? plusieurs)",
+          "dates":        r"(plusieurs dates|deux dates|multidate)",
           "index":        r"MEMORY\.md",
           "migration":    r"(migration|migrer|ne rien migrer)",
       }
       for nom, motif in RUBRIQUES.items():
-          bloc = re.search(motif, doc, re.I)
-          if not bloc:
+          if not re.search(motif, doc, re.I):
               echecs.append("rubrique absente du constat: %s" % nom)
-              continue
-          fenetre = doc[max(0, bloc.start() - 400): bloc.end() + 400]
-          if not re.search(r"\b\d+\b", fenetre):
-              echecs.append("rubrique sans chiffre: %s" % nom)
 
       # ---- 2. Preuve de lecture SANS recopier de nom de fichier prive.
       # Le constat porte un condensé recalculé ici ; les noms restent hors du depot.
@@ -294,7 +319,40 @@ tickets:
       if fuites:
           echecs.append("noms de fichiers de memoire recopies dans le depot: %d" % len(fuites))
 
-      # ---- 3. Le runbook B est reellement lancable par le moteur.
+      # Le controle des seuls NOMS autorisait implicitement la copie de CONTENUS
+      # — extraits, noms de clients, exemples « anonymises » a l'appreciation de
+      # la session (audit Codex 2026-08-20). On refuse toute phrase du constat
+      # qui se retrouve telle quelle dans un fichier de memoire.
+      corpus = []
+      for f in sorted(mem.glob("*.md")):
+          if f.name == "MEMORY.md":
+              continue
+          corpus.append(re.sub(r"\s+", " ", f.read_text(encoding="utf-8", errors="ignore")).lower())
+      corpus = "\n".join(corpus)
+      empruntes = 0
+      for phrase in re.split(r"(?<=[.!?])\s+|\n", doc):
+          p_norm = re.sub(r"\s+", " ", phrase).strip().lower()
+          if len(p_norm) >= 60 and p_norm in corpus:
+              empruntes += 1
+      if empruntes:
+          echecs.append("%d phrase(s) du constat recopiees depuis les fichiers de memoire "
+                        "— le livrable se borne aux agregats" % empruntes)
+
+      # ---- 3. Le runbook B est reellement lancable : on demande au MOTEUR de le
+      # compiler. Le controle artisanal (phase, modeles, prompts) laissait passer
+      # un chain.require_codex_go faux, un generates_runbook mal resolu ou un
+      # graphe consumes mort (audit Codex 2026-08-20).
+      comp = subprocess.run(
+          [os.environ["HERMES_CHECK_PYTHON"],
+           str(pathlib.Path.home() / "hermes-os" / "ops" / "plan_runner.py"),
+           "--runbook", str(pathlib.Path("runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml").resolve()),
+           "--compile"],
+          capture_output=True, text=True, cwd=str(pathlib.Path.home() / "hermes-os"))
+      if comp.returncode != 0:
+          echecs.append("plan_runner --compile refuse B: %s"
+                        % ((comp.stderr or comp.stdout).strip()[:400]))
+
+
       rb_path = pathlib.Path("runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml")
       rb = yaml.safe_load(rb_path.read_text(encoding="utf-8"))
       if rb.get("phase") != "B":

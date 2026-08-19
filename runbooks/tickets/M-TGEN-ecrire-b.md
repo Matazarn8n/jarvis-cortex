@@ -20,8 +20,26 @@ jamais écrite après G3).
 ## Partie 1 — Le constat
 
 Écris `docs/plans/2026-08-20-m-constat-memoire.md` en lisant réellement
-`/home/nuveo/.claude/projects/-home-nuveo/memory/*.md`. **Cinq rubriques, chacune
-avec ses chiffres** — le `check:` exige un nombre dans chacune :
+`/home/nuveo/.claude/projects/-home-nuveo/memory/*.md`.
+
+**Le document ouvre par un bloc de métriques structuré**, une ligne `clé: valeur`
+par métrique. Le `check:` recalcule les neuf valeurs et refuse toute divergence :
+
+```markdown
+user: 12
+feedback: 68
+project: 214
+reference: 9
+sans_type: 3
+feedback_revises: 21
+project_multidate: 40
+index_pointeurs_morts: 5
+fichiers_non_indexes: 17
+```
+
+(Les nombres ci-dessus sont un exemple de forme, pas des valeurs à recopier.)
+
+Puis **cinq rubriques rédigées**, qui expliquent ces chiffres :
 
 1. **Répartition par `metadata.type`** — combien de `user`, `feedback`,
    `project`, `reference`, et combien sans `type` exploitable.
@@ -37,12 +55,19 @@ avec ses chiffres** — le `check:` exige un nombre dans chacune :
    « Ne rien migrer » est une réponse valide si les chiffres la soutiennent. Ne
    fabrique pas un chantier.
 
-### Interdiction : aucun nom de fichier de mémoire dans le dépôt
+### Interdiction : ni nom, ni contenu, ni exemple
 
-Ces noms portent des clients, des personnes et des projets privés. Le constat est
-commité dans un dépôt git — **n'y recopie aucun `*.md` du dossier de mémoire**,
-ni en exemple, ni en annexe. Le `check:` compte les fuites et fait échouer le
-ticket s'il en trouve une.
+Ces fichiers portent des clients, des personnes et des projets privés. Le constat
+est commité dans un dépôt git, et l'historique garde ce qu'on y met même après
+suppression.
+
+- **Aucun nom de fichier** du dossier de mémoire (sauf `MEMORY.md`, qui est
+  l'index et que la rubrique 4 traite nommément).
+- **Aucun extrait, aucune citation, aucun exemple** tiré de ces fichiers — y
+  compris « anonymisé ». Le `check:` compare le constat au corpus et refuse toute
+  phrase de 60 caractères ou plus qui s'y retrouve telle quelle. Juger soi-même
+  qu'un extrait est assez anonyme n'est pas une garantie, c'est une appréciation.
+- Le livrable se borne aux **agrégats** et à une **recommandation générique**.
 
 La preuve de lecture est une **empreinte**, pas une liste. Calcule-la ainsi et
 inscris-la dans le document :
@@ -59,8 +84,9 @@ PY
 Le `check:` recalcule la même empreinte et exige de la retrouver dans le document.
 Elle prouve que tu as lu le dossier entier sans en divulguer le contenu.
 
-Les agrégats (compteurs, pourcentages, exemples **anonymisés** du type « un
-feedback de juillet porte trois dates ») sont bienvenus.
+Les agrégats — compteurs, pourcentages, distributions — sont la matière du
+document. Une observation qualitative s'écrit sans citer la source : « une part
+des règles porte une trace de révision manuscrite » et non « la règle X dit Y ».
 
 ## Partie 2 — Écrire le runbook B
 
@@ -119,12 +145,22 @@ le critère au modèle de menace du ticket.
 
 ## Étapes
 
-- [ ] **1.** Lire le dossier de mémoire, produire les cinq rubriques chiffrées et
-      l'empreinte.
+- [ ] **1.** Lire le dossier de mémoire, produire le bloc des neuf métriques,
+      les cinq rubriques et l'empreinte.
 - [ ] **2.** Écrire `docs/plans/2026-08-20-m-constat-memoire.md` — sans aucun nom
       de fichier de mémoire.
 - [ ] **3.** Écrire le runbook B et ses prompts sous `runbooks/tickets/`.
-- [ ] **4.** Valider la forme de ce que tu as produit :
+- [ ] **4.** Valider que le moteur accepte B — le `check:` le compile pour de
+      bon, autant le savoir avant :
+
+```bash
+"$HERMES_CHECK_PYTHON" ~/hermes-os/ops/plan_runner.py \
+  --runbook "$(pwd)/runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml" --compile
+```
+
+Attendu : code de retour 0.
+
+- [ ] **5.** Vérifier la forme de ce que tu as produit :
 
 ```bash
 "$HERMES_CHECK_PYTHON" - <<'PY'
@@ -137,7 +173,7 @@ for t in d["tickets"]:
 PY
 ```
 
-- [ ] **5. Commit**
+- [ ] **6. Commit**
 
 ```bash
 git add docs/plans/2026-08-20-m-constat-memoire.md runbooks/

@@ -124,20 +124,26 @@ node --test tests/test_store_regimes.mjs
 Attendu : les cas épisodique et procédural échouent. Si un cas passe déjà, c'est
 que le test ne teste pas ce qu'il prétend — corrige le test, pas le code.
 
-Vérifie aussi que rien n'a bougé dans la vraie mémoire :
+Vérifie aussi que **ton test** n'a rien fait bouger dans la vraie mémoire. Ne
+compare pas à « propre » : ce dépôt a des modifications préexistantes de l'Owner,
+sans rapport avec ce ticket, et exiger un état initial vierge serait un blocage
+que tu ne peux pas lever. Compare **avant/après** :
 
 ```bash
-git -C /home/nuveo/.claude/projects/-home-nuveo/memory status --short | head
+MEM=/home/nuveo/.claude/projects/-home-nuveo/memory
+avant=$(git -C "$MEM" status --porcelain)
+node --test tests/test_store_regimes.mjs; echo "test_exit=$?"
+apres=$(git -C "$MEM" status --porcelain)
+[ "$avant" = "$apres" ] && echo "ISOLATION OK" || { echo "FUITE — diff:"; diff <(printf '%s\n' "$avant") <(printf '%s\n' "$apres"); }
 ```
 
-Attendu : **vide**.
+Si tu vois `FUITE` : **arrête-toi et signale-le**. N'exécute **aucune** commande de
+restauration — surtout pas `git checkout .` : ce dépôt contient 431 fichiers
+personnels et du travail non commité de l'Owner. Les effacer serait détruire la
+donnée que ce plan existe pour protéger. Rapporte le diff, laisse l'Owner
+trancher, et corrige l'isolation de ta suite avant toute autre exécution.
 
-Si ce n'est **pas** vide : **arrête-toi et signale-le**. N'exécute aucune commande
-de restauration — surtout pas `git checkout .` : ce dépôt contient 431 fichiers
-personnels, et des modifications non commitées de l'Owner, sans aucun rapport avec
-ce ticket, peuvent s'y trouver. Les effacer serait détruire la donnée que ce plan
-existe pour protéger. Rapporte ce que tu vois, laisse l'Owner trancher, et corrige
-l'isolation de ta suite avant toute autre exécution.
+Le `check:` du ticket fait la même comparaison, en empreinte complète.
 
 - [ ] **3. Implémenter le minimum dans `store()`**
 
@@ -151,12 +157,15 @@ Le branchement va juste avant `fs.writeFileSync(file, body)`. Trois branches sur
 - [ ] **5. Vérifier la mutation à la main**
 
 ```bash
-tmp=$(mktemp -d) && git show 507f278:brain.js > "$tmp/brain.js" \
-  && BRAIN_UNDER_TEST="$tmp/brain.js" node --test tests/test_store_regimes.mjs; echo "exit=$?"
-rm -rf "$tmp"
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+git show 507f278:brain.js > "$tmp/brain.js" || { echo "git show a echoue — mutation NON jouee"; exit 1; }
+BRAIN_UNDER_TEST="$tmp/brain.js" node --test tests/test_store_regimes.mjs
+echo "mutation_exit=$?"
 ```
 
-Attendu : `exit` **non nul**. Un `exit=0` signifie que la suite ne prouve rien.
+Attendu : `mutation_exit` **non nul**. Le `git show` est testé séparément :
+sinon un `exit` non nul pouvait venir de lui, sans que la mutation ait jamais
+tourné.
 
 - [ ] **6. Vérifier le code de sortie de la CLI**, dans un bac, jamais sur la
       vraie mémoire :
