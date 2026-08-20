@@ -1,0 +1,129 @@
+# Bloc B — la boucle « verdict de gate → règle de mémoire ».
+#
+# Aujourd'hui un gate Codex rend un verdict, un défaut est constaté, et la règle
+# qui en découle est écrite À LA MAIN, plus tard, si quelqu'un y pense. B câble
+# la réinjection : un verdict qui révèle un défaut écrit lui-même sa règle via
+# `brain.js store --type feedback`, donc au régime procédural versionné posé en
+# M-T1 (brain.js:190-206 — un `feedback` réécrit copie l'ancien en `<base>.vN.md`
+# avant d'être remplacé ; rien n'est perdu).
+#
+# DETTES MOTEUR (une ligne chacune, hors périmètre des tickets ci-dessous) :
+# dette: `--deny-write` ne borne pas les écritures d'un `check:` hors `repo:` — la sonde B-T3 écrit dans le `.cache/sandbox-memory` de jarvis-cortex, hors de ce dépôt.
+# dette: un script de check produit par un ticket AVAL n'a pas de sha256 épinglable à l'écriture du runbook — les trois checks restent donc inline (12 à 18 lignes).
+# dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
+# dette: `AskUserQuestion` échoue en session de plan (`readonly database`) — un ticket ne peut pas poser la question que la consigne lui impose de poser.
+
+phase: "B"
+repo: /home/nuveo/hermes-os-plan-b
+description: >-
+  Câbler la réinjection verdict → règle : un défaut relevé par un gate Codex
+  écrit sa propre règle de mémoire, au régime procédural versionné de M-T1.
+
+requires_access:
+  - file: /home/nuveo/hermes-os-plan-b/.git
+  - file: /home/nuveo/hermes-os-plan-b/ops/plan_runner.py
+
+tickets:
+
+  - id: B-T1
+    kind: session
+    title: Contrat d'injection — quel verdict écrit quelle règle, et laquelle jamais
+    model: claude-opus-5
+    effort: high
+    codex_gate: true
+    max_budget_usd: 3.00
+    prompt_file: tickets/B-T1.md
+    produces:
+      - docs/plans/2026-08-21-b-contrat-injection.md
+    # Le contrat est le livrable ; le check le lit directement, il ne fait
+    # confiance à aucun marqueur imprimé par la session.
+    check: |
+      "$HERMES_CHECK_PYTHON" - <<'PY'
+      import json, os, pathlib, sys
+      json.loads(os.environ["HERMES_TICKET_FACTS"])
+      d = pathlib.Path("docs/plans/2026-08-21-b-contrat-injection.md").read_text(encoding="utf-8")
+      ancres = ("plan_runner.py:7327", "GO_AVEC_RESERVES", "NO_VERDICT",
+                "REVIEWER_DOWN", "brain.js", "slug", "idempotence")
+      manquant = [a for a in ancres if a not in d]
+      # littéraux scindés : le runbook ne doit pas contenir lui-même la formule
+      # interdite, sinon un contrôle statique du parc le signale à tort.
+      interdit = [p for p in ("aucun " + "CRITIQUE", "aucune " + "HAUTE", "ni " + "HAUTE") if p in d]
+      if manquant:
+          sys.exit(f"contrat incomplet, ancres absentes: {manquant}")
+      if interdit:
+          sys.exit(f"critere de GO inatteignable dans le contrat: {interdit}")
+      print(f"B-T1 contrat: {len(ancres)}/{len(ancres)} ancres, aucun critere inatteignable")
+      PY
+
+  - id: B-T2
+    kind: session
+    title: La décision — `regles_depuis_verdict()`, pure et déterministe
+    model: claude-sonnet-5
+    effort: medium
+    codex_gate: true
+    max_budget_usd: 2.50
+    prompt_file: tickets/B-T2.md
+    produces:
+      - ops/plan_runner.py
+    # Sonde comportementale à trois branches : la fonction est APPELÉE, sur un
+    # défaut (doit produire), sur un GO (doit se taire), sur une panne de
+    # reviewer (doit se taire). Les deux branches muettes sont le test de
+    # mutation : un stub qui produit toujours échoue ici.
+    check: |
+      "$HERMES_CHECK_PYTHON" - <<'PY'
+      import importlib.util, json, os, pathlib, sys
+      json.loads(os.environ["HERMES_TICKET_FACTS"])
+      spec = importlib.util.spec_from_file_location("pr", pathlib.Path("ops/plan_runner.py").resolve())
+      m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+      d = "CRITIQUE | ops/x.py:12 | le verdict n'ecrit aucune regle | cabler l'appel"
+      sur_defaut = m.regles_depuis_verdict("NO_GO", "VERDICT: NO_GO\n" + d)
+      sur_go = m.regles_depuis_verdict("GO", "VERDICT: GO\nRAS")
+      sur_panne = m.regles_depuis_verdict("REVIEWER_DOWN", d)
+      if len(sur_defaut) != 1 or sur_go or sur_panne:
+          sys.exit(f"sonde: defaut={len(sur_defaut)} (attendu 1) go={len(sur_go)} panne={len(sur_panne)} (attendus 0)")
+      s = sur_defaut[0]["slug"]
+      if s != m.regles_depuis_verdict("NO_GO", "VERDICT: NO_GO\n" + d)[0]["slug"]:
+          sys.exit(f"slug non deterministe: {s} puis un autre sur la meme entree")
+      if not s.startswith("feedback_"):
+          sys.exit(f"slug sans prefixe de type procedural: {s}")
+      print(f"sonde 3/3 · defaut->1 regle ({s}) · GO->0 · panne reviewer->0 · slug stable")
+      PY
+
+  - id: B-T3
+    kind: session
+    title: L'écriture — pont vers brain.js, et preuve que la réécriture versionne
+    model: claude-opus-5
+    effort: high
+    codex_gate: true
+    max_budget_usd: 3.00
+    prompt_file: tickets/B-T3.md
+    produces:
+      - ops/brain_bridge.py
+      - ops/plan_runner.py
+    # La sonde écrit DEUX FOIS la même règle en sandbox et exige que la première
+    # version survive dans `.v1.md`. C'est le seul contrôle qui distingue le
+    # régime procédural de M-T1 d'un simple écrasement — le défaut que B
+    # pourrait industrialiser s'il était mal câblé.
+    check: |
+      "$HERMES_CHECK_PYTHON" - <<'PY'
+      import importlib.util, json, os, pathlib, sys
+      json.loads(os.environ["HERMES_TICKET_FACTS"])
+      spec = importlib.util.spec_from_file_location("bb", pathlib.Path("ops/brain_bridge.py").resolve())
+      m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+      if not m.BRAIN_JS.exists():
+          sys.exit(f"brain.js introuvable a l'emplacement resolu: {m.BRAIN_JS}")
+      box = m.BRAIN_JS.parent / ".cache" / "sandbox-memory"
+      box.mkdir(parents=True, exist_ok=True)
+      for p in box.glob("feedback_sonde_b_t3*.md"): p.unlink()
+      r = {"slug": "feedback_sonde_b_t3", "fait": "PREMIER", "why": "sonde B-T3"}
+      m.ecrire_regle(r, sandbox=True)
+      m.ecrire_regle({**r, "fait": "SECOND"}, sandbox=True)
+      f, v1 = box / "feedback_sonde_b_t3.md", box / "feedback_sonde_b_t3.v1.md"
+      if not v1.exists():
+          sys.exit("regime procedural absent: reecriture sans .v1, la regle precedente est perdue")
+      if "PREMIER" not in v1.read_text(encoding="utf-8"):
+          sys.exit("version perdue: .v1 ne conserve pas le fait initial")
+      if "SECOND" not in f.read_text(encoding="utf-8"):
+          sys.exit("reecriture non appliquee: le fichier courant ne porte pas le nouveau fait")
+      print(f"sonde versionnee: {v1.name} garde PREMIER, {f.name} porte SECOND")
+      PY
