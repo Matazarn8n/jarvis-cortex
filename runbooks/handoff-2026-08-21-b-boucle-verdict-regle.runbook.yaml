@@ -39,7 +39,8 @@
 # dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas, et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
 # dette: `brain.js` ne prend aucun verrou pour indexer — un écrivain qui l'appelle directement et dont l'ajout tombe entre la dernière vérification de `os.stat()` du pont et son `os.replace()` perd sa ligne ; fermer cette fenêtre exige un changement de `brain.js`, hors du dépôt de B, et B-T3 se borne donc à ne jamais retirer une ligne qui n'est pas un doublon de son propre slug.
 # dette: `AskUserQuestion` échoue en session de plan (`readonly database`) — un ticket ne peut pas poser la question que la consigne lui impose de poser.
-# dette: l'exception de non-régression (le marqueur de raccordement daté, B-T0) reste une déclaration humaine qu'aucune sonde ne peut amarrer à une preuve antérieure à la session ; l'y amarrer exigerait que le moteur expose au `check:` l'état du dépôt avant le ticket, capacité absente — la sonde imprime donc le marqueur au lieu de le passer sous silence, faute de mieux.
+# dette: le sha256 de `brain.js` n'est pas épinglé, seulement son chemin (`requires_access` ci-dessus, `--oracle` du check B-T3) : le fichier vit hors du dépôt de B et M-T1 le modifie légitimement, un condensat littéral serait périmé avant le premier run — la sonde imprime donc celui qu'elle a réellement chargé, et prouve le régime versionné par comportement au lieu de faire confiance au fichier.
+# dette: aucune exception de non-régression n'est tolérée sur les trois fichiers de gouvernance (comparaison octet à octet au `base_sha`) ; en tolérer une exigerait que le moteur expose au `check:` une preuve antérieure à la session, capacité absente — le raccordement de l'Owner fera donc rougir la sonde tant que cette capacité manque, et c'est assumé.
 #
 # ABSENCE DE `chain:` — DÉLIBÉRÉE, PAS UN OUBLI. B est le dernier maillon du
 # programme : la seule suite identifiée par le constat du bloc M (rubrique 5,
@@ -60,6 +61,12 @@ description: >-
 requires_access:
   - file: /home/nuveo/hermes-os-plan-b/.git
   - file: /home/nuveo/hermes-os-plan-b/ops/plan_runner.py
+  # L'ORACLE DE B-T3, ÉPINGLÉ PAR SON CHEMIN. `brain.js` vit hors de ce dépôt et
+  # reste inscriptible : tout le régime versionné que B préserve dépend de lui.
+  # Le pré-vol exige donc sa présence, et le `check:` de B-T3 lui repasse ce même
+  # chemin en `--oracle` — un `BRAIN_JS` résolu ailleurs fait échouer la sonde au
+  # lieu de verdir sur un oracle quelconque.
+  - file: /home/nuveo/projects/jarvis-cortex/brain.js
 
 tickets:
 

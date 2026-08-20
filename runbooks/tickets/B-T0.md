@@ -178,6 +178,22 @@ Imprime le détail par verdict, `obtenu/attendu`, plus le total.
 
 Charge `ops/brain_bridge.py`, vérifie que `BRAIN_JS` **existe** sur le disque.
 
+**L'oracle est épinglé, et c'est un axe à part entière** (`cas_ok=oracle:epingle`).
+Tout ce que cette sonde prouve — le versionnement, le `.v1`, le `.v2` — est en
+réalité un comportement de `brain.js`, un fichier qui vit hors du dépôt de B et
+que n'importe qui peut réécrire. Une sonde qui se contente de « ça existe » verdit
+donc sur un oracle quelconque. Prends un argument `--oracle <chemin>` : la sonde
+exige que `bb.BRAIN_JS`, **résolu** (`Path.resolve()`), soit exactement ce
+chemin, lui aussi résolu, et refuse sinon. Le `check:` de B-T3 lui passe le
+chemin épinglé dans le `requires_access` du runbook ; l'autotest, lui, passe le
+chemin de son faux `brain.js` — c'est pourquoi c'est un argument et non une
+constante gravée dans la sonde. Imprime en clair, sur la ligne de compteurs, le
+chemin retenu et son `sha256` (`brain_js=<chemin> brain_js_sha256=<64 hex>`) : le
+condensat n'est comparé à rien — il n'existe aucune valeur antérieure à laquelle
+le comparer, c'est la dette consignée en tête du runbook — mais il part au
+journal du runner, et deux runs verts sur deux oracles différents cessent d'être
+indiscernables.
+
 **Bac à sable propre à l'exécution.** Le contrôle précédent écrivait dans le
 `.cache/sandbox-memory` partagé et réécrivait son `MEMORY.md` en entier sans
 verrou : deux exécutions concurrentes pouvaient perdre ou ressusciter les lignes
@@ -222,7 +238,7 @@ Exigences, une par axe :
 - `MEMORY.md` porte **toujours une seule** ligne après le quatrième appel : une
   révision versionne le fichier, elle ne duplique pas l'index.
 
-**Puis la concurrence — quatre axes de plus, et le trou que l'audit a nommé.**
+**Puis la concurrence — cinq axes de plus, et le trou que l'audit a nommé.**
 `brain.js` indexe en append-only (l. 208-220) : tenir *une* ligne par règle
 oblige le pont à relire, dédoublonner et réécrire `MEMORY.md`. C'est un cycle
 lecture-modification-écriture sur un fichier que **la mémoire réelle partage**
@@ -237,7 +253,7 @@ donc pour de bon, dans un sous-dossier **partagé** du bac à sable :
 
 Ces deux derniers axes sont nécessaires et **insuffisants** : deux fils lancés une
 seule fois peuvent être ordonnancés bout à bout, et un pont dépourvu de tout
-verrou les franchit alors sans rien prouver. Ne t'arrête donc pas là — les deux
+verrou les franchit alors sans rien prouver. Ne t'arrête donc pas là — les trois
 axes qui suivent ne dépendent pas de l'ordonnanceur, et c'est sur eux que porte
 la preuve :
 
@@ -257,6 +273,20 @@ la preuve :
   être**. Un pont qui réécrit l'index depuis un instantané pris avant l'appel à
   `node` l'a effacée ; celui qui ne retire que les doublons de son propre slug et
   revérifie `os.stat()` avant `os.replace()` l'a conservée.
+- **le verrou couvre jusqu'au `os.replace()`, pas seulement jusqu'à `node`.**
+  L'axe de prise ci-dessus constate un refus, il ne dit rien de l'instant du
+  relâchement : un pont qui libère le verrou avant de remplacer l'index laisse
+  béante exactement la fenêtre qu'il prétend fermer, et l'unique essai concurrent
+  peut se sérialiser sans le montrer. Alors continue la même boucle
+  `LOCK_EX | LOCK_NB` **au-delà du premier refus** et retiens le premier essai
+  qui *réussit*, le fil étant toujours en vol : à cet instant précis — verrou
+  relâché — le cycle du pont doit être **fini sur le disque**, donc `MEMORY.md`
+  porte déjà la ligne du slug en vol et `<slug>.md` existe. S'ils manquent, le
+  verrou a été rendu avant le remplacement. Relâche aussitôt ce que tu viens de
+  prendre. Un pont qui garde le verrou jusqu'au bout ne te le cède qu'après son
+  `os.replace()`, et cet axe est vert sans dépendre d'aucun ordonnancement ; si
+  la jonction du fil arrive avant ta première prise, l'axe n'est **pas exercé** —
+  ne l'imprime pas, et ne le remplace pas par une acceptation par défaut.
 
 Reste une fenêtre que ce contrôle ne prétend pas fermer : un ajout direct tombant
 entre la dernière vérification de `os.stat()` et le `os.replace()` est perdu. La
@@ -366,8 +396,11 @@ geste légitime, à chaque rejeu, ré-audit de chaîne ou maillon suivant qui
 réutilise cette sonde. Défaut déjà payé ici : le texte d'un runbook est lu comme
 une norme, et une norme absolue devient un blocage que personne ne peut lever.
 
-La non-régression tolère donc la présence de ces noms dans un fichier de
-gouvernance. **Aucune exception, et surtout pas un marqueur.**
+La porte de sortie n'est donc pas une exception dans la sonde : c'est le
+`base_sha` qui bouge. Le jour où l'Owner pose sa ligne et la commite, la
+comparaison ci-dessous repart de ce commit-là et redevient verte d'elle-même,
+sans qu'aucune session n'ait rien à déclarer. **Aucune exception dans le code de
+la sonde, et surtout pas un marqueur.**
 
 Une version antérieure de ce prompt tolérait la présence si le fichier portait un
 marqueur daté « posé à la main par l'Owner ». C'était une faute, relevée par
@@ -388,18 +421,8 @@ cette ligne à la main. Elle est consignée en tête du runbook et dans son
 « Encore à Faire ». Ce qui change, c'est qu'elle cesse d'être auto-certifiable :
 une exception future devra s'appuyer sur une preuve ANTÉRIEURE à la session — un
 sha épinglé avant son lancement — jamais sur un texte que la session peut
-produire.
-
-
-```
-# raccordement B verdict->regle, pose a la main le YYYY-MM-DD par l'Owner
-```
-
-Sans marqueur, la présence reste un échec. Avec marqueur, la sonde consigne la
-présence dans sa sortie (elle l'imprime, elle ne la tait pas) et rend 0 sur cet
-axe. Le marqueur est une déclaration humaine, pas une preuve : c'est assumé — il
-n'existe pas de contrôle mécanique qui distingue le raccordement voulu par
-l'Owner d'un contournement, et prétendre le contraire serait la vraie faute.
+produire. N'écris donc **aucune** route « avec marqueur, rend 0 » : sur cet axe,
+la sonde n'a qu'une sortie possible, la différence est un échec.
 
 C'est le `check:` de ce ticket. Aucun livrable de B n'existe encore : tu
 fabriques donc des arbres synthétiques dans un répertoire temporaire
@@ -477,17 +500,19 @@ dépôt est public à l'échelle de l'équipe et git garde ce qu'on y met.
 
 ```bash
 set -o pipefail
-python3 ops/checks/sonde_b.py autotest --facts '{}' | tee /dev/stderr | grep -c '^cas_ok='
-sha256sum -c ops/checks/sonde_b.sha256
+python3 ops/checks/sonde_b.py autotest --facts '{}' | tee /dev/stderr | grep -c '^cas_ok=' \
+  && sha256sum -c ops/checks/sonde_b.sha256
 ```
 
 `set -o pipefail` n'est pas décoratif : sans lui, le code de retour du pipeline
 est celui de `grep`, et un autotest qui **échoue** après avoir imprimé trente
-lignes afficherait quand même « 35 » et te laisserait croire que c'est passé.
-C'est du Bash — lance donc ce bloc sous `bash`, pas sous `sh`.
+lignes afficherait quand même « 37 » et te laisserait croire que c'est passé. Le
+`&&` ne l'est pas davantage : sur deux commandes séparées, le statut de la
+séquence est celui de la dernière, et un `sha256sum -c` vert reverdirait un
+autotest rouge. C'est du Bash — lance donc ce bloc sous `bash`, pas sous `sh`.
 
 Colle les deux sorties dans ton message de fin. La première doit lister les cas
-cassés refusés et finir sur un compte **≥ 35** — en dessous, le `check:` de ce
+cassés refusés et finir sur un compte **≥ 37** — en dessous, le `check:` de ce
 ticket échouera ; la seconde doit dire `ops/checks/sonde_b.py: OK`, ce qui exige
 que le sceau soit au format standard décrit plus haut.
 

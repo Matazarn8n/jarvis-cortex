@@ -43,8 +43,11 @@ geste légitime, à chaque rejeu, ré-audit de chaîne ou maillon suivant qui
 réutilise cette sonde. Défaut déjà payé ici : le texte d'un runbook est lu comme
 une norme, et une norme absolue devient un blocage que personne ne peut lever.
 
-La non-régression tolère donc la présence de ces noms dans un fichier de
-gouvernance. **Aucune exception, et surtout pas un marqueur.**
+La porte de sortie n'est donc pas une exception dans la sonde : c'est le
+`base_sha` qui bouge. Le jour où l'Owner pose sa ligne et la commite, la
+comparaison ci-dessous repart de ce commit-là et redevient verte d'elle-même,
+sans qu'aucune session n'ait rien à déclarer. **Aucune exception dans le code de
+la sonde, et surtout pas un marqueur.**
 
 Une version antérieure de ce prompt tolérait la présence si le fichier portait un
 marqueur daté « posé à la main par l'Owner ». C'était une faute, relevée par
@@ -65,18 +68,8 @@ cette ligne à la main. Elle est consignée en tête du runbook et dans son
 « Encore à Faire ». Ce qui change, c'est qu'elle cesse d'être auto-certifiable :
 une exception future devra s'appuyer sur une preuve ANTÉRIEURE à la session — un
 sha épinglé avant son lancement — jamais sur un texte que la session peut
-produire.
-
-
-```
-# raccordement B verdict->regle, pose a la main le YYYY-MM-DD par l'Owner
-```
-
-Sans marqueur, la présence reste un échec. Avec marqueur, la sonde consigne la
-présence dans sa sortie (elle l'imprime, elle ne la tait pas) et rend 0 sur cet
-axe. Le marqueur est une déclaration humaine, pas une preuve : c'est assumé — il
-n'existe pas de contrôle mécanique qui distingue le raccordement voulu par
-l'Owner d'un contournement, et prétendre le contraire serait la vraie faute.
+produire. Aucune route « avec marqueur, rend 0 » n'existe sur cet axe : la
+différence est un échec, sans autre issue.
 
 ## Le livrable — un module neuf, `ops/verdict_hook.py`
 
