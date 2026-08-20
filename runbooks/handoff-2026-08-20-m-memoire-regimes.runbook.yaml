@@ -75,6 +75,34 @@ requires_access:
   - cmd: "node --version"
 
 tickets:
+  - id: M-T0
+    kind: human
+    why: >-
+      Le corpus de mémoire est écrit EN CONTINU par d'autres sessions : 431 →
+      439 fichiers dans la seule journée du 2026-08-20. Un `check:` qui
+      recalculait en direct comparait donc le constat à un corpus qui avait
+      bougé depuis, et a fait échouer trois tours d'affilée sur cette seule
+      dérive — à ~2,50 USD le tour d'opus — alors que le travail livré était
+      bon. Le relevé sort de la session, comme la capture `ss -tlnp` de S-T0 :
+      il fige la photo une fois, et le commit la rend opposable.
+    gate_reason: >-
+      M — relever le corpus de mémoire. Ce qui va se produire si tu approuves :
+      tu lances toi-même, depuis /home/nuveo/jarvis-cortex-plan-m,
+      `python3 scripts/releve-memoire.py`. Le script LIT
+      ~/.claude/projects/-home-nuveo/memory/ et n'y écrit rien. Sortie fixe :
+      docs/plans/2026-08-20-recu-memoire.txt — neuf agrégats, le nombre de
+      fichiers, une empreinte SHA-256 tronquée et l'horodatage du relevé.
+      AUCUN nom de fichier, AUCUN extrait : un nom de fichier de mémoire
+      recopié dans un dépôt git n'en ressort plus, l'historique le garde même
+      après suppression. Puis commite-le
+      (`git add docs/plans/ && git commit -m "releve du corpus de memoire
+      2026-08-20"`) : c'est le commit qui rend le reçu opposable, M-TGEN ayant
+      Edit et Write. Lis le script avant d'approuver.
+      Lance-le au plus près de M-TGEN : le `check:` refuse un reçu daté d'un
+      autre jour que le 2026-08-20.
+    produces:
+      - docs/plans/2026-08-20-recu-memoire.txt
+
   - id: M-T1
     why: >-
       `brain.js` écrase sans condition. Trois régimes doivent être branchés sur
@@ -264,13 +292,14 @@ tickets:
       maillon suivant est un ticket du maillon courant, jamais une session
       humaine (règle du 2026-08-10). Choix d'architecture : opus-5.
     kind: session
-    depends_on: [M-T1]
+    depends_on: [M-T1, M-T0]
     model: claude-opus-5
     effort: high
     allow_tools: [Read, Grep, Glob, Edit, Write]
     prompt_file: tickets/M-TGEN-ecrire-b.md
     consumes:
       - tests/test_store_regimes.mjs
+      - docs/plans/2026-08-20-recu-memoire.txt
     produces:
       - docs/plans/2026-08-20-m-constat-memoire.md
       - runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml
@@ -287,32 +316,64 @@ tickets:
       echecs = []
       doc = pathlib.Path("docs/plans/2026-08-20-m-constat-memoire.md").read_text(encoding="utf-8")
 
-      # ---- 0. Neuf metriques RECALCULEES ici, comparees a un BLOC STRUCTURE du
-      # constat. Chercher chaque valeur n'importe ou laissait une date valider un
-      # compteur, et quatre des neuf metriques n'etaient pas recalculees du tout
-      # (audit Codex 2026-08-20).
-      mem0 = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
-      REVISE = re.compile(r"mis[e]?\s+[àa]\s+jour|R[ÉE]VOQU|CORRECTION|corrig[ée]", re.I)
-      DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
-      m = {"user": 0, "feedback": 0, "project": 0, "reference": 0, "sans_type": 0,
-           "feedback_revises": 0, "project_multidate": 0}
-      for f in sorted(mem0.glob("*.md")):
-          if f.name == "MEMORY.md":
-              continue
-          txt = f.read_text(encoding="utf-8", errors="ignore")
-          mt = re.search(r"^\s*type:\s*\"?(user|feedback|project|reference)\"?\s*$", txt[:1500], re.M)
-          t = mt.group(1) if mt else "sans_type"
-          m[t] += 1
-          if t == "feedback" and REVISE.search(txt):
-              m["feedback_revises"] += 1
-          if t == "project" and len(set(DATE.findall(txt))) > 1:
-              m["project_multidate"] += 1
-      idx = mem0 / "MEMORY.md"
-      idx_txt = idx.read_text(encoding="utf-8") if idx.is_file() else ""
-      pointeurs = set(re.findall(r"\(([A-Za-z0-9_.,-]+\.md)\)", idx_txt))
-      presents = {p.name for p in mem0.glob("*.md")} - {"MEMORY.md"}
-      m["index_pointeurs_morts"] = len(pointeurs - presents - {"MEMORY.md"})
-      m["fichiers_non_indexes"] = len(presents - pointeurs)
+      # ---- 0. Les neuf metriques viennent d'un RECU COMMITE, plus d'un recalcul
+      # en direct. Motif mesure le 2026-08-20 : le corpus est ecrit en continu par
+      # d'autres sessions (431 -> 439 fichiers dans la journee), donc un recalcul
+      # au moment du check comparait le constat a un corpus qui avait bouge depuis.
+      # Trois tours d'affilee ont echoue sur cette seule derive, a ~2,50 USD le
+      # tour, alors que le travail livre etait bon. Un controle qui ne peut pas
+      # CONVERGER est un blocage, pas une rigueur.
+      #
+      # Ce qui se perd, et il faut le savoir : le check ne re-mesure plus le
+      # corpus lui-meme. La verite sort d'UNE execution de scripts/releve-memoire.py.
+      # Un bug dans ce script graverait des chiffres faux dans un commit que le
+      # check certifierait ensuite pour toujours — constat et recu seraient
+      # toujours d'accord, puisqu'ils sortent du meme code. D'ou la borne de
+      # fraicheur ci-dessous : elle ne supprime pas ce risque, elle borne la
+      # fenetre ou il peut naitre.
+      RECU = "docs/plans/2026-08-20-recu-memoire.txt"
+      if not pathlib.Path(RECU).is_file():
+          echecs.append("recu du corpus absent — M-T0 ne l'a pas produit")
+          recu_txt = ""
+      else:
+          recu_txt = pathlib.Path(RECU).read_text(encoding="utf-8")
+
+      # Le recu vient de M-T0 (humain) et n'est opposable que commite et INCHANGE :
+      # M-TGEN a Edit et Write, un recu pose sur le disque serait reecrivable. La
+      # session, sans Bash, ne peut pas commiter.
+      suivi = subprocess.run(["git", "ls-files", "--error-unmatch", RECU],
+                             capture_output=True, text=True)
+      if suivi.returncode != 0:
+          echecs.append("recu du corpus non suivi par git — M-T0 ne l'a pas commite")
+      else:
+          sale = subprocess.run(["git", "diff", "--name-only", "HEAD", "--", RECU],
+                                capture_output=True, text=True)
+          if sale.returncode != 0:
+              echecs.append("git diff indisponible: %s" % sale.stderr.strip()[:200])
+          elif sale.stdout.strip():
+              echecs.append("recu du corpus MODIFIE depuis son commit")
+
+      # Borne de fraicheur : un recu d'un autre jour decrirait un corpus qui n'est
+      # plus celui que le constat pretend decrire.
+      JOUR = "2026-08-20"
+      mh = re.search(r"^horodatage:\s*(\S+)$", recu_txt, re.M)
+      if not mh:
+          echecs.append("recu sans `horodatage:` — fraicheur invérifiable")
+      elif not mh.group(1).startswith(JOUR):
+          echecs.append("recu date du %s, attendu %s" % (mh.group(1)[:10], JOUR))
+
+      m = {}
+      for ligne in recu_txt.splitlines():
+          mm = re.match(r"^([a-z_]{4,30}):\s*(\d+)\s*$", ligne)
+          if mm:
+              m[mm.group(1)] = int(mm.group(2))
+      ATTENDUES = {"user", "feedback", "project", "reference", "sans_type",
+                   "feedback_revises", "project_multidate", "index_pointeurs_morts",
+                   "fichiers_non_indexes"}
+      manque = sorted(ATTENDUES - set(m))
+      if manque:
+          echecs.append("recu incomplet, metriques absentes: %s" % manque)
+      m = {c: v for c, v in m.items() if c in ATTENDUES}
 
       # Le constat DOIT porter un bloc `cle: valeur`, une ligne par metrique.
       declare = {}
@@ -324,7 +385,7 @@ tickets:
           if cle not in declare:
               echecs.append("metrique absente du bloc structure du constat: %s (attendu %d)" % (cle, val))
           elif declare[cle] != val:
-              echecs.append("metrique %s: constat dit %d, recalcul dit %d" % (cle, declare[cle], val))
+              echecs.append("metrique %s: constat dit %d, recu dit %d" % (cle, declare[cle], val))
 
       # ---- 1. Les CINQ rubriques du constat, chacune redigee.
       RUBRIQUES = {
@@ -342,10 +403,14 @@ tickets:
       # Le constat porte un condensé recalculé ici ; les noms restent hors du depot.
       mem = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
       noms = sorted(p.name for p in mem.glob("*.md"))
-      attendu = hashlib.sha256("\n".join(noms).encode("utf-8")).hexdigest()[:16]
-      if attendu not in doc:
-          echecs.append("empreinte de lecture absente ou fausse (attendu %s sur %d fichiers)"
-                        % (attendu, len(noms)))
+      # L'empreinte AUSSI vient du recu : la recalculer ici rejouerait exactement
+      # la course que la section 0 vient de fermer.
+      me = re.search(r"^empreinte:\s*([0-9a-f]{16})$", recu_txt, re.M)
+      if not me:
+          echecs.append("recu sans `empreinte:` lisible")
+      elif me.group(1) not in doc:
+          echecs.append("empreinte du constat absente ou differente de celle du recu (%s)"
+                        % me.group(1))
       # MEMORY.md est l'INDEX, pas un fait prive : la rubrique 4 l'exige nommement,
       # le controle de fuite l'interdisait — contradiction inatteignable (Codex).
       fuites = [n for n in noms if n != "MEMORY.md" and n in doc]
@@ -442,8 +507,9 @@ tickets:
           sys.exit(1)
 
       faits = json.loads(os.environ["HERMES_TICKET_FACTS"])
-      print("M_TGEN rubriques=5 empreinte=%s b_tickets=%d modeles=%d tickets_connus=%d"
-            % (attendu, len(tks), len(modeles), len(faits.get("tickets") or {})))
+      print("M_TGEN rubriques=5 empreinte=%s recu=%d metriques b_tickets=%d modeles=%d "
+            "tickets_connus=%d"
+            % (me.group(1), len(m), len(tks), len(modeles), len(faits.get("tickets") or {})))
       PY
     codex_gate: true
     max_turns: 80
