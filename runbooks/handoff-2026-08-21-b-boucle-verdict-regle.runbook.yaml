@@ -83,7 +83,7 @@ tickets:
     effort: high
     codex_gate: true
     max_budget_usd: 3.00
-    # Le ticket le plus long du bloc : un script, ses 35 cas d'autotest, un
+    # Le ticket le plus long du bloc : un script, ses 37 cas d'autotest, un
     # sceau. Bornes explicites — les défauts du moteur (120 tours, 90 min)
     # laissent une session égarée brûler le budget avant de buter dessus.
     max_turns: 70
@@ -98,7 +98,7 @@ tickets:
     # vérificateur permissif — celui qui aurait laissé passer les défauts de
     # l'audit — échoue ici, avant d'avoir servi.
     # La QUANTITÉ mesurée est le nombre de lignes `cas_ok=` que l'autotest émet,
-    # une par piège réellement construit puis refusé (B-T0.md en énumère 35 au
+    # une par piège réellement construit puis refusé (B-T0.md en énumère 37 au
     # minimum) : un vérificateur amputé de ses cas cassés n'atteint pas le
     # seuil, là où un `test -s` sur le script l'aurait laissé passer. stderr
     # n'est PAS capturé — un échec doit rester lisible dans le journal du
@@ -112,7 +112,7 @@ tickets:
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 35
+      && test "$cas" -ge 37
       && echo "$sortie"
       && echo "B-T0 sonde=autotest cas_ok=${cas}"
 
@@ -248,14 +248,15 @@ tickets:
     # ajoutant sans verrou une ligne d'index qui doit survivre. C'est ce qui
     # oblige le pont à ne retirer que les doublons de SON slug au lieu de
     # réécrire l'index depuis un instantané périmé.
-    # Onze axes, donc onze `cas_ok=` attendus : c'est la quantité que le check
-    # compte, sur l'artefact que `--module` nomme.
+    # Treize axes, donc treize `cas_ok=` attendus : c'est la quantité que le
+    # check compte, sur l'artefact que `--module` nomme.
     check: >-
       sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
-      --module ops/brain_bridge.py)
+      --module ops/brain_bridge.py
+      --oracle /home/nuveo/projects/jarvis-cortex/brain.js)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 11
+      && test "$cas" -ge 13
       && echo "$sortie"
       && echo "B-T3 sonde=pont cas_ok=${cas}"
 
