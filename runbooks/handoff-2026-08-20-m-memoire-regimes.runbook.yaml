@@ -222,7 +222,7 @@ tickets:
                             "l'isolation de la suite est cassee")
 
           # ---- 3. Mutation : la meme suite doit ECHOUER contre le code d'avant.
-          vieux = tmp / "brain-%s.js" % BASE_SHA
+          vieux = tmp / ("brain-%s.js" % BASE_SHA)   # `/` lie plus fort que `%`
           g = subprocess.run(["git", "show", "%s:brain.js" % BASE_SHA],
                              capture_output=True, text=True, cwd=str(REPO))
           if g.returncode != 0:
@@ -385,6 +385,28 @@ tickets:
                             "l'executerait" % str(acces.get("cmd"))[:80])
       if rb.get("phase") != "B":
           echecs.append("phase de B = %r" % rb.get("phase"))
+      # `project:` et `repo:` sont des champs REQUIS par le moteur
+      # (plan_runner.py:549). Le 2026-08-20, B est ne SANS `project:` : le check
+      # le declarait conforme et `load_runbook` levait
+      # « runbook: champ requis manquant `project` » — B naissait INLANCABLE, et
+      # l'audit adverse ne l'a pas vu non plus (il jugeait la rigueur des checks
+      # de B, pas sa chargeabilite).
+      if not rb.get("project"):
+          echecs.append("B ne declare pas `project:` — champ requis, B serait inlancable")
+      WORKTREE_B = "/home/nuveo/hermes-os-plan-b"
+      if rb.get("repo") != WORKTREE_B:
+          echecs.append("B declare repo=%r, attendu %s (worktree cree et allowliste)"
+                        % (rb.get("repo"), WORKTREE_B))
+      # La branche du worktree DOIT valoir `plan/<project>` : toute autre branche
+      # `plan/...` fait dire au moteur « la branche d'un AUTRE plan » et gare le
+      # ticket au premier tour.
+      br = subprocess.run(["git", "-C", WORKTREE_B, "rev-parse", "--abbrev-ref", "HEAD"],
+                          capture_output=True, text=True)
+      if br.returncode != 0:
+          echecs.append("branche du worktree de B illisible: %s" % br.stderr.strip()[:200])
+      elif rb.get("project") and br.stdout.strip() != "plan/%s" % rb["project"]:
+          echecs.append("branche du worktree de B = %r, attendu plan/%s"
+                        % (br.stdout.strip(), rb["project"]))
       tks = rb.get("tickets") or []
       if not tks:
           echecs.append("B n'a aucun ticket")
