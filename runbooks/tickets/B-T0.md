@@ -188,6 +188,21 @@ du diff du ticket : cette non-régression borne le **contenu** de ces trois
 fichiers, elle n'est pas une whitelist du commit. La dette est déjà consignée en
 tête du runbook ; ne la maquille pas en garantie.
 
+## Contrat de SORTIE de la sonde — les `check:` en dépendent
+
+Chaque sous-commande écrit, **sur stdout et seulement en cas de succès**, une
+ligne unique de compteurs mesurés, de la forme `cle=valeur` séparés par des
+espaces — par exemple `cas=7 rejetes=6 regles=3`. Ce sont des grandeurs
+réellement comptées pendant la passe, jamais des constantes : une sortie
+constante satisfait « stdout non vide » sans rien mesurer, et c'est le faux
+positif exact que la règle vise.
+
+**Tout diagnostic d'échec part sur stderr**, jamais sur stdout, et la sonde rend
+un code non nul. Les `check:` du runbook capturent stdout dans une substitution
+et n'impriment qu'au succès : un échec court-circuite avant l'impression, et
+c'est stderr qui porte alors l'explication. Une sonde qui écrirait ses échecs sur
+stdout les rendrait invisibles au moment où on en a besoin.
+
 ## Sonde `autotest` — juge le vérificateur
 
 **Et la porte de sortie, sans laquelle ce contrôle devient un blocage
