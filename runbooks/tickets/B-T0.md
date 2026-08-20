@@ -95,7 +95,8 @@ contrôle laissait passer n'importe quoi :
   NO_GO, NO_VERDICT, NO_REVIEWER, REVIEWER_DOWN}` : ni doublon, ni manquant, ni
   cas supplémentaire. Compare des ensembles **et** les longueurs, sinon un
   doublon passe ;
-- la racine porte exactement les clés `derivation_slug` et `cas` ;
+- le schéma de la racine est celui du bloc `decisions` plus bas — **trois** clés,
+  `derivation_slug`, `decisions` et `cas` ; ne le vérifie qu'une fois, là-bas ;
 - chaque cas porte exactement les clés `verdict`, `rapport`, `regles`, `cles`,
   `attendus` — pas une de moins, pas une de plus ;
 - `regles` est un entier `>= 0` ; `rapport` est une chaîne non vide ;
@@ -221,7 +222,7 @@ Exigences, une par axe :
 - `MEMORY.md` porte **toujours une seule** ligne après le quatrième appel : une
   révision versionne le fichier, elle ne duplique pas l'index.
 
-**Puis la concurrence — deux axes de plus, et le trou que l'audit a nommé.**
+**Puis la concurrence — quatre axes de plus, et le trou que l'audit a nommé.**
 `brain.js` indexe en append-only (l. 208-220) : tenir *une* ligne par règle
 oblige le pont à relire, dédoublonner et réécrire `MEMORY.md`. C'est un cycle
 lecture-modification-écriture sur un fichier que **la mémoire réelle partage**
@@ -232,9 +233,35 @@ donc pour de bon, dans un sous-dossier **partagé** du bac à sable :
 - deux écrivains **simultanés** (`threading.Thread` ou deux sous-processus) sur
   **deux slugs distincts**, joints avant de mesurer ;
 - les deux `<slug>.md` existent — aucune écriture perdue ;
-- `MEMORY.md` porte **exactement une** ligne par slug, donc deux au total. C'est
-  la preuve comportementale du verrou par racine et du remplacement atomique
-  qu'exige B-T3 ; un pont qui réécrit l'index sans verrou en perd une.
+- `MEMORY.md` porte **exactement une** ligne par slug, donc deux au total.
+
+Ces deux derniers axes sont nécessaires et **insuffisants** : deux fils lancés une
+seule fois peuvent être ordonnancés bout à bout, et un pont dépourvu de tout
+verrou les franchit alors sans rien prouver. Ne t'arrête donc pas là — les deux
+axes qui suivent ne dépendent pas de l'ordonnanceur, et c'est sur eux que porte
+la preuve :
+
+- **prise du verrou, observée directement.** Pendant qu'un `ecrire_regle` est en
+  vol dans un fil, tente toi-même, en boucle serrée jusqu'à la jonction,
+  `fcntl.flock(open("<racine>/.memory.lock"), LOCK_EX | LOCK_NB)` et exige **au
+  moins un `BlockingIOError`**. B-T3 impose ce nom de fichier, tu peux donc le
+  nommer. L'appel à `node` dure des dizaines de millisecondes : la fenêtre est
+  large et l'observation reproductible. Un pont qui n'ouvre jamais ce verrou ne
+  te refusera jamais rien, et échoue ici ;
+- **un écrivain direct concurrent ne perd pas sa ligne.** Le verrou du pont ne
+  lie que ce qui passe par le pont ; `brain.js` reste appelable directement.
+  Joue donc ce rôle, à un moment **choisi et non espéré** : dès que l'axe
+  précédent t'a montré le verrou tenu — donc qu'un cycle est en cours — ajoute
+  toi-même, sans prendre le verrou, une ligne d'index pour un **troisième** slug
+  à la fin de `MEMORY.md`. Après la jonction, cette ligne doit **toujours y
+  être**. Un pont qui réécrit l'index depuis un instantané pris avant l'appel à
+  `node` l'a effacée ; celui qui ne retire que les doublons de son propre slug et
+  revérifie `os.stat()` avant `os.replace()` l'a conservée.
+
+Reste une fenêtre que ce contrôle ne prétend pas fermer : un ajout direct tombant
+entre la dernière vérification de `os.stat()` et le `os.replace()` est perdu. La
+fermer exigerait que `brain.js` prenne le même verrou, ce qui est hors du dépôt
+de B — B-T3 la consigne en dette, et ta sonde ne la sonde pas.
 
 Imprime l'état du disque constaté, pas un verdict binaire.
 
@@ -316,9 +343,9 @@ cibles :
 |------------|-------------------|-------------------------------------------------|
 | `contrat`  | 14                | les 6 cas de matrice + les 7 décisions + l'axe du document |
 | `decision` | 6                 | un par verdict du domaine                        |
-| `pont`     | 9                 | `.v1`, `.md`, `.v2` absent, index, `inchangee`, révision du `why`, index après révision, + les 2 axes concurrents |
+| `pont`     | 11                | `.v1`, `.md`, `.v2` absent, index, `inchangee`, révision du `why`, index après révision, + les 4 axes concurrents |
 | `entree`   | 8                 | les 5 passes, les 2 CLI, la non-régression       |
-| `autotest` | 33                | 4 arbres valides + les 29 pièges énumérés plus bas |
+| `autotest` | 35                | 4 arbres valides + les 31 pièges énumérés plus bas |
 
 Un seuil manqué fait échouer le ticket jugé — c'est voulu : une sonde amputée de
 ses axes ne doit pas pouvoir rendre `done`.
@@ -376,11 +403,18 @@ minimum, et chacun doit être refusé :
   rejeu ; un qui ajoute une ligne d'index par appel ; **un qui ne compare que le
   `fait` et rend donc `inchangee` quand seul le `why` change** — c'est le piège
   qui garde l'idempotence honnête ; **un qui réécrit `MEMORY.md` sans verrou et
-  perd donc une ligne quand deux écrivains le font en même temps**. Rends ce
-  dernier piège *déterministe* plutôt qu'aléatoire : le faux pont dort quelques
+  perd donc une ligne quand deux écrivains le font en même temps** ; **un qui
+  n'ouvre jamais `<racine>/.memory.lock`** — celui-là doit être refusé par l'axe
+  de prise du verrou, et pas seulement par chance d'ordonnancement ; **un qui
+  prend bien le verrou mais réécrit l'index depuis un instantané pris avant
+  l'appel à `node`**, et efface donc la ligne de l'écrivain direct. Rends ces
+  pièges *déterministes* plutôt qu'aléatoires : le faux pont dort quelques
   dizaines de millisecondes entre sa lecture de l'index et sa réécriture, ce qui
   garantit l'entrelacement au lieu de l'espérer — un piège qui ne mord qu'une
   fois sur dix rend la sonde intermittente, ce qui est pire qu'un piège absent.
+  Le dernier est le plus important des trois : il est *correct au sens du verrou*
+  et faux quand même, et c'est le seul que le couple « deux fils, deux slugs » ne
+  peut pas distinguer d'un pont sain.
 - `entree` : un module qui lève au lieu de journaliser l'échec ; un qui écrit
   même sur `GO` ; un dont le chemin par défaut ne touche jamais le disque ;
   **une CLI qui imprime `echec…` mais sort quand même en 0** sur une racine
@@ -391,8 +425,8 @@ ne sont pas commités ailleurs que dans le corps de `sonde_b.py`.
 
 **La sortie de l'autotest nomme les cas rejetés**, un par ligne au format
 `cas_ok=<nom>` du contrat de sortie ci-dessus — un arbre valide accepté et un
-piège refusé comptent chacun pour une ligne. Les vingt-neuf pièges énumérés
-ci-dessus plus les quatre arbres valides font le seuil de 33 ; en ajouter est
+piège refusé comptent chacun pour une ligne. Les trente-et-un pièges énumérés
+ci-dessus plus les quatre arbres valides font le seuil de 35 ; en ajouter est
 bienvenu. Un autotest qui imprime « tout va bien » ne prouve rien ; celui qui
 nomme chaque piège refusé prouve que l'instrument mord.
 
@@ -428,11 +462,11 @@ sha256sum -c ops/checks/sonde_b.sha256
 
 `set -o pipefail` n'est pas décoratif : sans lui, le code de retour du pipeline
 est celui de `grep`, et un autotest qui **échoue** après avoir imprimé trente
-lignes afficherait quand même « 33 » et te laisserait croire que c'est passé.
+lignes afficherait quand même « 35 » et te laisserait croire que c'est passé.
 C'est du Bash — lance donc ce bloc sous `bash`, pas sous `sh`.
 
 Colle les deux sorties dans ton message de fin. La première doit lister les cas
-cassés refusés et finir sur un compte **≥ 33** — en dessous, le `check:` de ce
+cassés refusés et finir sur un compte **≥ 35** — en dessous, le `check:` de ce
 ticket échouera ; la seconde doit dire `ops/checks/sonde_b.py: OK`, ce qui exige
 que le sceau soit au format standard décrit plus haut.
 

@@ -116,7 +116,7 @@ suffit à empiler une version par rejeu, et tu as reconstruit le défaut d'en
 face.
 
 L'index compte autant que le fichier : le constat du bloc M mesure 328 fichiers
-sur 436 sans ligne d'index. Une règle écrite par B vaut **exactement une** ligne
+sur 438 sans ligne d'index. Une règle écrite par B vaut **exactement une** ligne
 d'index — pas zéro, pas une par rejeu, et pas une de plus quand une révision
 versionne le fichier.
 
@@ -131,23 +131,49 @@ finissent en même temps lancent deux `ecrire_regle` sur la même racine. Sans
 précaution, chacun relit l'index d'avant l'autre et le réécrit ensuite — la ligne
 du perdant disparaît, silencieusement, et un test séquentiel reste vert.
 
-Deux exigences, toutes deux dans la bibliothèque standard :
+Trois exigences, toutes trois dans la bibliothèque standard :
 
-- **un verrou par racine** — un fichier de verrou dans la racine (par exemple
-  `<racine>/.memory.lock`), pris pour toute la durée du cycle : la lecture de
-  l'index, l'appel à `node`, et la réécriture. `fcntl.flock` sur un descripteur
-  ouvert suffit, il est interprocessus et le noyau le libère si le processus
-  meurt — c'est ce qui compte ici, une session tuée ne doit pas geler la boucle.
-  Libère-le dans un `finally`, et borne l'attente (`timeout=` de ta boucle
+- **un verrou par racine** — le fichier `<racine>/.memory.lock`, **ce nom-là et
+  pas un autre** : la sonde `pont` de B-T0 tente de le prendre pendant que tu
+  écris, et exige d'essuyer un refus. Prends-le pour toute la durée du cycle : la
+  lecture de l'index, l'appel à `node`, la réécriture. `fcntl.flock` sur un
+  descripteur ouvert suffit, il est interprocessus et le noyau le libère si le
+  processus meurt — c'est ce qui compte ici, une session tuée ne doit pas geler la
+  boucle. Libère-le dans un `finally`, et borne l'attente (`timeout=` de ta boucle
   d'acquisition) plutôt que de bloquer sans fin ;
-- **un remplacement atomique** — écris l'index dans un fichier temporaire du même
-  répertoire, puis `os.replace()`. Un `write()` direct laisse une fenêtre où
-  `MEMORY.md` est tronqué, et un processus interrompu au mauvais moment le laisse
-  ainsi pour de bon.
+- **une réécriture bornée à ta propre règle** — c'est le second défaut relevé par
+  l'audit, et il ne se répare pas avec un verrou. Ton verrou ne lie que les
+  appelants qui passent par ce pont ; `brain.js` reste appelable directement, à la
+  main ou par un autre outil, et cet écrivain-là n'en sait rien. Donc ne
+  reconstruis **jamais** `MEMORY.md` depuis une idée que tu t'en fais : relis-le
+  **après** le retour de `node`, au plus tard, et n'en retire que les lignes
+  d'index **surnuméraires pointant sur le slug que tu viens d'écrire** (garde la
+  dernière). Toute autre ligne est recopiée **telle quelle**, octet pour octet, y
+  compris celles apparues depuis le début de ton cycle. Une ligne que tu ne
+  reconnais pas n'est pas à toi ;
+- **un remplacement atomique, sous garde** — écris l'index dans un fichier
+  temporaire du même répertoire, puis `os.replace()`. Un `write()` direct laisse
+  une fenêtre où `MEMORY.md` est tronqué, et un processus interrompu au mauvais
+  moment le laisse ainsi pour de bon. Et parce qu'un écrivain direct peut avoir
+  ajouté sa ligne entre ta relecture et ton `os.replace()`, relève
+  `os.stat()` (taille et `st_mtime_ns`) au moment de la relecture, revérifie-le
+  juste avant `os.replace()`, et **recommence la relecture** s'il a bougé — deux
+  ou trois tours bornés, puis renonce à dédoublonner plutôt que d'écraser. Laisser
+  un doublon d'index est un défaut cosmétique ; effacer la ligne d'un autre est
+  une perte.
 
 Ce n'est pas une contre-mesure anti-attaquant : c'est deux gates honnêtes qui
-finissent à la même seconde. Consigne dans le module ce que tu verrouilles, sur
-quelle granularité, et ce qui se passe si le verrou n'est pas obtenu à temps.
+finissent à la même seconde, et un mainteneur qui lance `brain.js` à la main
+pendant que la boucle tourne. Consigne dans le module ce que tu verrouilles, sur
+quelle granularité, ce qui se passe si le verrou n'est pas obtenu à temps, et la
+fenêtre résiduelle ci-dessous — ne la maquille pas en garantie.
+
+**Reste une dette, et elle est du ressort du magasin, pas du tien.** Un écrivain
+qui ignore le verrou et dont l'ajout tombe entre ta dernière vérification de
+`os.stat()` et ton `os.replace()` perd quand même sa ligne. La fermer exigerait
+que `brain.js` prenne le même verrou — un changement d'une dépendance hors de ce
+dépôt, hors du périmètre de B. Écris-la en une ligne dans le module ; ne rallonge
+pas le pont pour la contourner.
 
 ## Ce que le check fera
 
@@ -184,19 +210,36 @@ Elle exige ensuite :
 
 Puis elle exerce la **concurrence**, ce que les quatre appels séquentiels ne
 peuvent pas faire : dans un sous-dossier neuf du bac à sable — une racine
-**partagée**, cette fois — elle lance **deux écrivains simultanés** (deux
-`threading.Thread`, ou deux sous-processus) sur **deux slugs distincts**, et
-exige ensuite :
+**partagée**, cette fois. **Quatre** axes, et deux d'entre eux ne se contentent
+pas d'espérer un entrelacement.
+
+D'abord deux écrivains simultanés (deux `threading.Thread`, ou deux
+sous-processus) sur **deux slugs distincts** :
 
 - les **deux** `<slug>.md` présents — aucune écriture perdue ;
 - `MEMORY.md` portant **exactement une** ligne pour chacun des deux slugs, soit
-  deux lignes au total. C'est la preuve du verrou : sans lui, le cycle
-  lecture-modification-écriture de l'un écrase la ligne de l'autre, et il en
-  manque une.
+  deux lignes au total.
 
-Deux axes, donc. Ils échouent sur un pont correct-mais-non-verrouillé — c'est
-exactement ce qu'ils sont là pour attraper, et c'est un défaut que la version
-séquentielle du contrôle ne voyait pas.
+Ces deux axes-là sont nécessaires mais **ne prouvent rien à eux seuls**, et
+l'audit l'a dit : deux fils lancés une fois peuvent être ordonnancés
+séquentiellement, auquel cas un pont sans le moindre verrou les passe. D'où les
+deux axes suivants, qui ne dépendent pas de l'ordonnanceur :
+
+- **le verrou est réellement pris.** Pendant qu'un `ecrire_regle` est en vol dans
+  un fil, la sonde tente elle-même, en boucle serrée,
+  `fcntl.flock(<racine>/.memory.lock, LOCK_EX | LOCK_NB)` et exige **au moins un
+  refus** (`BlockingIOError`). L'appel à `node` dure des dizaines de
+  millisecondes : la fenêtre est large et l'observation fiable. Un pont qui
+  n'ouvre jamais ce fichier ne refuse jamais rien, et échoue ici — c'est la
+  vérification directe que le test comportemental ne pouvait pas rendre ;
+- **un écrivain direct concurrent ne perd pas sa ligne.** La sonde joue le
+  mainteneur qui lance `brain.js` à la main : ayant constaté ci-dessus que le
+  verrou est tenu, donc qu'un cycle est en cours, elle **ajoute elle-même** une
+  ligne d'index pour un troisième slug directement dans `MEMORY.md`, sans prendre
+  le verrou. Le moment est choisi, pas espéré. Une fois le fil joint, cette ligne
+  doit **toujours être là**. Un pont qui réécrit l'index depuis un instantané
+  périmé l'a effacée ; celui qui ne retire que ses propres doublons et revérifie
+  `os.stat()` avant `os.replace()` l'a gardée.
 
 Puis elle efface le dossier entier, dans un `finally`. Elle ne peut emporter que
 ce qu'elle a créé : le dossier n'a pas existé avant elle. C'est aussi pourquoi

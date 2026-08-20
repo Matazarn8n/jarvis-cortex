@@ -37,6 +37,7 @@
 # dette: le runner ne borne pas les écritures d'un `check:` hors `repo:` — les sondes B-T3 et B-T4 écrivent dans un bac à sable propre à l'exécution, sous le `.cache/` de jarvis-cortex, hors de ce dépôt.
 # dette: aucun `check:` ne peut lire la liste des fichiers du diff du ticket ; la non-régression de périmètre se borne donc au contenu des trois fichiers de gouvernance, pas à une whitelist du commit.
 # dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas, et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
+# dette: `brain.js` ne prend aucun verrou pour indexer — un écrivain qui l'appelle directement et dont l'ajout tombe entre la dernière vérification de `os.stat()` du pont et son `os.replace()` perd sa ligne ; fermer cette fenêtre exige un changement de `brain.js`, hors du dépôt de B, et B-T3 se borne donc à ne jamais retirer une ligne qui n'est pas un doublon de son propre slug.
 # dette: `AskUserQuestion` échoue en session de plan (`readonly database`) — un ticket ne peut pas poser la question que la consigne lui impose de poser.
 # dette: l'exception de non-régression (le marqueur de raccordement daté, B-T0) reste une déclaration humaine qu'aucune sonde ne peut amarrer à une preuve antérieure à la session ; l'y amarrer exigerait que le moteur expose au `check:` l'état du dépôt avant le ticket, capacité absente — la sonde imprime donc le marqueur au lieu de le passer sous silence, faute de mieux.
 #
@@ -75,7 +76,7 @@ tickets:
     effort: high
     codex_gate: true
     max_budget_usd: 3.00
-    # Le ticket le plus long du bloc : un script, ses 33 cas d'autotest, un
+    # Le ticket le plus long du bloc : un script, ses 35 cas d'autotest, un
     # sceau. Bornes explicites — les défauts du moteur (120 tours, 90 min)
     # laissent une session égarée brûler le budget avant de buter dessus.
     max_turns: 70
@@ -90,7 +91,7 @@ tickets:
     # vérificateur permissif — celui qui aurait laissé passer les défauts de
     # l'audit — échoue ici, avant d'avoir servi.
     # La QUANTITÉ mesurée est le nombre de lignes `cas_ok=` que l'autotest émet,
-    # une par piège réellement construit puis refusé (B-T0.md en énumère 33 au
+    # une par piège réellement construit puis refusé (B-T0.md en énumère 35 au
     # minimum) : un vérificateur amputé de ses cas cassés n'atteint pas le
     # seuil, là où un `test -s` sur le script l'aurait laissé passer. stderr
     # n'est PAS capturé — un échec doit rester lisible dans le journal du
@@ -104,7 +105,7 @@ tickets:
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 33
+      && test "$cas" -ge 35
       && echo "$sortie"
       && echo "B-T0 sonde=autotest cas_ok=${cas}"
 
@@ -216,7 +217,7 @@ tickets:
     # le dossier entier — rien d'autre. Quatre exigences, un seul passage :
     #  1. réécriture avec un fait DIFFÉRENT -> `.v1` garde l'ancien (régime M-T1) ;
     #  2. écriture -> UNE ligne d'index (rubrique 4 du constat : 328 fichiers sur
-    #     436 ne sont dans aucun index, B ne doit pas grossir ce tas) ;
+    #     438 ne sont dans aucun index, B ne doit pas grossir ce tas) ;
     #  3. gate REJOUÉ à l'identique -> ni `.v2`, ni seconde ligne d'index ;
     #  4. réécriture où SEUL le `why` change -> `.v2` apparaît. L'égalité porte
     #     sur tout le contenu persistant, pas sur le seul `fait` : une règle dont
@@ -231,14 +232,23 @@ tickets:
     # propre à l'exécution — c'est la sonde qui y lance elle-même DEUX écrivains
     # concurrents sur une racine partagée, sur deux slugs distincts, et exige
     # les deux règles et leurs deux lignes d'index.
-    # Neuf axes, donc neuf `cas_ok=` attendus : c'est la quantité que le check
+    # MAIS DEUX FILS LANCÉS UNE FOIS NE PROUVENT PAS LE VERROU — l'ordonnanceur
+    # peut les sérialiser, et un pont sans verrou passe alors. Deux axes de plus,
+    # indépendants de l'ordonnancement : la sonde tente elle-même
+    # `flock(<racine>/.memory.lock, LOCK_NB)` pendant qu'une écriture est en vol
+    # et exige un refus ; puis, le verrou constaté tenu, elle joue l'écrivain
+    # DIRECT que le verrou ne lie pas — un `brain.js` lancé à la main — en
+    # ajoutant sans verrou une ligne d'index qui doit survivre. C'est ce qui
+    # oblige le pont à ne retirer que les doublons de SON slug au lieu de
+    # réécrire l'index depuis un instantané périmé.
+    # Onze axes, donc onze `cas_ok=` attendus : c'est la quantité que le check
     # compte, sur l'artefact que `--module` nomme.
     check: >-
       sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/brain_bridge.py)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 9
+      && test "$cas" -ge 11
       && echo "$sortie"
       && echo "B-T3 sonde=pont cas_ok=${cas}"
 

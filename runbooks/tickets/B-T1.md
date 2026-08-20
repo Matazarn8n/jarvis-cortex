@@ -106,15 +106,25 @@ ta trouvaille : consigne-la, elle prime sur ce prompt.
    implémente cette règle et la sonde `pont` l'exerce dans les deux sens.
 5. **Le contenu.** Ce qui part dans le fait, ce qui part dans `--why`. Le fait
    doit rester lisible seul, des mois plus tard, sans le rapport d'origine.
-6. **L'index `MEMORY.md`.** Le constat du bloc M mesure 328 fichiers sur 436
+6. **L'index `MEMORY.md`.** Le constat du bloc M mesure 328 fichiers sur 438
    sans aucune ligne d'index : trois sur quatre ne sont atteignables que si l'on
    connaît déjà leur existence. Une règle que B écrit doit poser sa ligne
    d'index **au moment de l'écriture**, pas plus tard. `brain.js` l'appose déjà
    (l. 208-220), mais **en append-only** : dis explicitement combien de lignes
    une règle vaut, et ce qui se passe à la réécriture. C'est le même arbitrage
    que le point 4, vu depuis l'index.
-7. **Ce que la boucle ne fera jamais.** Borne-la. Au minimum : elle n'efface
-   rien, elle n'écrit pas hors du magasin, elle ne fusionne pas deux règles.
+7. **Ce que la boucle ne fera jamais.** Borne-la. Au minimum : elle ne supprime
+   aucun fichier de règle ni aucune version `.vN`, elle n'écrit pas hors du
+   magasin, elle ne fusionne pas deux règles.
+
+   Rédige cette interdiction sur les **règles**, pas sur les octets : le point 6
+   oblige la boucle à retirer d'un `MEMORY.md` append-only les lignes d'index
+   **surnuméraires de la règle qu'elle vient d'écrire**, et B-T3 l'implémente. Un
+   « elle n'efface rien » écrit à plat contredirait donc le point 6 dans le même
+   document — c'est la contradiction que le gate a relevée. Autorise explicitement
+   ce seul retrait, et borne-le : les lignes des **autres** règles ne sont jamais
+   touchées, ce qui est aussi ce que la sonde `pont` exerce avec son écrivain
+   direct concurrent.
 
 ## Modèle de menace — borné
 
@@ -192,7 +202,7 @@ le format) :
      **et différentes** l'une de l'autre ; s'ils disent la même chose, `--why`
      ne porte rien que le fait ne porte déjà ;
   6. **index** — `lignes_index_par_regle` vaut exactement `1` (rubrique 4 du
-     constat du bloc M : 328 fichiers sur 436 sans ligne d'index — B ne grossit
+     constat du bloc M : 328 fichiers sur 438 sans ligne d'index — B ne grossit
      pas ce tas, et ne le grossit pas non plus d'une ligne par rejeu) ;
   7. **bornes** — `jamais` porte au moins **trois** chaînes non vides.
 - **Cohérence entre `decisions` et `cas`**, vérifiée cas par cas : un cas à
