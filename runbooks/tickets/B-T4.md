@@ -29,6 +29,28 @@ et une retouche ailleurs ne se ferait pas arrêter mécaniquement. Le périmètr
 tient parce que tu le respectes et parce que le gate Codex relit ton diff, pas
 parce qu'une barrière l'impose.
 
+**Et la porte de sortie, sans laquelle ce contrôle devient un blocage
+incorrigible.** La finalité de B est qu'un jour `injecter_regles` **apparaisse**
+dans `ops/plan_runner.py` — c'est la dette que l'Owner paiera à la main. Le jour
+où il la paie, une non-régression écrite naïvement ferait rougir la sonde sur son
+geste légitime, à chaque rejeu, ré-audit de chaîne ou maillon suivant qui
+réutilise cette sonde. Défaut déjà payé ici : le texte d'un runbook est lu comme
+une norme, et une norme absolue devient un blocage que personne ne peut lever.
+
+La non-régression tolère donc la présence de ces noms dans un fichier de
+gouvernance **si et seulement si** ce fichier porte aussi, sur une de ses lignes,
+un marqueur de raccordement daté de la forme :
+
+```
+# raccordement B verdict->regle, pose a la main le YYYY-MM-DD par l'Owner
+```
+
+Sans marqueur, la présence reste un échec. Avec marqueur, la sonde consigne la
+présence dans sa sortie (elle l'imprime, elle ne la tait pas) et rend 0 sur cet
+axe. Le marqueur est une déclaration humaine, pas une preuve : c'est assumé — il
+n'existe pas de contrôle mécanique qui distingue le raccordement voulu par
+l'Owner d'un contournement, et prétendre le contraire serait la vraie faute.
+
 ## Le livrable — un module neuf, `ops/verdict_hook.py`
 
 ### 1. La fonction
