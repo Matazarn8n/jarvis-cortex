@@ -13,10 +13,12 @@ Tu n'écris **pas** le point d'entrée qui relie les deux : c'est B-T4. Un seul
 livrable ici, `ops/brain_bridge.py`.
 
 Le `check:` appelle la sonde avec `--module ops/brain_bridge.py` et **compte**
-les lignes `cas_ok=` qu'elle imprime : il en exige **sept** — `.v1` versionné,
+les lignes `cas_ok=` qu'elle imprime : il en exige **neuf** — `.v1` versionné,
 `.md` à jour, `.v2` absent au rejeu, une seule ligne d'index,
-`etat == "inchangee"` décidé, une révision du seul `why` qui produit `.v2`, et
-l'index toujours à une ligne après elle. Un axe non exercé ne compte pas.
+`etat == "inchangee"` décidé, une révision du seul `why` qui produit `.v2`,
+l'index toujours à une ligne après elle, puis **deux écrivains concurrents sur
+une racine partagée** qui doivent produire leurs deux règles et leurs deux
+lignes d'index. Un axe non exercé ne compte pas.
 
 ## Le livrable — `ops/brain_bridge.py`
 
@@ -38,10 +40,14 @@ Il expose exactement deux noms :
 `racine=None` écrit dans la mémoire réelle ; `racine=<dossier>` écrit **dans ce
 dossier et nulle part ailleurs**, index compris. C'est ce qui rend le pont
 vérifiable sans toucher à la mémoire de l'Owner, **et** ce qui permet à deux
-contrôles concurrents de ne pas se marcher dessus : un bac à sable partagé et
-son `MEMORY.md` unique, réécrit sans verrou, faisait perdre ou ressusciter les
-lignes d'une exécution par l'autre. Un dossier neuf par exécution supprime la
-course au lieu de la gérer.
+*contrôles* concurrents de ne pas se marcher dessus : un bac à sable partagé et
+son `MEMORY.md` unique faisait perdre ou ressusciter les lignes d'une exécution
+par l'autre. Un dossier neuf par exécution supprime cette course-là.
+
+Elle ne supprime pas l'autre, et c'est le point dur de ce ticket : **la mémoire
+réelle est une racine partagée**, et deux gates qui rendent leur verdict en même
+temps y écrivent en même temps. Voir plus bas — c'est le verrou, pas le bac à
+sable, qui répond à celle-là.
 
 Établis **sur le disque** comment `brain.js` accepte une racine de magasin —
 variable d'environnement lue à son démarrage, option de ligne de commande, ou
@@ -67,7 +73,7 @@ Points de vigilance, tous mécaniques :
   du moteur ferait entrer tout `ops/plan_runner.py` dans l'import — c'est le
   contraire de ce qu'on veut ici.
 
-## Les deux points à ne pas rater
+## Les trois points à ne pas rater
 
 ### 1. Le régime procédural — ne le casse pas
 
@@ -114,6 +120,35 @@ sur 436 sans ligne d'index. Une règle écrite par B vaut **exactement une** lig
 d'index — pas zéro, pas une par rejeu, et pas une de plus quand une révision
 versionne le fichier.
 
+### 3. La concurrence — un verrou par racine, et un remplacement atomique
+
+Le point précédent te met dans une situation que `brain.js` ne gère pas pour toi.
+Il ajoute sa ligne d'index **en append-only** (l. 208-220) : tenir *une* ligne
+par règle à travers les révisions t'oblige donc à **relire `MEMORY.md`, le
+dédoublonner, et le réécrire**. C'est un cycle lecture-modification-écriture sur
+un fichier partagé, et la mémoire réelle *est* partagée : deux gates qui
+finissent en même temps lancent deux `ecrire_regle` sur la même racine. Sans
+précaution, chacun relit l'index d'avant l'autre et le réécrit ensuite — la ligne
+du perdant disparaît, silencieusement, et un test séquentiel reste vert.
+
+Deux exigences, toutes deux dans la bibliothèque standard :
+
+- **un verrou par racine** — un fichier de verrou dans la racine (par exemple
+  `<racine>/.memory.lock`), pris pour toute la durée du cycle : la lecture de
+  l'index, l'appel à `node`, et la réécriture. `fcntl.flock` sur un descripteur
+  ouvert suffit, il est interprocessus et le noyau le libère si le processus
+  meurt — c'est ce qui compte ici, une session tuée ne doit pas geler la boucle.
+  Libère-le dans un `finally`, et borne l'attente (`timeout=` de ta boucle
+  d'acquisition) plutôt que de bloquer sans fin ;
+- **un remplacement atomique** — écris l'index dans un fichier temporaire du même
+  répertoire, puis `os.replace()`. Un `write()` direct laisse une fenêtre où
+  `MEMORY.md` est tronqué, et un processus interrompu au mauvais moment le laisse
+  ainsi pour de bon.
+
+Ce n'est pas une contre-mesure anti-attaquant : c'est deux gates honnêtes qui
+finissent à la même seconde. Consigne dans le module ce que tu verrouilles, sur
+quelle granularité, et ce qui se passe si le verrou n'est pas obtenu à temps.
+
 ## Ce que le check fera
 
 Le `check:` de ton ticket est un appel d'une ligne à la sonde `pont` de
@@ -147,6 +182,22 @@ Elle exige ensuite :
   justification est versionnée, pas avalée ;
 - `MEMORY.md` porte **toujours une seule** ligne après le quatrième appel.
 
+Puis elle exerce la **concurrence**, ce que les quatre appels séquentiels ne
+peuvent pas faire : dans un sous-dossier neuf du bac à sable — une racine
+**partagée**, cette fois — elle lance **deux écrivains simultanés** (deux
+`threading.Thread`, ou deux sous-processus) sur **deux slugs distincts**, et
+exige ensuite :
+
+- les **deux** `<slug>.md` présents — aucune écriture perdue ;
+- `MEMORY.md` portant **exactement une** ligne pour chacun des deux slugs, soit
+  deux lignes au total. C'est la preuve du verrou : sans lui, le cycle
+  lecture-modification-écriture de l'un écrase la ligne de l'autre, et il en
+  manque une.
+
+Deux axes, donc. Ils échouent sur un pont correct-mais-non-verrouillé — c'est
+exactement ce qu'ils sont là pour attraper, et c'est un défaut que la version
+séquentielle du contrôle ne voyait pas.
+
 Puis elle efface le dossier entier, dans un `finally`. Elle ne peut emporter que
 ce qu'elle a créé : le dossier n'a pas existé avant elle. C'est aussi pourquoi
 elle ne touche jamais à un `MEMORY.md` partagé — un contrôle ne dégrade pas ce
@@ -170,7 +221,7 @@ ensuite, puis efface ce dossier et rien d'autre :
 
 ```bash
 python3 - <<'PY'
-import importlib.util, os, pathlib, shutil, time
+import importlib.util, os, pathlib, shutil, threading, time
 s = importlib.util.spec_from_file_location("bb", pathlib.Path("ops/brain_bridge.py").resolve())
 bb = importlib.util.module_from_spec(s); s.loader.exec_module(bb)
 box = bb.BRAIN_JS.parent / ".cache" / f"preuve-b-t3-{os.getpid()}-{time.time_ns()}"
@@ -188,6 +239,16 @@ try:
           "| v1 =", (box / f"{slug}.v1.md").exists(), "| v2 apres revision du why =", v2.exists(),
           "| v2 porte WHY_A =", v2.exists() and "WHY_A" in v2.read_text(encoding="utf-8"),
           "| lignes d'index =", idx.read_text(encoding="utf-8").count(slug) if idx.exists() else 0)
+    part = box / "partagee"; part.mkdir()
+    slugs = ["feedback_preuve_b_t3_a", "feedback_preuve_b_t3_b"]
+    fils = [threading.Thread(target=bb.ecrire_regle,
+                             args=({"slug": s, "fait": "CONCURRENT", "why": "WHY_C", "type": "feedback"},),
+                             kwargs={"racine": part}) for s in slugs]
+    for f in fils: f.start()
+    for f in fils: f.join()
+    ipart = (part / "MEMORY.md").read_text(encoding="utf-8") if (part / "MEMORY.md").exists() else ""
+    print("concurrence: regles =", [(part / f"{s}.md").exists() for s in slugs],
+          "| lignes d'index =", [ipart.count(s) for s in slugs], "(attendu [True, True] et [1, 1])")
 finally:
     shutil.rmtree(box, ignore_errors=True)
 PY
@@ -196,9 +257,13 @@ PY
 Colle sa sortie dans ton message de fin. Attendu :
 `etats = ['ecrite', 'ecrite', 'inchangee', 'ecrite']`, `v2 apres le rejeu
 identique = False`, `v1 = True`, `v2 apres revision du why = True` portant
-`WHY_A`, et **une seule** ligne d'index d'un bout à l'autre.
+`WHY_A`, et **une seule** ligne d'index d'un bout à l'autre. Puis, sur la racine
+partagée, `regles = [True, True]` et `lignes d'index = [1, 1]`.
 
-Les deux échecs à ne pas maquiller. Si `v2` est vrai après le rejeu identique,
+Les trois échecs à ne pas maquiller. Si la racine partagée rend `[1, 0]` ou
+`[0, 1]`, ton verrou n'existe pas ou ne couvre pas tout le cycle : une des deux
+règles a été indexée puis effacée par l'autre, et c'est le défaut qui perd des
+lignes en production sans jamais rien afficher. Si `v2` est vrai après le rejeu identique,
 ton idempotence n'existe pas. Si le quatrième état est `inchangee`, elle est trop
 large : tu ne compares que le `fait` et tu viens de perdre une révision.
 Dis-le plutôt que de relancer jusqu'à ce que ça passe. Si le dossier reste vide,

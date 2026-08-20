@@ -111,8 +111,42 @@ contrôle laissait passer n'importe quoi :
 - au moins un cas a `regles > 0` ;
 - `derivation_slug` mentionne `sha256`.
 
+**Le bloc `decisions` — c'est là que porte le renfort.** L'audit a montré qu'un
+document ne portant que les ancres, flanqué d'une matrice formellement valide
+mais arbitraire, franchissait ce contrôle sans avoir tranché quoi que ce soit :
+la substance était déléguée au gate Codex, et un faux contrat aurait été exécuté
+fidèlement par B-T2. B-T1 met donc ses sept décisions dans la matrice, en champs
+machine-lisibles, et tu en vérifies un invariant chacune — **sept axes** :
+
+- la racine porte exactement `derivation_slug`, `decisions` et `cas` ;
+  `decisions` porte exactement `verdicts_armes`, `severites_retenues`,
+  `cle_champs`, `cle_exclus`, `cle_normalisation`, `egalite_champs`,
+  `contenu_fait`, `contenu_why`, `lignes_index_par_regle`, `jamais` ;
+- `verdicts_armes` : liste non vide, incluse dans le domaine des six verdicts, et
+  **sans `NO_REVIEWER` ni `REVIEWER_DOWN`** ;
+- `severites_retenues` : liste non vide, incluse dans `{CRITIQUE, HAUTE,
+  MOYENNE, BASSE, INFO, MOTEUR}` ;
+- `cle_champs` et `cle_exclus` non vides et **disjoints**, `cle_normalisation`
+  chaîne non vide ;
+- `egalite_champs` contient au moins `fait`, `why` et `type` — l'invariant qui
+  empêche une idempotence trop large de perdre les révisions, en amont de B-T3 ;
+- `contenu_fait` et `contenu_why` : chaînes non vides et **différentes** ;
+- `lignes_index_par_regle == 1` ;
+- `jamais` : au moins trois chaînes non vides.
+
+Et la **cohérence entre `decisions` et `cas`**, vérifiée dans l'axe de chaque
+cas, sans axe supplémentaire — c'est elle qui interdit une matrice arbitraire :
+
+- `regles > 0` ⟹ le `verdict` est dans `verdicts_armes`, **et** le `rapport`
+  porte au moins une ligne dont le premier champ est une sévérité de
+  `severites_retenues` ;
+- `verdict` hors de `verdicts_armes` ⟹ `regles == 0` ;
+- `verdict` armé et `regles == 0` ⟹ le `rapport` ne porte **aucune** ligne
+  d'une sévérité retenue. Sinon la doctrine et l'exemple se contredisent.
+
 Imprime les comptes que tu as **calculés** : nombre de cas, liste des verdicts
-productifs, total des règles attendues, dérivation annoncée.
+productifs, total des règles attendues, dérivation annoncée, verdicts armés,
+sévérités retenues.
 
 ## Sonde `decision` — juge B-T2
 
@@ -186,6 +220,21 @@ Exigences, une par axe :
   des gates ;
 - `MEMORY.md` porte **toujours une seule** ligne après le quatrième appel : une
   révision versionne le fichier, elle ne duplique pas l'index.
+
+**Puis la concurrence — deux axes de plus, et le trou que l'audit a nommé.**
+`brain.js` indexe en append-only (l. 208-220) : tenir *une* ligne par règle
+oblige le pont à relire, dédoublonner et réécrire `MEMORY.md`. C'est un cycle
+lecture-modification-écriture sur un fichier que **la mémoire réelle partage**
+entre tous les gates. Une suite séquentielle ne peut pas voir ce défaut : elle
+reste verte pendant que deux gates simultanés se perdent une ligne. Exerce-le
+donc pour de bon, dans un sous-dossier **partagé** du bac à sable :
+
+- deux écrivains **simultanés** (`threading.Thread` ou deux sous-processus) sur
+  **deux slugs distincts**, joints avant de mesurer ;
+- les deux `<slug>.md` existent — aucune écriture perdue ;
+- `MEMORY.md` porte **exactement une** ligne par slug, donc deux au total. C'est
+  la preuve comportementale du verrou par racine et du remplacement atomique
+  qu'exige B-T3 ; un pont qui réécrit l'index sans verrou en perd une.
 
 Imprime l'état du disque constaté, pas un verdict binaire.
 
@@ -265,11 +314,11 @@ cibles :
 
 | sonde      | seuil du `check:` | ce que les axes couvrent                        |
 |------------|-------------------|-------------------------------------------------|
-| `contrat`  | 7                 | les 6 cas de matrice + l'axe du document         |
+| `contrat`  | 14                | les 6 cas de matrice + les 7 décisions + l'axe du document |
 | `decision` | 6                 | un par verdict du domaine                        |
-| `pont`     | 7                 | `.v1`, `.md`, `.v2` absent, index, `inchangee`, révision du `why`, index après révision |
+| `pont`     | 9                 | `.v1`, `.md`, `.v2` absent, index, `inchangee`, révision du `why`, index après révision, + les 2 axes concurrents |
 | `entree`   | 8                 | les 5 passes, les 2 CLI, la non-régression       |
-| `autotest` | 27                | 4 arbres valides + les 23 pièges énumérés plus bas |
+| `autotest` | 33                | 4 arbres valides + les 29 pièges énumérés plus bas |
 
 Un seuil manqué fait échouer le ticket jugé — c'est voulu : une sonde amputée de
 ses axes ne doit pas pouvoir rendre `done`.
@@ -316,14 +365,22 @@ minimum, et chacun doit être refusé :
   hors domaine ; une clé en trop sur un cas ; `cles` non vide sur un cas à
   `regles: 0` ; `len(cles) != regles` ; un `attendus` sans `why` ; une matrice
   tout à zéro ; `REVIEWER_DOWN` produisant une règle ; un document portant la
-  formule de GO inatteignable ; un document amputé d'une ancre.
+  formule de GO inatteignable ; un document amputé d'une ancre ; **`decisions`
+  absent** ; **`REVIEWER_DOWN` dans `verdicts_armes`** ; **un cas productif dont
+  le verdict n'est pas armé** ; **`egalite_champs` sans `why`** ;
+  **`lignes_index_par_regle: 2`**.
 - `decision` : un module qui rend le bon compte mais des règles sans `fait` ;
   un qui rend un `type` autre que `feedback` ; un qui dérive le slug autrement
   que par `sha256` ; un stub qui rend toujours une règle.
 - `pont` : un faux pont qui n'écrit pas de `.v1` ; un qui empile un `.v2` au
   rejeu ; un qui ajoute une ligne d'index par appel ; **un qui ne compare que le
   `fait` et rend donc `inchangee` quand seul le `why` change** — c'est le piège
-  qui garde l'idempotence honnête.
+  qui garde l'idempotence honnête ; **un qui réécrit `MEMORY.md` sans verrou et
+  perd donc une ligne quand deux écrivains le font en même temps**. Rends ce
+  dernier piège *déterministe* plutôt qu'aléatoire : le faux pont dort quelques
+  dizaines de millisecondes entre sa lecture de l'index et sa réécriture, ce qui
+  garantit l'entrelacement au lieu de l'espérer — un piège qui ne mord qu'une
+  fois sur dix rend la sonde intermittente, ce qui est pire qu'un piège absent.
 - `entree` : un module qui lève au lieu de journaliser l'échec ; un qui écrit
   même sur `GO` ; un dont le chemin par défaut ne touche jamais le disque ;
   **une CLI qui imprime `echec…` mais sort quand même en 0** sur une racine
@@ -334,8 +391,8 @@ ne sont pas commités ailleurs que dans le corps de `sonde_b.py`.
 
 **La sortie de l'autotest nomme les cas rejetés**, un par ligne au format
 `cas_ok=<nom>` du contrat de sortie ci-dessus — un arbre valide accepté et un
-piège refusé comptent chacun pour une ligne. Les vingt-trois pièges énumérés
-ci-dessus plus les quatre arbres valides font le seuil de 27 ; en ajouter est
+piège refusé comptent chacun pour une ligne. Les vingt-neuf pièges énumérés
+ci-dessus plus les quatre arbres valides font le seuil de 33 ; en ajouter est
 bienvenu. Un autotest qui imprime « tout va bien » ne prouve rien ; celui qui
 nomme chaque piège refusé prouve que l'instrument mord.
 
@@ -364,13 +421,25 @@ dépôt est public à l'échelle de l'équipe et git garde ce qu'on y met.
 `/home/nuveo/hermes-os-plan-b`, les deux commandes qui rendent la preuve :
 
 ```bash
+set -o pipefail
 python3 ops/checks/sonde_b.py autotest --facts '{}' | tee /dev/stderr | grep -c '^cas_ok='
 sha256sum -c ops/checks/sonde_b.sha256
 ```
 
+`set -o pipefail` n'est pas décoratif : sans lui, le code de retour du pipeline
+est celui de `grep`, et un autotest qui **échoue** après avoir imprimé trente
+lignes afficherait quand même « 33 » et te laisserait croire que c'est passé.
+C'est du Bash — lance donc ce bloc sous `bash`, pas sous `sh`.
+
 Colle les deux sorties dans ton message de fin. La première doit lister les cas
-cassés refusés et finir sur un compte **≥ 27** — en dessous, le `check:` de ce
+cassés refusés et finir sur un compte **≥ 33** — en dessous, le `check:` de ce
 ticket échouera ; la seconde doit dire `ops/checks/sonde_b.py: OK`, ce qui exige
-que le sceau soit au format standard décrit plus haut. C'est la commande exacte
-que lance le `check:` : un sceau mal formé ou périmé rendrait les quatre `check:`
-suivants impossibles — vérifie-le, ne le suppose pas.
+que le sceau soit au format standard décrit plus haut.
+
+Ce n'est **pas** la commande exacte du `check:`, et ne te fie pas à l'idée
+qu'elle le serait : le `check:` appelle `"$HERMES_CHECK_PYTHON"` et non `python3`,
+il passe `--facts "$HERMES_TICKET_FACTS"` et non `'{}'`, et il capture stdout
+dans une substitution au lieu d'un pipeline. C'est la même *substance* — le même
+autotest, le même seuil, le même `sha256sum -c` — dans un habillage plus commode
+à lire. Un sceau mal formé ou périmé rendrait les quatre `check:` suivants
+impossibles : vérifie-le, ne le suppose pas.

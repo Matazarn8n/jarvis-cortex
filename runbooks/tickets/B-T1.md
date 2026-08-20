@@ -16,16 +16,19 @@ forme exécutable du premier :
   `check:` de B-T2 exécutera, verdict par verdict, sur l'implémentation.
 
 Le `check:` de ce ticket **compte** les lignes `cas_ok=` que la sonde `contrat`
-imprime : il en exige **sept** — un par cas de la matrice (les six verdicts du
-domaine, ni plus ni moins) plus l'axe du document rédigé. Une matrice amputée
-d'un verdict ne peut pas atteindre le seuil.
+imprime : il en exige **quatorze** — un par cas de la matrice (les six verdicts
+du domaine, ni plus ni moins), un par décision du bloc `decisions` (les sept
+ci-dessous), plus l'axe du document rédigé. Une matrice amputée d'un verdict ou
+d'une décision ne peut pas atteindre le seuil.
 
 ## Le problème
 
 `ops/plan_runner.py` fait passer chaque ticket par un gate Codex. Le gate rend un
 verdict et un rapport de findings. Quand un défaut est réel, la règle qui devrait
 en découler est écrite **à la main, après coup, si quelqu'un y pense** — et le
-plus souvent personne n'y pense. B câble la réinjection automatique.
+plus souvent personne n'y pense. B outille cette réinjection de bout en bout —
+jusqu'au point d'entrée CLI de B-T4 ; le dernier fil, l'appel posé dans le
+moteur, reste une dette que l'Owner paie à la main (voir plus bas).
 
 Le magasin de règles est `brain.js` (dépôt jarvis-cortex), commande
 `node brain.js store "<fait>" --type feedback --name <slug> --why "<pourquoi>"`.
@@ -131,9 +134,27 @@ document s'il contient cette formule.
 Un contrat que personne n'exécute se contredit en silence. Le tien devient un
 jeu d'épreuves : `docs/plans/2026-08-21-b-contrat-injection.matrice.json`.
 
+Elle porte **deux** choses : tes sept décisions en champs machine-lisibles, et
+les six cas qui les illustrent. Les deux, pas l'une des deux — l'audit a montré
+qu'un document ne portant que les ancres, flanqué d'une matrice formellement
+valide mais arbitraire, franchissait le contrôle sans avoir tranché quoi que ce
+soit, et que B-T2 exécutait ensuite ce faux contrat fidèlement.
+
 ```json
 {
   "derivation_slug": "feedback_ + sha256(cle)[:12]  — cle = <ce que tu tranches au point 3>",
+  "decisions": {
+    "verdicts_armes": ["NO_GO", "…"],
+    "severites_retenues": ["CRITIQUE", "…"],
+    "cle_champs": ["<champ de finding>", "…"],
+    "cle_exclus": ["<champ volontairement hors clé>", "…"],
+    "cle_normalisation": "<ce que tu appliques, des deux côtés, avant de hacher>",
+    "egalite_champs": ["fait", "why", "type"],
+    "contenu_fait": "<ce qui part dans le fait, et sous quelle forme>",
+    "contenu_why": "<ce qui part dans --why, et sous quelle forme>",
+    "lignes_index_par_regle": 1,
+    "jamais": ["<interdiction>", "<interdiction>", "<interdiction>"]
+  },
   "cas": [
     {
       "verdict": "NO_GO",
@@ -151,7 +172,35 @@ Règles de forme, toutes vérifiées par la sonde `contrat` de `ops/checks/sonde
 (livré par B-T0 — **lis-le**, il est écrit avant ton ticket et fait autorité sur
 le format) :
 
-- La racine porte **exactement** `derivation_slug` et `cas`.
+- La racine porte **exactement** `derivation_slug`, `decisions` et `cas`.
+- `decisions` porte **exactement** les dix clés ci-dessus, et la sonde vérifie
+  un invariant par décision — sept axes, sept `cas_ok=` :
+  1. **déclencheur** — `verdicts_armes` est une liste non vide, incluse dans le
+     domaine des six verdicts, et ne contient **ni `NO_REVIEWER` ni
+     `REVIEWER_DOWN`** : une panne de reviewer n'est pas un défaut du code ;
+  2. **sévérité** — `severites_retenues` est une liste non vide, incluse dans
+     `{CRITIQUE, HAUTE, MOYENNE, BASSE, INFO, MOTEUR}` ;
+  3. **clé** — `cle_champs` et `cle_exclus` sont non vides et **disjoints**,
+     `cle_normalisation` est une chaîne non vide. Un champ ne peut pas être à la
+     fois dans la clé et hors d'elle, et « rien n'est exclu » n'est pas une
+     décision : c'est l'aveu qu'on n'a pas regardé ce qui bouge d'un gate à
+     l'autre ;
+  4. **idempotence** — `egalite_champs` contient **au moins** `fait`, `why` et
+     `type`. C'est le point 4 rendu mécanique : une égalité qui oublie `why`
+     perd les révisions, et B-T3 hérite de ce champ tel quel ;
+  5. **contenu** — `contenu_fait` et `contenu_why` sont des chaînes non vides
+     **et différentes** l'une de l'autre ; s'ils disent la même chose, `--why`
+     ne porte rien que le fait ne porte déjà ;
+  6. **index** — `lignes_index_par_regle` vaut exactement `1` (rubrique 4 du
+     constat du bloc M : 328 fichiers sur 436 sans ligne d'index — B ne grossit
+     pas ce tas, et ne le grossit pas non plus d'une ligne par rejeu) ;
+  7. **bornes** — `jamais` porte au moins **trois** chaînes non vides.
+- **Cohérence entre `decisions` et `cas`**, vérifiée cas par cas : un cas à
+  `regles > 0` a son `verdict` dans `verdicts_armes` **et** son `rapport` porte
+  au moins une ligne dont la sévérité est dans `severites_retenues` ; un cas dont
+  le `verdict` n'est pas armé est à `regles == 0` ; et un cas armé mais à
+  `regles == 0` ne doit porter aucune ligne d'une sévérité retenue. Un contrat
+  qui se contredit entre sa doctrine et ses exemples échoue ici, pas au gate.
 - **Les six verdicts du domaine ont chacun leur cas, une fois et une seule** :
   `GO`, `GO_AVEC_RESERVES`, `NO_GO`, `NO_VERDICT`, `NO_REVIEWER`,
   `REVIEWER_DOWN`. Ni doublon, ni manquant, ni cas hors domaine — la sonde
@@ -191,9 +240,14 @@ Le `check:` de ton ticket est un appel d'une ligne à la sonde `contrat` de
 `sha256`, `idempotence`, `MEMORY.md` et `dette`, et l'absence de la formule
 interdite. Sur la matrice : les règles de forme ci-dessus, toutes.
 
-Ces ancres sont le plancher, pas le plafond : un document qui les contient sans
-trancher les sept points ci-dessus passera le check et se fera refuser au gate
-Codex.
+Ces ancres restent un plancher faible — elles se satisfont d'un document qui les
+mentionne sans rien trancher. **C'est le bloc `decisions` qui porte la substance,
+et lui est contrôlé** : chacune des sept décisions a son invariant, et la
+cohérence avec les six cas est vérifiée. Un contrat arbitraire mais bien formé ne
+passe plus. Ce qui reste au gate Codex, et que rien ne mécanise, c'est le
+**jugement** : `verdicts_armes` peut être bien formé et mal choisi. Écris donc,
+pour chaque décision, la justification en prose à côté du champ — c'est elle que
+le gate lira.
 
 ## Fin — la commande finale et sa preuve observable
 
@@ -205,9 +259,11 @@ qui rend la preuve — elle lit la matrice et rapporte des grandeurs, elle ne se
 déclare pas vraie :
 
 ```bash
-python3 -c 'import json;m=json.load(open("docs/plans/2026-08-21-b-contrat-injection.matrice.json"));print("cas="+str(len(m["cas"])),"regles="+str(sum(c["regles"] for c in m["cas"])),"productifs="+str([c["verdict"] for c in m["cas"] if c["regles"]]))'
+python3 -c 'import json;m=json.load(open("docs/plans/2026-08-21-b-contrat-injection.matrice.json"));d=m["decisions"];print("cas="+str(len(m["cas"])),"regles="+str(sum(c["regles"] for c in m["cas"])),"productifs="+str([c["verdict"] for c in m["cas"] if c["regles"]]),"armes="+str(d["verdicts_armes"]),"severites="+str(d["severites_retenues"]),"egalite="+str(d["egalite_champs"]),"index="+str(d["lignes_index_par_regle"]))'
 ```
 
 Colle sa sortie dans ton message de fin. Six cas, au moins un productif, zéro sur
-les deux sentinelles de panne : si un chiffre te surprend, c'est la matrice qui
-est fausse, pas la commande.
+les deux sentinelles de panne, aucune sentinelle dans `armes`, `egalite` portant
+`fait`/`why`/`type`, `index=1` : si un chiffre te surprend, c'est la matrice qui
+est fausse, pas la commande. Et si `productifs` déborde de `armes`, ta doctrine
+et tes exemples ne disent pas la même chose.

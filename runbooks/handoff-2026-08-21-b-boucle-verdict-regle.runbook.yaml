@@ -1,11 +1,20 @@
 # Bloc B — la boucle « verdict de gate → règle de mémoire ».
 #
 # Aujourd'hui un gate Codex rend un verdict, un défaut est constaté, et la règle
-# qui en découle est écrite À LA MAIN, plus tard, si quelqu'un y pense. B câble
-# la réinjection : un verdict qui révèle un défaut écrit sa règle via
-# `brain.js store --type feedback`, donc au régime procédural versionné posé en
-# M-T1 (brain.js:197-206 — un `feedback` réécrit copie l'ancien en `<base>.vN.md`
-# avant d'être remplacé ; rien n'est perdu).
+# qui en découle est écrite À LA MAIN, plus tard, si quelqu'un y pense. B OUTILLE
+# la réinjection : il livre la chaîne complète — contrat, décision, pont, point
+# d'entrée appelable — qui écrit une règle via `brain.js store --type feedback`,
+# donc au régime procédural versionné posé en M-T1 (brain.js:197-206 — un
+# `feedback` réécrit copie l'ancien en `<base>.vN.md` avant d'être remplacé ;
+# rien n'est perdu).
+#
+# CE QUE B NE FAIT PAS, ET IL FAUT LE LIRE AVANT LE RESTE : livré tel quel,
+# AUCUN verdict de gate n'écrit de règle tout seul. Le dernier fil — l'appel posé
+# dans `ops/plan_runner.py` après `ts["verdict_motif"]` — est une DETTE du moteur
+# (première ligne de la liste ci-dessous), pas un ticket : une session de plan ne
+# modifie jamais un fichier de gouvernance. B s'arrête au point d'entrée CLI, et
+# c'est l'Owner qui branche. Le mot « automatique » ne s'applique donc qu'à ce
+# qui se passe APRÈS ce raccordement.
 #
 # PÉRIMÈTRE — B ne touche AUCUN fichier de gouvernance du moteur. Les trois
 # fichiers `ops/plan_runner.py`, `ops/plan_doctor.py` et `ops/plan_factory.py` ne
@@ -29,6 +38,7 @@
 # dette: aucun `check:` ne peut lire la liste des fichiers du diff du ticket ; la non-régression de périmètre se borne donc au contenu des trois fichiers de gouvernance, pas à une whitelist du commit.
 # dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas, et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
 # dette: `AskUserQuestion` échoue en session de plan (`readonly database`) — un ticket ne peut pas poser la question que la consigne lui impose de poser.
+# dette: l'exception de non-régression (le marqueur de raccordement daté, B-T0) reste une déclaration humaine qu'aucune sonde ne peut amarrer à une preuve antérieure à la session ; l'y amarrer exigerait que le moteur expose au `check:` l'état du dépôt avant le ticket, capacité absente — la sonde imprime donc le marqueur au lieu de le passer sous silence, faute de mieux.
 #
 # ABSENCE DE `chain:` — DÉLIBÉRÉE, PAS UN OUBLI. B est le dernier maillon du
 # programme : la seule suite identifiée par le constat du bloc M (rubrique 5,
@@ -41,9 +51,10 @@ phase: "B"
 project: b-boucle-verdict-regle-2026-08-21
 repo: /home/nuveo/hermes-os-plan-b
 description: >-
-  Câbler la réinjection verdict → règle : un défaut relevé par un gate Codex
-  écrit sa propre règle de mémoire, au régime procédural versionné de M-T1,
-  dans des modules neufs — aucun fichier de gouvernance n'est touché.
+  Outiller la réinjection verdict → règle jusqu'à un point d'entrée appelable :
+  contrat, décision pure, pont vers le régime procédural versionné de M-T1, CLI.
+  Aucun fichier de gouvernance n'est touché, donc rien ne s'écrit
+  automatiquement à la livraison : le raccordement du moteur reste une dette.
 
 requires_access:
   - file: /home/nuveo/hermes-os-plan-b/.git
@@ -64,6 +75,11 @@ tickets:
     effort: high
     codex_gate: true
     max_budget_usd: 3.00
+    # Le ticket le plus long du bloc : un script, ses 33 cas d'autotest, un
+    # sceau. Bornes explicites — les défauts du moteur (120 tours, 90 min)
+    # laissent une session égarée brûler le budget avant de buter dessus.
+    max_turns: 70
+    timeout_minutes: 60
     prompt_file: tickets/B-T0.md
     produces:
       - ops/checks/sonde_b.py
@@ -74,7 +90,7 @@ tickets:
     # vérificateur permissif — celui qui aurait laissé passer les défauts de
     # l'audit — échoue ici, avant d'avoir servi.
     # La QUANTITÉ mesurée est le nombre de lignes `cas_ok=` que l'autotest émet,
-    # une par piège réellement construit puis refusé (B-T0.md en énumère 27 au
+    # une par piège réellement construit puis refusé (B-T0.md en énumère 33 au
     # minimum) : un vérificateur amputé de ses cas cassés n'atteint pas le
     # seuil, là où un `test -s` sur le script l'aurait laissé passer. stderr
     # n'est PAS capturé — un échec doit rester lisible dans le journal du
@@ -88,7 +104,7 @@ tickets:
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 27
+      && test "$cas" -ge 33
       && echo "$sortie"
       && echo "B-T0 sonde=autotest cas_ok=${cas}"
 
@@ -103,6 +119,9 @@ tickets:
     effort: high
     codex_gate: true
     max_budget_usd: 3.00
+    # Deux documents, aucun code : la lecture du moteur domine le temps.
+    max_turns: 45
+    timeout_minutes: 45
     prompt_file: tickets/B-T1.md
     produces:
       - docs/plans/2026-08-21-b-contrat-injection.md
@@ -112,15 +131,25 @@ tickets:
     # dégénérée ET une matrice malformée : exactement les six verdicts du
     # domaine, uniques, aucun cas en trop, clés exactes sur chaque cas,
     # `cles`/`attendus` de longueur `regles` (donc vides sur un cas à zéro), au
-    # moins un cas productif, zéro règle sur les deux pannes de reviewer. Les
-    # comptes imprimés sont calculés, jamais littéraux : la quantité mesurée est
-    # le nombre de `cas_ok=` — un par cas de matrice validé, plus l'axe du
-    # document. Une matrice amputée d'un verdict n'atteint pas le seuil.
+    # moins un cas productif, zéro règle sur les deux pannes de reviewer.
+    # LES SEPT DÉCISIONS SONT DANS LA MATRICE, PAS SEULEMENT DANS LA PROSE.
+    # L'audit a montré qu'un document ne portant que les ancres, flanqué d'une
+    # matrice formellement valide mais arbitraire, passait sans avoir tranché
+    # quoi que ce soit — et B-T2 aurait exécuté ce faux contrat fidèlement. Le
+    # bloc `decisions` porte donc les sept décisions en champs machine-lisibles,
+    # et la sonde vérifie leurs invariants ET leur cohérence avec les six cas :
+    # un verdict de panne armé, un cas productif dont le verdict n'est pas armé,
+    # une égalité d'idempotence sans `why`, un index à deux lignes par règle sont
+    # refusés par le contrôle, pas laissés au gate. Les comptes imprimés sont
+    # calculés, jamais littéraux : la quantité mesurée est le nombre de
+    # `cas_ok=` — un par cas de matrice, un par décision, plus l'axe du
+    # document. Une matrice amputée d'un verdict ou d'une décision n'atteint pas
+    # le seuil.
     check: >-
       sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py contrat
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 7
+      && test "$cas" -ge 14
       && echo "$sortie"
       && echo "B-T1 sonde=contrat cas_ok=${cas}"
 
@@ -135,6 +164,9 @@ tickets:
     effort: medium
     codex_gate: true
     max_budget_usd: 2.50
+    # Une fonction pure, sans I/O : le plus court des cinq.
+    max_turns: 40
+    timeout_minutes: 35
     prompt_file: tickets/B-T2.md
     produces:
       - ops/verdict_regles.py
@@ -170,6 +202,10 @@ tickets:
     effort: high
     codex_gate: true
     max_budget_usd: 2.50
+    # Le seul ticket qui touche le disque et lance `node` : les allers-retours
+    # d'essai coûtent des tours, la borne reste au-dessus sans être ouverte.
+    max_turns: 55
+    timeout_minutes: 50
     prompt_file: tickets/B-T3.md
     produces:
       - ops/brain_bridge.py
@@ -186,14 +222,23 @@ tickets:
     #     sur tout le contenu persistant, pas sur le seul `fait` : une règle dont
     #     la justification est corrigée est une RÉVISION, et la déclarer
     #     `inchangee` la perdrait sans bruit — le défaut exact que M-T1 ferme.
-    # Sept axes, donc sept `cas_ok=` attendus : c'est la quantité que le check
+    # ET LE CAS CONCURRENT, qui manquait. `brain.js` indexe en append-only
+    # (brain.js:208-220) : tenir UNE ligne par règle malgré les révisions oblige
+    # le pont à relire et réécrire `MEMORY.md`. Deux gates réels partagent la
+    # mémoire de l'Owner, donc ce fichier : sans verrou par racine ni
+    # remplacement atomique, deux écrivains simultanés perdent la ligne l'un de
+    # l'autre pendant qu'un test séquentiel reste vert. Le bac à sable reste
+    # propre à l'exécution — c'est la sonde qui y lance elle-même DEUX écrivains
+    # concurrents sur une racine partagée, sur deux slugs distincts, et exige
+    # les deux règles et leurs deux lignes d'index.
+    # Neuf axes, donc neuf `cas_ok=` attendus : c'est la quantité que le check
     # compte, sur l'artefact que `--module` nomme.
     check: >-
       sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/brain_bridge.py)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 7
+      && test "$cas" -ge 9
       && echo "$sortie"
       && echo "B-T3 sonde=pont cas_ok=${cas}"
 
@@ -209,6 +254,9 @@ tickets:
     effort: medium
     codex_gate: true
     max_budget_usd: 2.00
+    # Un module et sa CLI, sur des briques déjà livrées et déjà éprouvées.
+    max_turns: 45
+    timeout_minutes: 40
     prompt_file: tickets/B-T4.md
     produces:
       - ops/verdict_hook.py
