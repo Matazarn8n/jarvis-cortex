@@ -18,8 +18,21 @@ Une seule fonction publique :
 def regles_depuis_verdict(verdict: str, report: str) -> list[dict]:
 ```
 
-Elle rend une liste de règles à écrire. Chaque règle est un `dict` portant au
-moins `slug`, `fait`, `why`.
+Elle rend une liste de règles à écrire. Chaque règle est un `dict` portant
+**exactement** quatre clés :
+
+| clé     | contenu                                                              |
+|---------|----------------------------------------------------------------------|
+| `slug`  | `"feedback_" + sha256(cle)[:12]`, la clé étant tranchée par B-T1      |
+| `fait`  | l'énoncé de la règle, non vide, lisible seul des mois plus tard       |
+| `why`   | la raison, non vide — ce qui part dans `--why` de `brain.js`          |
+| `type`  | la chaîne `"feedback"`, toujours                                     |
+
+Ni clé en moins, ni clé en plus. La sonde `decision` vérifie **chaque règle en
+entier**, pas seulement le compte : une règle bien comptée mais au corps vide
+passait l'ancien contrôle et cassait au pont, une étape plus loin, dans un ticket
+qui n'en était pas responsable. `fait` et `why` doivent en outre contenir les
+fragments que la matrice annonce dans `attendus[i]`.
 
 **Le module est neuf et autonome.** Il n'importe rien du moteur : ni
 `ops/plan_runner.py`, ni `ops/plan_doctor.py`, ni `ops/plan_factory.py`, que ce
@@ -70,17 +83,26 @@ En résumé de ce qu'il fixe :
 
 ## Ce que le check fera — sache-le avant d'écrire
 
+Le `check:` de ton ticket est un appel d'une ligne à la sonde `decision` de
+`ops/checks/sonde_b.py`, livré par B-T0 — il est écrit **avant** ton module,
+donc il n'a pas été taillé pour le laisser passer. Lis-le.
+
 Il **importe** `ops/verdict_regles.py` par `importlib`, charge la matrice, et
 **appelle** ta fonction une fois par cas — les six verdicts, pas trois. Pour
-chaque cas il exige le nombre de règles annoncé ; et pour chaque règle attendue,
-il recalcule `"feedback_" + sha256(cle)[:12]` depuis la clé de la matrice et
-exige ce slug **exactement**.
+chaque cas il exige le nombre de règles annoncé, puis, règle par règle et dans
+l'ordre :
+
+- les quatre clés exactes, et `type == "feedback"` ;
+- `fait` et `why` non vides ;
+- `attendus[i]["fait"]` contenu dans `fait`, `attendus[i]["why"]` dans `why` ;
+- `slug` égal à `"feedback_" + sha256(cles[i])[:12]`, **recalculé** par la sonde.
 
 Les cas à zéro sont un test de mutation : un stub qui produit toujours une règle
 échoue, et un contrôle qui ne sait pas dire non ne mesure rien. Le recalcul du
 slug en est un second : une dérivation maison qui « marche » dans ton processus
 mais ne reproduit pas le `sha256` du contrat échoue ici, et pas six mois plus
-tard sur un dossier de mémoire dupliqué.
+tard sur un dossier de mémoire dupliqué. La vérification du corps en est un
+troisième : renvoyer le bon nombre de dictionnaires vides ne passe pas.
 
 Ne cherche pas à faire passer la sonde — fais marcher la fonction, la sonde
 suivra. Si un chiffre de la matrice te paraît faux, **ne le contourne pas dans

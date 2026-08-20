@@ -17,25 +17,39 @@ ticket ne fait donc **pas** le raccordement dans le moteur : il livre un point
 d'entrée autonome et exerçable, et le raccordement reste une **dette** consignée
 par le contrat de B-T1, que l'Owner tranche ensuite.
 
-Le check le vérifie dans les deux sens : ton module doit marcher seul, et le nom
-`injecter_regles` doit rester **absent** de `ops/plan_runner.py`. Un diff qui
-déborde échoue mécaniquement, avant même le gate.
+Le check le vérifie dans les deux sens : ton module doit marcher seul, et les
+noms `injecter_regles`, `regles_depuis_verdict` et `ecrire_regle` doivent rester
+**absents** des trois fichiers de gouvernance.
+
+Sache exactement ce que cela vaut, et ne compte pas sur plus. Un `check:` ne peut
+pas lire la liste des fichiers du diff de ton ticket — la capacité n'existe pas
+dans le moteur, et la dette est consignée en tête du runbook. Le contrôle borne
+donc le **contenu** de ces trois fichiers ; ce n'est pas une whitelist du commit,
+et une retouche ailleurs ne se ferait pas arrêter mécaniquement. Le périmètre
+tient parce que tu le respectes et parce que le gate Codex relit ton diff, pas
+parce qu'une barrière l'impose.
 
 ## Le livrable — un module neuf, `ops/verdict_hook.py`
 
 ### 1. La fonction
 
 ```python
-def injecter_regles(verdict: str, report: str, ts: dict, *, ecrire=None) -> None:
+def injecter_regles(verdict: str, report: str, ts: dict, *, ecrire=None, racine=None) -> None:
 ```
 
 Elle appelle `regles_depuis_verdict(verdict, report)` (module
 `ops/verdict_regles.py`, B-T2) puis, pour chaque règle rendue, l'écrivain —
 `ecrire` s'il est fourni, sinon `brain_bridge.ecrire_regle` (B-T3), **importé
-paresseusement dans le corps de la fonction**. Ce paramètre n'est pas une
-commodité de test : c'est ce qui permet au `check:` d'exercer le chemin réel sans
-écrire sur le disque de l'Owner, et ce qui évite qu'un `brain.js` absent fasse
-échouer le simple chargement du module.
+paresseusement dans le corps de la fonction**. L'import paresseux évite qu'un
+`brain.js` absent fasse échouer le simple chargement du module.
+
+`racine` est transmis tel quel à l'écrivain par défaut (`racine=None` → mémoire
+réelle ; `racine=<dossier>` → ce dossier, cf. B-T3). C'est ce qui permet au
+contrôle d'exercer le **chemin par défaut**, celui qui servira en production,
+sans écrire dans la mémoire de l'Owner. Ne le traite pas comme un paramètre de
+confort : la version précédente de ce ticket n'était vérifiée qu'à travers des
+écrivains injectés, si bien que `ecrire=None`, l'import paresseux et la mutation
+réelle pouvaient tous être cassés sans que rien ne le dise.
 
 ### 2. L'échec ne doit ni tomber, ni disparaître
 
@@ -82,8 +96,11 @@ se lit là où elle sera payée.
 
 ## Ce que le check fera — sache-le avant d'écrire
 
-Il importe `ops/verdict_hook.py` et **appelle** `injecter_regles` trois fois avec
-son propre écrivain injecté :
+Le `check:` de ton ticket est un appel d'une ligne à la sonde `entree` de
+`ops/checks/sonde_b.py`, livré par B-T0 — lis-la. Elle importe
+`ops/verdict_hook.py` et **appelle** `injecter_regles` cinq fois.
+
+Trois passes avec son propre écrivain injecté :
 
 1. un `NO_GO` portant une ligne `CRITIQUE`, écrivain qui réussit → exige
    **exactement 1** écriture et `ts["regles_memoire"] == [{... "etat": "ecrite"}]` ;
@@ -91,13 +108,27 @@ son propre écrivain injecté :
 3. le même `NO_GO`, écrivain qui **lève** → exige que l'appel **ne lève pas** et
    qu'une entrée porte un `etat` commençant par `echec`.
 
-Puis il lance la CLI en sous-processus, `--dry-run`, rapport sur l'entrée
-standard, et exige un code 0 et un `feedback_` dans la sortie réelle. Enfin il
-lit `ops/plan_runner.py` et exige que `injecter_regles` n'y figure pas.
+Puis deux passes sur le **chemin par défaut**, `ecrire=None` — celles qui
+exercent l'import paresseux du pont et la mutation réelle :
+
+4. `racine=<dossier neuf, propre à l'exécution>` → **le fichier de la règle doit
+   apparaître dans ce dossier**, avec le fait dedans. La preuve est le disque,
+   pas l'état rendu : un stub qui renvoie `"ecrite"` sans rien écrire échoue ici.
+   La sonde efface ensuite le dossier entier, qu'elle a créé elle-même ;
+5. le même chemin par défaut contre une racine impossible → **aucune exception**,
+   et un `etat` commençant par `echec`. C'est le comportement d'échec du chemin
+   réel ; les écrivains injectés ne peuvent pas le prouver.
+
+Puis elle lance la CLI en sous-processus, `--dry-run`, rapport sur l'entrée
+standard, et exige un code 0 et un `feedback_` dans la sortie réelle. Enfin elle
+lit les trois fichiers de gouvernance et exige qu'aucun ne mentionne
+`injecter_regles`, `regles_depuis_verdict` ni `ecrire_regle`.
 
 Le cas 2 est un test de mutation : un chemin qui écrit toujours échoue. Le cas 3
-aussi : un `try/except: pass` échoue. Ne cherche pas à faire passer la sonde —
-fais marcher le point d'entrée, la sonde suivra.
+aussi : un `try/except: pass` échoue. Le cas 4 en est un troisième, et c'est le
+plus important : il n'y a aucun moyen de le passer sans que le chemin de
+production fonctionne. Ne cherche pas à faire passer la sonde — fais marcher le
+point d'entrée, la sonde suivra.
 
 ## Modèle de menace — borné
 

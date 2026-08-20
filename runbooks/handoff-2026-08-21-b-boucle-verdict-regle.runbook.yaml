@@ -9,9 +9,14 @@
 #
 # PÉRIMÈTRE — B ne touche AUCUN fichier de gouvernance du moteur. Les trois
 # fichiers `ops/plan_runner.py`, `ops/plan_doctor.py` et `ops/plan_factory.py` ne
-# sont jamais modifiés par ce bloc : B livre trois modules neufs et un point
-# d'entrée en ligne de commande. Le raccordement du moteur à ce point d'entrée
-# est une dette, pas un ticket (voir ci-dessous) — c'est l'Owner qui le tranche.
+# sont jamais modifiés par ce bloc : B livre un vérificateur, trois modules neufs
+# et un point d'entrée en ligne de commande. Le raccordement du moteur à ce point
+# d'entrée est une dette, pas un ticket — c'est l'Owner qui le tranche.
+#
+# LES CONTRÔLES SONT UN LIVRABLE, PAS DU YAML. B-T0 écrit `ops/checks/sonde_b.py`
+# et son sceau ; les quatre `check:` suivants sont un appel d'une ligne. C'est la
+# règle des quinze lignes, tenue et non pas exemptée : aucun `check:` de ce
+# runbook ne porte de programme.
 #
 # PRÉREQUIS : le régime versionné vit dans le worktree du bloc M. Si `BRAIN_JS`
 # résolvait vers un jarvis-cortex qui ne le porte pas encore, la sonde B-T3
@@ -19,8 +24,9 @@
 #
 # DETTES MOTEUR (une ligne chacune, hors périmètre des tickets ci-dessous) :
 # dette: le raccordement du moteur (un appel après `ts["verdict_motif"]`, vers 7327) reste à faire par le mainteneur du moteur — une session de plan ne touche pas aux fichiers de gouvernance, et B s'arrête donc au point d'entrée CLI livré par B-T4.
-# dette: `--deny-write` ne borne pas les écritures d'un `check:` hors `repo:` — la sonde B-T3 écrit dans le `.cache/sandbox-memory` de jarvis-cortex, hors de ce dépôt.
-# dette: un `check:` ne peut pas appeler un script livré par un ticket AVAL en épinglant son sha256 — le condensat n'existe pas quand le runbook s'écrit. Les checks restent donc inline ; la matrice de verdicts est sortie en livrable de B-T1, ce qui les ramène de 34 à ~16 lignes.
+# dette: un runbook ne peut pas épingler le sha256 d'un script que l'un de ses propres tickets crée — le condensat n'existe pas à l'écriture ; le sceau `ops/checks/sonde_b.sha256`, écrit par B-T0 et relu par chaque sonde, est le plus proche substitut atteignable sans changement du moteur.
+# dette: le runner ne borne pas les écritures d'un `check:` hors `repo:` — les sondes B-T3 et B-T4 écrivent dans un bac à sable propre à l'exécution, sous le `.cache/` de jarvis-cortex, hors de ce dépôt.
+# dette: aucun `check:` ne peut lire la liste des fichiers du diff du ticket ; la non-régression de périmètre se borne donc au contenu des trois fichiers de gouvernance, pas à une whitelist du commit.
 # dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas, et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
 # dette: `AskUserQuestion` échoue en session de plan (`readonly database`) — un ticket ne peut pas poser la question que la consigne lui impose de poser.
 
@@ -38,6 +44,30 @@ requires_access:
 
 tickets:
 
+  - id: B-T0
+    kind: session
+    title: Le vérificateur — les quatre sondes de B, en un script, et son autotest
+    why: >-
+      Un contrôle empaqueté en one-liners YAML n'est ni relu, ni testé, ni
+      corrigeable : c'est ce qui a fait passer, ailleurs, des sondes qui
+      acceptaient une matrice malformée et des modules à moitié cassés. Le
+      vérificateur devient donc un livrable relu par un gate, écrit AVANT les
+      modules qu'il juge — il ne peut pas être taillé pour les faire passer.
+    model: claude-opus-5
+    effort: high
+    codex_gate: true
+    max_budget_usd: 3.00
+    prompt_file: tickets/B-T0.md
+    produces:
+      - ops/checks/sonde_b.py
+      - ops/checks/sonde_b.sha256
+    # Le check de ce ticket est l'autotest du vérificateur lui-même : chaque
+    # sonde est confrontée à un arbre valide ET à une série d'arbres cassés
+    # plausibles, et doit accepter le premier et refuser chacun des seconds. Un
+    # vérificateur permissif — celui qui aurait laissé passer les défauts de
+    # l'audit — échoue ici, avant d'avoir servi. La sortie nomme les cas rejetés.
+    check: '"$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest --facts "$HERMES_TICKET_FACTS"'
+
   - id: B-T1
     kind: session
     title: Contrat d'injection — quel verdict écrit quelle règle, et laquelle jamais
@@ -54,29 +84,13 @@ tickets:
       - docs/plans/2026-08-21-b-contrat-injection.md
       - docs/plans/2026-08-21-b-contrat-injection.matrice.json
     # Le contrat rédigé fixe la doctrine ; la matrice JSON la rend exécutable et
-    # devient le jeu d'épreuves de B-T2. Le check lit les deux livrables et ne
-    # fait confiance à aucun marqueur imprimé par la session. Il refuse une
-    # matrice dégénérée : couverture des six verdicts, au moins un cas productif,
-    # et zéro règle sur une panne de reviewer.
-    check: |
-      out=$("$HERMES_CHECK_PYTHON" - <<'PY'
-      import json, os, pathlib, sys
-      json.loads(os.environ["HERMES_TICKET_FACTS"])
-      d = pathlib.Path("docs/plans/2026-08-21-b-contrat-injection.md").read_text(encoding="utf-8")
-      mat = json.loads(pathlib.Path("docs/plans/2026-08-21-b-contrat-injection.matrice.json").read_text(encoding="utf-8"))
-      cas = {c["verdict"]: c for c in mat["cas"]}
-      manque = [a for a in ("verdict_motif", "GO_AVEC_RESERVES", "NO_VERDICT", "REVIEWER_DOWN", "brain.js", "sha256", "idempotence", "MEMORY.md", "dette") if a not in d]
-      absents = [v for v in ("GO", "GO_AVEC_RESERVES", "NO_GO", "NO_VERDICT", "NO_REVIEWER", "REVIEWER_DOWN") if v not in cas]
-      # littéraux scindés : le runbook ne doit pas porter lui-même la formule interdite.
-      interdit = [p for p in ("aucun " + "CRITIQUE", "aucune " + "HAUTE", "ni " + "HAUTE") if p in d]
-      if manque or absents or interdit:
-          sys.exit(f"contrat: ancres absentes={manque} verdicts hors matrice={absents} critere inatteignable={interdit}")
-      productifs = [c["verdict"] for c in mat["cas"] if c["regles"] > 0 and len(c.get("cles", [])) == c["regles"]]
-      if not productifs or cas["REVIEWER_DOWN"]["regles"] or cas["NO_REVIEWER"]["regles"] or "sha256" not in mat.get("derivation_slug", ""):
-          sys.exit(f"matrice degeneree: productifs_avec_cles={productifs} panne={cas['REVIEWER_DOWN']['regles']}/{cas['NO_REVIEWER']['regles']} derivation={mat.get('derivation_slug')!r}")
-      print(f"B-T1: 6/6 verdicts couverts, cas productifs={productifs}, slug derive par {mat['derivation_slug']}")
-      PY
-      ) && echo "$out"
+    # devient le jeu d'épreuves de B-T2. La sonde `contrat` refuse une matrice
+    # dégénérée ET une matrice malformée : exactement les six verdicts du
+    # domaine, uniques, aucun cas en trop, clés exactes sur chaque cas,
+    # `cles`/`attendus` de longueur `regles` (donc vides sur un cas à zéro), au
+    # moins un cas productif, zéro règle sur les deux pannes de reviewer. Les
+    # comptes imprimés sont calculés, jamais littéraux.
+    check: '"$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py contrat --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256'
 
   - id: B-T2
     kind: session
@@ -93,33 +107,14 @@ tickets:
     produces:
       - ops/verdict_regles.py
     # Module NEUF — aucun fichier de gouvernance n'est touché ici.
-    # Sonde comportementale pilotée par la matrice de B-T1 : la fonction est
-    # APPELÉE sur les SIX verdicts du domaine, pas seulement sur trois. Les cas
-    # attendus à zéro (GO propre, NO_VERDICT, les deux pannes) sont le test de
-    # mutation : un stub qui produit toujours échoue.
-    # Le slug est recalculé ici par sha256 — une dérivation par `hash()`, non
-    # reproductible d'un processus à l'autre, ne peut pas passer.
-    check: |
-      out=$("$HERMES_CHECK_PYTHON" - <<'PY'
-      import hashlib, importlib.util, json, os, pathlib, sys
-      json.loads(os.environ["HERMES_TICKET_FACTS"])
-      spec = importlib.util.spec_from_file_location("vr", pathlib.Path("ops/verdict_regles.py").resolve())
-      m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
-      mat = json.loads(pathlib.Path("docs/plans/2026-08-21-b-contrat-injection.matrice.json").read_text(encoding="utf-8"))
-      ecarts = []
-      for c in mat["cas"]:
-          r = m.regles_depuis_verdict(c["verdict"], c["rapport"])
-          if len(r) != c["regles"]:
-              ecarts.append(f"{c['verdict']}->{len(r)} regle(s), attendu {c['regles']}")
-          for regle, cle in zip(r, c.get("cles", [])):
-              attendu = "feedback_" + hashlib.sha256(cle.encode("utf-8")).hexdigest()[:12]
-              if regle["slug"] != attendu:
-                  ecarts.append(f"{c['verdict']}: slug {regle['slug']!r} != sha256 attendu {attendu!r}")
-      if ecarts:
-          sys.exit("sonde matrice: " + " · ".join(ecarts))
-      print(f"sonde: {len(mat['cas'])} verdicts exerces, {sum(c['regles'] for c in mat['cas'])} regle(s) produite(s), slugs = sha256 du contrat")
-      PY
-      ) && echo "$out"
+    # La sonde `decision` appelle la fonction sur les SIX verdicts et vérifie
+    # chaque règle rendue en entier : clés exactes, `type` valant `feedback`,
+    # `fait` et `why` non vides et portant le contenu que la matrice annonce en
+    # `attendus`, slug égal au `sha256` de la clé. Une règle sans `fait` ni
+    # `why` — qui passait le compte et cassait plus tard au pont — échoue ici.
+    # Les cas attendus à zéro sont le test de mutation : un stub qui produit
+    # toujours échoue.
+    check: '"$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py decision --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256'
 
   - id: B-T3
     kind: session
@@ -131,43 +126,20 @@ tickets:
     model: claude-opus-5
     effort: high
     codex_gate: true
-    max_budget_usd: 2.00
+    max_budget_usd: 2.50
     prompt_file: tickets/B-T3.md
     produces:
       - ops/brain_bridge.py
     # Module NEUF — aucun fichier de gouvernance n'est touché ici.
-    # Trois exigences, une seule sonde, sur le pont réel en sandbox :
+    # La sonde `pont` travaille dans un bac à sable PROPRE À L'EXÉCUTION
+    # (`racine=`, dossier neuf portant pid et horloge) : aucun `MEMORY.md`
+    # partagé, donc aucune course entre deux exécutions, et le nettoyage retire
+    # le dossier entier — rien d'autre. Trois exigences, un seul passage :
     #  1. réécriture avec un fait DIFFÉRENT -> `.v1` garde l'ancien (régime M-T1) ;
     #  2. écriture -> UNE ligne d'index (rubrique 4 du constat : 328 fichiers sur
     #     434 ne sont dans aucun index, B ne doit pas grossir ce tas) ;
     #  3. gate REJOUÉ à l'identique -> ni `.v2`, ni seconde ligne d'index.
-    # Le slug porte le pid et l'horloge : deux exécutions concurrentes ne peuvent
-    # pas effacer leurs preuves mutuelles. Le nettoyage retire les fichiers ET les
-    # lignes d'index de CETTE exécution — la sonde ne laisse pas de pointeur mort.
-    check: |
-      out=$("$HERMES_CHECK_PYTHON" - <<'PY'
-      import importlib.util, json, os, pathlib, sys, time
-      json.loads(os.environ["HERMES_TICKET_FACTS"])
-      spec = importlib.util.spec_from_file_location("bb", pathlib.Path("ops/brain_bridge.py").resolve())
-      bb = importlib.util.module_from_spec(spec); spec.loader.exec_module(bb)
-      if not bb.BRAIN_JS.exists(): sys.exit(f"brain.js introuvable a l'emplacement resolu: {bb.BRAIN_JS}")
-      slug = f"feedback_sonde_b_t3_{os.getpid()}_{time.time_ns()}"
-      box = bb.BRAIN_JS.parent / ".cache" / "sandbox-memory"; idx = box / "MEMORY.md"
-      lu = lambda nom: (box / nom).read_text(encoding="utf-8") if (box / nom).exists() else ""
-      try:
-          index = []
-          for fait in ("PREMIER", "SECOND", "SECOND"):  # 3e appel = gate rejoue a l'identique
-              bb.ecrire_regle({"slug": slug, "fait": fait, "why": "sonde B-T3"}, sandbox=True)
-              index.append(lu("MEMORY.md").count(slug))
-          etat = ("PREMIER" in lu(f"{slug}.v1.md"), "SECOND" in lu(f"{slug}.md"), (box / f"{slug}.v2.md").exists(), index)
-          if etat != (True, True, False, [1, 1, 1]):
-              sys.exit(f"sonde pont: v1_garde_PREMIER={etat[0]} courant_SECOND={etat[1]} v2_empilee={etat[2]} lignes_index={etat[3]} (attendu True/True/False/[1,1,1])")
-          print(f"sonde pont: .v1 garde PREMIER · courant SECOND · rejeu inerte (pas de .v2) · index {index}")
-      finally:
-          for p in box.glob(f"{slug}*.md"): p.unlink()
-          if idx.exists(): idx.write_text("".join(l for l in idx.read_text(encoding="utf-8").splitlines(True) if slug not in l), encoding="utf-8")
-      PY
-      ) && echo "$out"
+    check: '"$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256'
 
   - id: B-T4
     kind: session
@@ -180,37 +152,18 @@ tickets:
     model: claude-sonnet-5
     effort: medium
     codex_gate: true
-    max_budget_usd: 1.50
+    max_budget_usd: 2.00
     prompt_file: tickets/B-T4.md
     produces:
       - ops/verdict_hook.py
-    # Module NEUF, avec une CLI. La sonde APPELLE `injecter_regles()` avec son
-    # propre écrivain injecté, puis LANCE la CLI en sous-processus et lit sa
-    # sortie réelle : la preuve est le texte produit, pas un code de retour.
-    # Passe 3 avec un écrivain qui lève : la boucle ne doit ni tomber (un gate ne
-    # casse pas parce que la mémoire n'a pas pu s'écrire) ni avaler l'échec — il
-    # doit atterrir dans le state du ticket, visible au rapport.
-    # Dernière condition : `injecter_regles` reste absent de ops/plan_runner.py —
-    # la non-régression qui prouve que le périmètre a tenu.
-    check: |
-      out=$("$HERMES_CHECK_PYTHON" - <<'PY'
-      import importlib.util, json, os, pathlib, subprocess, sys
-      json.loads(os.environ["HERMES_TICKET_FACTS"])
-      src = pathlib.Path("ops/verdict_hook.py").resolve()
-      spec = importlib.util.spec_from_file_location("vh", src)
-      m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
-      rap = "VERDICT: NO_GO\nCRITIQUE | ops/x.py:12 | le verdict n'ecrit aucune regle | cabler l'appel"
-      vus = []
-      def ok(regle, **kw): vus.append(regle["slug"]); return {"etat": "ecrite", "fichier": regle["slug"] + ".md"}
-      def casse(regle, **kw): raise RuntimeError("brain.js code 1: [brain] store refuse")
-      res = []
-      for verdict, rapport, ecrivain in (("NO_GO", rap, ok), ("GO", "VERDICT: GO\nRAS", ok), ("NO_GO", rap, casse)):
-          ts = {}; m.injecter_regles(verdict, rapport, ts, ecrire=ecrivain)  # passe 3 : ne doit PAS lever
-          res.append([e.get("etat", "") for e in ts.get("regles_memoire", [])])
-      cli = subprocess.run([sys.executable, str(src), "--verdict", "NO_GO", "--rapport", "-", "--dry-run"], input=rap, capture_output=True, text=True)
-      moteur = "injecter_regles" in pathlib.Path("ops/plan_runner.py").read_text(encoding="utf-8")
-      if res[0] != ["ecrite"] or len(vus) != 1 or res[1] or not any(e.startswith("echec") for e in res[2]) or cli.returncode or "feedback_" not in cli.stdout or moteur:
-          sys.exit(f"point d'entree: NO_GO={res[0]} ecritures={len(vus)} GO={res[1]} echec={res[2]} cli={cli.returncode}/{cli.stdout[:80]!r} moteur_touche={moteur}")
-      print(f"sonde: NO_GO->1 ecriture journalisee · GO->0 · echec remonte {res[2]} · CLI --dry-run: {cli.stdout.strip().splitlines()[-1][:90]} · moteur intact (injecter_regles absent de ops/plan_runner.py)")
-      PY
-      ) && echo "$out"
+    # Module NEUF, avec une CLI. La sonde `entree` exerce les DEUX chemins :
+    #  · écrivain injecté — NO_GO -> 1 entrée `ecrite`, GO -> 0, écrivain qui
+    #    lève -> aucune exception mais un `etat` commençant par `echec` ;
+    #  · chemin PAR DÉFAUT (`ecrire=None`) contre un bac à sable propre à
+    #    l'exécution : l'import paresseux du pont et la mutation réelle sont
+    #    exercés, et la preuve est le FICHIER apparu sur le disque, pas l'état
+    #    rendu ; puis le même chemin par défaut contre une racine impossible,
+    #    qui doit rendre un `echec` observable sans lever.
+    # Enfin la CLI en sous-processus, dont on lit la sortie réelle, et la
+    # non-régression de périmètre sur les trois fichiers de gouvernance.
+    check: '"$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py entree --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256'

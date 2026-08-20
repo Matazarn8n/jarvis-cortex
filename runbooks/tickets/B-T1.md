@@ -87,7 +87,7 @@ ta trouvaille : consigne-la, elle prime sur ce prompt.
    boucle tourne vite.
 5. **Le contenu.** Ce qui part dans le fait, ce qui part dans `--why`. Le fait
    doit rester lisible seul, des mois plus tard, sans le rapport d'origine.
-6. **L'index `MEMORY.md`.** Le constat du bloc M mesure 328 fichiers sur 432
+6. **L'index `MEMORY.md`.** Le constat du bloc M mesure 328 fichiers sur 434
    sans aucune ligne d'index : trois sur quatre ne sont atteignables que si l'on
    connaît déjà leur existence. Une règle que B écrit doit poser sa ligne
    d'index **au moment de l'écriture**, pas plus tard. `brain.js` l'appose déjà
@@ -123,27 +123,42 @@ jeu d'épreuves : `docs/plans/2026-08-21-b-contrat-injection.matrice.json`.
       "verdict": "NO_GO",
       "rapport": "VERDICT: NO_GO\nCRITIQUE | ops/x.py:12 | le verdict n'ecrit aucune regle | cabler l'appel",
       "regles": 1,
-      "cles": ["<la cle exacte que ce rapport doit produire>"]
+      "cles": ["<la cle exacte que ce rapport doit produire>"],
+      "attendus": [{ "fait": "<fragment que le fait doit contenir>", "why": "<fragment que le why doit contenir>" }]
     },
-    { "verdict": "GO", "rapport": "VERDICT: GO\nRAS", "regles": 0 }
+    { "verdict": "GO", "rapport": "VERDICT: GO\nRAS", "regles": 0, "cles": [], "attendus": [] }
   ]
 }
 ```
 
-Règles de forme, toutes vérifiées par le check :
+Règles de forme, toutes vérifiées par la sonde `contrat` de `ops/checks/sonde_b.py`
+(livré par B-T0 — **lis-le**, il est écrit avant ton ticket et fait autorité sur
+le format) :
 
-- **Les six verdicts du domaine ont chacun leur cas** : `GO`,
-  `GO_AVEC_RESERVES`, `NO_GO`, `NO_VERDICT`, `NO_REVIEWER`, `REVIEWER_DOWN`.
-  Rien n'est laissé implicite — c'est précisément sur les branches qu'on
-  n'écrit pas qu'une implémentation se trompe sans qu'on le voie.
-- `regles` est le nombre **exact** de règles attendu ; `cles` porte une clé par
-  règle attendue, dans l'ordre, et n'apparaît que si `regles > 0`.
+- La racine porte **exactement** `derivation_slug` et `cas`.
+- **Les six verdicts du domaine ont chacun leur cas, une fois et une seule** :
+  `GO`, `GO_AVEC_RESERVES`, `NO_GO`, `NO_VERDICT`, `NO_REVIEWER`,
+  `REVIEWER_DOWN`. Ni doublon, ni manquant, ni cas hors domaine — la sonde
+  compare l'ensemble **et** la longueur. Rien n'est laissé implicite : c'est
+  précisément sur les branches qu'on n'écrit pas qu'une implémentation se trompe
+  sans qu'on le voie.
+- Chaque cas porte **exactement** les clés `verdict`, `rapport`, `regles`,
+  `cles`, `attendus`. Pas une de moins, pas une de plus.
+- `regles` est le nombre **exact** de règles attendu. `cles` et `attendus` ont
+  **toujours** la longueur `regles` — donc deux listes vides sur un cas à zéro.
+  Un `cles` non vide sur un cas qui n'écrit rien est une contradiction, et la
+  sonde la refuse.
+- `attendus[i]` porte `fait` et `why` : les **fragments de texte** que la règle
+  produite devra contenir. Ce n'est pas décoratif — la sonde `decision` vérifie
+  chaque règle en entier, et une règle au bon compte mais au corps vide échoue
+  là. C'est toi qui fixes ce que « la bonne règle » veut dire ; ne mets pas des
+  fragments si génériques qu'ils passeraient sur n'importe quel texte.
 - **Les deux sentinelles de panne sont à `0`**, quel que soit le rapport que tu
   leur donnes — et donne-leur un rapport chargé de findings, sinon le cas ne
   teste rien.
 - `derivation_slug` mentionne `sha256`.
 - Au moins un cas produit une règle. Une matrice tout à zéro passerait n'importe
-  quelle implémentation muette : le check la refuse.
+  quelle implémentation muette : la sonde la refuse.
 
 Prends `GO_AVEC_RESERVES` au sérieux. Un GO peut porter un défaut réel, et c'est
 toi qui décides si la boucle écrit dans ce cas. Le chiffre que tu poses dans la
@@ -154,10 +169,11 @@ compagnie. Ils sont commités.
 
 ## Ce que le check vérifiera
 
-Sur le document : la présence littérale de `verdict_motif`, `GO_AVEC_RESERVES`,
-`NO_VERDICT`, `REVIEWER_DOWN`, `brain.js`, `sha256`, `idempotence`, `MEMORY.md`
-et `dette`, et l'absence de la formule interdite. Sur la matrice : les règles de
-forme ci-dessus.
+Le `check:` de ton ticket est un appel d'une ligne à la sonde `contrat` de
+`ops/checks/sonde_b.py`. Sur le document : la présence littérale de
+`verdict_motif`, `GO_AVEC_RESERVES`, `NO_VERDICT`, `REVIEWER_DOWN`, `brain.js`,
+`sha256`, `idempotence`, `MEMORY.md` et `dette`, et l'absence de la formule
+interdite. Sur la matrice : les règles de forme ci-dessus, toutes.
 
 Ces ancres sont le plancher, pas le plafond : un document qui les contient sans
 trancher les sept points ci-dessus passera le check et se fera refuser au gate

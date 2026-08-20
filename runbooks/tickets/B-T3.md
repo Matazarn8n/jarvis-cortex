@@ -23,15 +23,28 @@ Il expose exactement deux noms :
   Le dépôt jarvis-cortex n'est pas ce dépôt-ci ; le chemin canonique est à
   établir sur le disque, avec un secours par variable d'environnement. Consigne
   dans le module comment tu l'as résolu et ce qui se passe s'il est absent.
-- **`ecrire_regle(regle: dict, *, sandbox: bool = False) -> dict`** — écrit une
-  règle via `node brain.js store ... --type feedback`. Avec `sandbox=True`, il
-  passe `--sandbox` : `brain.js` écrit alors dans son `.cache/sandbox-memory`
-  et **ne touche pas à la mémoire réelle**. Il rend
+- **`ecrire_regle(regle: dict, *, racine=None) -> dict`** — écrit une règle via
+  `node brain.js store ... --type feedback`. Il rend
   `{"etat": "ecrite" | "inchangee", "fichier": "<nom>.md"}`, et **lève** si
   l'écriture a échoué — c'est B-T4 qui décide quoi faire de l'exception.
 
-Le `--sandbox` n'est pas un confort de test : c'est ce qui rend ce ticket
-vérifiable sans écrire dans la mémoire de l'Owner. Ne le contourne pas.
+`racine` est le point central de ce ticket, et il n'est pas un confort de test.
+`racine=None` écrit dans la mémoire réelle ; `racine=<dossier>` écrit **dans ce
+dossier et nulle part ailleurs**, index compris. C'est ce qui rend le pont
+vérifiable sans toucher à la mémoire de l'Owner, **et** ce qui permet à deux
+contrôles concurrents de ne pas se marcher dessus : un bac à sable partagé et
+son `MEMORY.md` unique, réécrit sans verrou, faisait perdre ou ressusciter les
+lignes d'une exécution par l'autre. Un dossier neuf par exécution supprime la
+course au lieu de la gérer.
+
+Établis **sur le disque** comment `brain.js` accepte une racine de magasin —
+variable d'environnement lue à son démarrage, option de ligne de commande, ou
+`--sandbox` s'il n'expose que celle-là. Consigne en tête du module ce que tu as
+trouvé et comment tu le passes (via `env=` de `subprocess`, en toute logique).
+Si `brain.js` n'offre **aucun** moyen de choisir sa racine, c'est ta trouvaille
+et elle prime sur ce prompt : consigne-la en dette, nommément, et dis-le dans ton
+message de fin — ne simule pas l'isolation en écrivant les fichiers toi-même,
+tu casserais le régime versionné décrit ci-dessous.
 
 Points de vigilance, tous mécaniques :
 
@@ -74,27 +87,33 @@ le même fait, rends `{"etat": "inchangee"}` **sans appeler `brain.js`**. Une
 lecture évitée vaut mieux qu'une version fabriquée.
 
 L'index compte autant que le fichier : le constat du bloc M mesure 328 fichiers
-sur 432 sans ligne d'index. Une règle écrite par B vaut **exactement une** ligne
+sur 434 sans ligne d'index. Une règle écrite par B vaut **exactement une** ligne
 d'index — pas zéro, pas une par rejeu.
 
 ## Ce que le check fera
 
-Il importe ton module, vérifie que `BRAIN_JS` **existe** sur le disque, puis
-appelle `ecrire_regle(..., sandbox=True)` **trois fois** sur un slug propre à
-l'exécution (pid + horloge, pour ne pas marcher sur une autre exécution) :
-`PREMIER`, puis `SECOND`, puis `SECOND` encore. Il exige ensuite :
+Le `check:` de ton ticket est un appel d'une ligne à la sonde `pont` de
+`ops/checks/sonde_b.py`, livré par B-T0 — écrite **avant** ton module, elle n'a
+pas été taillée pour le laisser passer. Lis-la.
+
+Elle importe ton module, vérifie que `BRAIN_JS` **existe** sur le disque, crée un
+dossier neuf `<parent de brain.js>/.cache/sonde-b-<pid>-<ns>/` et appelle
+`ecrire_regle(..., racine=<ce dossier>)` **trois fois** sur le même slug :
+`PREMIER`, puis `SECOND`, puis `SECOND` encore. Elle exige ensuite :
 
 - `<slug>.v1.md` présent et contenant `PREMIER` — la réécriture a versionné ;
 - `<slug>.md` contient `SECOND` — la réécriture a bien eu lieu ;
 - `<slug>.v2.md` **absent** — le rejeu à l'identique n'a rien empilé ;
-- le `MEMORY.md` de la sandbox porte **une** ligne mentionnant le slug après la
-  première écriture, et **toujours une** après le rejeu.
+- le `MEMORY.md` du dossier porte **une** ligne mentionnant le slug après
+  **chacun** des trois appels — pas zéro, pas une par rejeu ;
+- le troisième appel rend `etat == "inchangee"` : l'idempotence doit être
+  *décidée* par ton module, pas obtenue par accident.
 
-Puis il efface ce qu'il a créé, et rien d'autre : ses fichiers, **et ses lignes
-d'index**. Une sonde qui laisserait ses lignes derrière elle fabriquerait à
-chaque exécution le pointeur mort que la rubrique 4 du constat dénombre — un
-contrôle ne dégrade pas ce qu'il mesure. Comme le slug porte le pid et
-l'horloge, ce nettoyage ne peut pas emporter les preuves d'une autre exécution.
+Puis elle efface le dossier entier, dans un `finally`. Elle ne peut emporter que
+ce qu'elle a créé : le dossier n'a pas existé avant elle. C'est aussi pourquoi
+elle ne touche jamais à un `MEMORY.md` partagé — un contrôle ne dégrade pas ce
+qu'il mesure, et il ne se dégrade pas non plus lui-même quand deux exécutions se
+croisent.
 
 C'est une sonde comportementale : elle exerce le pont réel, elle ne lit aucun
 marqueur que ta session aurait imprimé.
@@ -108,30 +127,34 @@ contre-mesure contre une attaque délibérée ; pas de critère de GO du type
 ## Fin — la commande finale et sa preuve observable
 
 Termine en lançant, depuis `/home/nuveo/hermes-os-plan-b`, la séquence qui
-exerce ton pont en sandbox et rapporte ce que le disque porte ensuite — puis qui
-efface ses propres traces, fichiers **et** lignes d'index :
+exerce ton pont dans un bac à sable **à elle**, rapporte ce que le disque porte
+ensuite, puis efface ce dossier et rien d'autre :
 
 ```bash
 python3 - <<'PY'
-import importlib.util, os, pathlib, time
+import importlib.util, os, pathlib, shutil, time
 s = importlib.util.spec_from_file_location("bb", pathlib.Path("ops/brain_bridge.py").resolve())
 bb = importlib.util.module_from_spec(s); s.loader.exec_module(bb)
-slug = f"feedback_preuve_b_t3_{os.getpid()}_{time.time_ns()}"
-box = bb.BRAIN_JS.parent / ".cache" / "sandbox-memory"; idx = box / "MEMORY.md"
-etats = [bb.ecrire_regle({"slug": slug, "fait": f, "why": "preuve B-T3"}, sandbox=True)["etat"]
-         for f in ("PREMIER", "SECOND", "SECOND")]
-print("brain.js =", bb.BRAIN_JS, "| etats =", etats,
-      "| v1 =", (box / f"{slug}.v1.md").exists(), "| v2 =", (box / f"{slug}.v2.md").exists(),
-      "| lignes d'index =", idx.read_text(encoding="utf-8").count(slug) if idx.exists() else 0)
-for p in box.glob(f"{slug}*.md"): p.unlink()
-if idx.exists():
-    idx.write_text("".join(l for l in idx.read_text(encoding="utf-8").splitlines(True) if slug not in l), encoding="utf-8")
+box = bb.BRAIN_JS.parent / ".cache" / f"preuve-b-t3-{os.getpid()}-{time.time_ns()}"
+box.mkdir(parents=True)
+slug = "feedback_preuve_b_t3"
+try:
+    etats = [bb.ecrire_regle({"slug": slug, "fait": f, "why": "preuve B-T3", "type": "feedback"}, racine=box)["etat"]
+             for f in ("PREMIER", "SECOND", "SECOND")]
+    idx = box / "MEMORY.md"
+    print("brain.js =", bb.BRAIN_JS, "| etats =", etats,
+          "| v1 =", (box / f"{slug}.v1.md").exists(), "| v2 =", (box / f"{slug}.v2.md").exists(),
+          "| lignes d'index =", idx.read_text(encoding="utf-8").count(slug) if idx.exists() else 0)
+finally:
+    shutil.rmtree(box, ignore_errors=True)
 PY
 ```
 
 Colle sa sortie dans ton message de fin. Attendu : `v1 = True`, `v2 = False`,
-une seule ligne d'index. Si `v2` est vrai, ton idempotence n'existe pas — dis-le
-plutôt que de relancer jusqu'à ce que ça passe.
+`etats = ['ecrite', 'ecrite', 'inchangee']`, une seule ligne d'index. Si `v2` est
+vrai, ton idempotence n'existe pas — dis-le plutôt que de relancer jusqu'à ce que
+ça passe. Si le dossier reste vide, c'est que `racine` n'est pas honorée : c'est
+le résultat de ta session, rapporte-le tel quel.
 
 Commit atomique du seul module. Aucun secret, aucune donnée personnelle, et
 **aucun contenu de la mémoire recopié dans le dépôt** : les fichiers de règles

@@ -120,19 +120,28 @@ qu'aucune main ne tient. Sans le versionnement de M-T1, elle produirait le même
 
 **89 fichiers `project` sur 281 portent plusieurs dates distinctes, soit 31,7 %.**
 
-Presque un tiers, là aussi. Presque un tiers des fichiers
-d'état ont été rouverts et réécrits : un fait daté du jour J, puis une correction
-ou une suite datée du jour K, dans le même fichier. Le fichier ne dit plus « voici
-ce qui s'est passé le J », il dit « voici l'état courant, et il a bougé au moins
-une fois ». La date d'origine survit comme texte, pas comme structure : rien ne
-distingue l'événement de sa révision, et rien ne dit ce que le fichier affirmait
-avant.
+Presque un tiers, là aussi. **Cette métrique est un indice, pas une preuve.**
+Elle mesure une propriété du texte — plusieurs dates coexistent dans un même
+fichier — et rien d'autre. Elle est compatible avec une réouverture ultérieure :
+un fait daté du jour J, puis une correction ou une suite datée du jour K,
+ajoutées plus tard. Elle est tout aussi compatible avec un fichier écrit d'une
+traite qui cite plusieurs dates dès sa création — un compte rendu couvrant une
+période, un rappel d'échéance, une référence à un événement passé. Rien dans le
+fichier ne permet de trancher, et la session n'a observé aucune histoire de
+modification : ni horodatage de système de fichiers, ni versions antérieures, ni
+journal. Le distinguo se perdrait si on l'écrivait autrement.
 
-Autrement dit, le registre déclaratif a été utilisé comme s'il était procédural,
-sans en avoir la garantie. C'est le même défaut que la rubrique 2, dans la même
-proportion (31,7 % contre 29,9 %) mais sur deux fois et demie plus de fichiers.
-Les deux registres ont dérivé ensemble, ce qui écarte l'hypothèse d'un accident
-propre à l'un d'eux.
+Ce qui est certain est plus modeste, et suffit : sur ces 89 fichiers, la date
+d'origine survit comme **texte, pas comme structure**. Rien ne distingue un
+événement de sa révision, rien ne dit ce que le fichier affirmait avant, et rien
+ne dira demain lequel des deux cas on avait sous les yeux. Le registre déclaratif
+ne porte pas la garantie qu'un usage daté supposerait — que ce soit par
+réécriture ou par construction.
+
+C'est le même angle mort que la rubrique 2, dans une proportion voisine (31,7 %
+contre 29,9 %) mais sur deux fois et demie plus de fichiers. À la différence près
+que la rubrique 2 s'appuie sur une trace *explicite* de révision, laissée à la
+main : là, la réécriture est attestée. Ici, elle n'est que possible.
 
 ## 4. L'index `MEMORY.md`
 
@@ -163,14 +172,15 @@ malformé — les 4 fichiers sans type — représente 0,9 % du dossier et se co
 la main en une passe. Appeler cela une migration serait gonfler un chantier pour
 avoir l'air d'en avoir un.
 
-**Migrer les 124 fichiers réécrits reviendrait à inventer leur histoire.** Les
-89 du journal et les 35 du registre procédural posent le même problème : les
-faire passer au régime versionné demanderait de séparer l'énoncé d'origine de
-sa révision. Cette séparation n'existe plus dans les fichiers : il n'y reste que
-le texte fusionné et deux dates. Un outil de migration devrait deviner où couper,
-et il se tromperait — en produisant des versions antérieures qui n'ont jamais été
-écrites. Une fausse version est pire que pas de version : elle se lit comme une
-preuve. Le régime de M-T1 vaut pour ce qui s'écrit à partir de maintenant, et
+**Migrer les 124 fichiers signalés reviendrait à leur inventer une histoire.**
+Les 89 du journal et les 35 du registre procédural posent le même problème : les
+faire passer au régime versionné demanderait de séparer un énoncé d'origine de sa
+révision. Or cette séparation n'est pas dans les fichiers — il n'y reste que du
+texte et des dates — et pour les 89, on ne sait même pas si une révision a eu
+lieu. Un outil de migration devrait deviner où couper, et sur quels fichiers
+couper ; il se tromperait deux fois, en produisant des versions antérieures qui
+n'ont jamais été écrites. Une fausse version est pire que pas de version : elle
+se lit comme une preuve. Le régime de M-T1 vaut pour ce qui s'écrit à partir de maintenant, et
 c'est la seule portée qu'il puisse avoir honnêtement.
 
 **Le vrai manque n'est pas un manque de format.** Les 328 fichiers non indexés
@@ -216,7 +226,7 @@ question, alors que la consigne lui impose de le faire plutôt que de supposer.
 ## Conséquence sur la suite
 
 Le runbook B — `runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml`
-— et ses quatre prompts sont écrits. Le régime procédural sur lequel B s'appuie a
+— et ses cinq prompts sont écrits. Le régime procédural sur lequel B s'appuie a
 été lu dans le code livré par M-T1 (`brain.js`, remplacement versionné en
 `<base>.vN.md` pour `--type feedback`), pas supposé.
 
