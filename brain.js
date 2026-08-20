@@ -187,6 +187,23 @@ ${fact}
 ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
 *Saved ${today} via brain store.*
 `;
+  // Trois régimes d'écriture, pilotés par `type` (déjà calculé plus haut) :
+  //  - user/reference (sémantique)  : upsert, comportement historique inchangé.
+  //  - project (épisodique)         : append-only — un fichier existant bloque
+  //    l'écriture (perte de fait silencieuse sinon), sauf --force explicite.
+  //  - feedback (procédural)        : remplacement versionné — l'ancien
+  //    contenu part dans <base>.vN.md avant d'être remplacé, jamais perdu.
+  // Un type inconnu garde l'écrasement inconditionnel d'origine.
+  if (fs.existsSync(file)) {
+    if (type === 'project' && !opts.force) {
+      throw new Error(`store refuse d'écraser "${path.basename(file)}" (type project = append-only, le fait existant serait perdu) — relancez avec --force pour l'autoriser explicitement.`);
+    }
+    if (type === 'feedback') {
+      let n = 1;
+      while (fs.existsSync(file.replace(/\.md$/, `.v${n}.md`))) n++;
+      fs.copyFileSync(file, file.replace(/\.md$/, `.v${n}.md`));
+    }
+  }
   fs.writeFileSync(file, body);
   // one index line - append-only, no reads needed beyond the index itself
   const index = path.join(dir, MEM_INDEX);
@@ -252,7 +269,13 @@ if (require.main === module) {
     }
     console.log(`\n[brain] ${r.hits.length} hits · ${r.bytes.toLocaleString()} bytes read · ${r.ms}ms`);
   } else if (cmd === 'store') {
-    const r = store(args.join(' '), flags);
+    let r;
+    try {
+      r = store(args.join(' '), flags);
+    } catch (e) {
+      console.error(`[brain] ${e.message}`);
+      process.exit(1);
+    }
     console.log(`[brain] stored -> ${r.file}`);
     console.log(`[brain] index += ${r.indexLine}`);
     console.log(`[brain] ${r.bytes.toLocaleString()} bytes written · ${r.ms}ms · zero exploration reads`);
