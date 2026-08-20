@@ -9,6 +9,11 @@ les relies, tu n'en réécris aucun.
 
 **Lis `docs/plans/2026-08-21-b-contrat-injection.md`.** Il fait foi.
 
+Le `check:` appelle la sonde avec `--module ops/verdict_hook.py` et **compte**
+les lignes `cas_ok=` qu'elle imprime : il en exige **sept** — les cinq passes
+détaillées plus bas, la CLI en sous-processus, la non-régression de périmètre.
+Un chemin non exercé n'imprime rien et fait manquer le seuil.
+
 ## Le périmètre, avant tout le reste
 
 Une session de plan **ne modifie jamais** un fichier de gouvernance du moteur —

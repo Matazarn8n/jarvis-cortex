@@ -65,8 +65,20 @@ tickets:
     # sonde est confrontée à un arbre valide ET à une série d'arbres cassés
     # plausibles, et doit accepter le premier et refuser chacun des seconds. Un
     # vérificateur permissif — celui qui aurait laissé passer les défauts de
-    # l'audit — échoue ici, avant d'avoir servi. La sortie nomme les cas rejetés.
-    check: '"$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest --facts "$HERMES_TICKET_FACTS"'
+    # l'audit — échoue ici, avant d'avoir servi.
+    # La QUANTITÉ mesurée est le nombre de lignes `cas_ok=` que l'autotest émet,
+    # une par piège réellement construit puis refusé (B-T0.md en énumère 25 au
+    # minimum) : un vérificateur amputé de ses cas cassés n'atteint pas le
+    # seuil, là où un `test -s` sur le script l'aurait laissé passer. stderr
+    # n'est PAS capturé — un échec doit rester lisible dans le journal du
+    # runner.
+    check: >-
+      sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      --facts "$HERMES_TICKET_FACTS")
+      && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
+      && test "$cas" -ge 25
+      && echo "$sortie"
+      && echo "B-T0 sonde=autotest cas_ok=${cas}"
 
   - id: B-T1
     kind: session
@@ -89,8 +101,16 @@ tickets:
     # domaine, uniques, aucun cas en trop, clés exactes sur chaque cas,
     # `cles`/`attendus` de longueur `regles` (donc vides sur un cas à zéro), au
     # moins un cas productif, zéro règle sur les deux pannes de reviewer. Les
-    # comptes imprimés sont calculés, jamais littéraux.
-    check: '"$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py contrat --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256'
+    # comptes imprimés sont calculés, jamais littéraux : la quantité mesurée est
+    # le nombre de `cas_ok=` — un par cas de matrice validé, plus l'axe du
+    # document. Une matrice amputée d'un verdict n'atteint pas le seuil.
+    check: >-
+      sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py contrat
+      --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256)
+      && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
+      && test "$cas" -ge 7
+      && echo "$sortie"
+      && echo "B-T1 sonde=contrat cas_ok=${cas}"
 
   - id: B-T2
     kind: session
@@ -114,7 +134,18 @@ tickets:
     # `why` — qui passait le compte et cassait plus tard au pont — échoue ici.
     # Les cas attendus à zéro sont le test de mutation : un stub qui produit
     # toujours échoue.
-    check: '"$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py decision --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256'
+    # `--module` nomme l'artefact jugé : la sonde le charge sous `--racine` et
+    # refuse un chemin autre que celui qu'elle attend. La quantité mesurée est
+    # le nombre de `cas_ok=`, un par verdict du domaine réellement exercé — un
+    # module qui n'en couvre que la moitié n'atteint pas le seuil.
+    check: >-
+      sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py decision
+      --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
+      --module ops/verdict_regles.py)
+      && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
+      && test "$cas" -ge 6
+      && echo "$sortie"
+      && echo "B-T2 sonde=decision cas_ok=${cas}"
 
   - id: B-T3
     kind: session
@@ -139,7 +170,16 @@ tickets:
     #  2. écriture -> UNE ligne d'index (rubrique 4 du constat : 328 fichiers sur
     #     434 ne sont dans aucun index, B ne doit pas grossir ce tas) ;
     #  3. gate REJOUÉ à l'identique -> ni `.v2`, ni seconde ligne d'index.
-    check: '"$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256'
+    # Cinq axes, donc cinq `cas_ok=` attendus : c'est la quantité que le check
+    # compte, sur l'artefact que `--module` nomme.
+    check: >-
+      sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont
+      --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
+      --module ops/brain_bridge.py)
+      && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
+      && test "$cas" -ge 5
+      && echo "$sortie"
+      && echo "B-T3 sonde=pont cas_ok=${cas}"
 
   - id: B-T4
     kind: session
@@ -166,4 +206,12 @@ tickets:
     #    qui doit rendre un `echec` observable sans lever.
     # Enfin la CLI en sous-processus, dont on lit la sortie réelle, et la
     # non-régression de périmètre sur les trois fichiers de gouvernance.
-    check: '"$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py entree --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256'
+    # Sept axes, donc sept `cas_ok=` : les cinq passes, la CLI, le périmètre.
+    check: >-
+      sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py entree
+      --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
+      --module ops/verdict_hook.py)
+      && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
+      && test "$cas" -ge 7
+      && echo "$sortie"
+      && echo "B-T4 sonde=entree cas_ok=${cas}"

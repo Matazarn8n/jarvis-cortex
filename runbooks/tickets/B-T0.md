@@ -25,8 +25,16 @@ Un `check:` est un appel, pas un programme. Les quatre `check:` de ce runbook
 sont donc des lignes de la forme :
 
 ```
-"$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py <sonde> --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
+sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py <sonde> --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256 --module <artefact>) \
+  && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=') && test "$cas" -ge <seuil> \
+  && echo "$sortie" && echo "<ticket> sonde=<sonde> cas_ok=${cas}"
 ```
+
+Le compteur n'est pas décoratif : `plan_factory` refuse un ticket qui produit du
+code sans qu'aucune quantité ne soit mesurée sur l'artefact déclaré. C'est ce
+que `--module` et le décompte des `cas_ok=` rendent au `check:`. **stderr n'est
+jamais capturé** — sur échec, la chaîne `&&` s'arrête avant l'impression et le
+diagnostic doit rester lisible dans le journal du runner.
 
 Le vérificateur est relu par un gate Codex, testé par son propre autotest, et
 corrigeable sans réécrire un runbook. C'est le seul endroit de B où de la
@@ -35,7 +43,7 @@ logique de contrôle a le droit de vivre.
 ## Interface
 
 ```
-sonde_b.py {contrat|decision|pont|entree|autotest} --facts <json> [--sceau <fichier>] [--racine <dir>]
+sonde_b.py {contrat|decision|pont|entree|autotest} --facts <json> [--sceau <fichier>] [--racine <dir>] [--module <chemin>]
 ```
 
 - `--facts` porte la valeur de `$HERMES_TICKET_FACTS`. **Parse-la** (`json.loads`)
@@ -48,6 +56,13 @@ sonde_b.py {contrat|decision|pont|entree|autotest} --facts <json> [--sceau <fich
   n'existe pas encore quand il tourne.
 - `--racine`, par défaut le répertoire courant : la racine du dépôt où les
   livrables sont cherchés. C'est ce qui rend `autotest` possible.
+- `--module`, pour `decision`, `pont` et `entree` : le chemin de l'artefact
+  jugé, relatif à `--racine`. La sonde le compare au chemin qu'elle attend
+  (`ops/verdict_regles.py`, `ops/brain_bridge.py`, `ops/verdict_hook.py`
+  respectivement) et **abandonne sur écart** — un `check:` recopié d'un ticket
+  à l'autre sans changer le module se voit tout de suite. C'est aussi ce qui
+  rattache le compteur du `check:` à l'artefact du ticket. Absent, la sonde
+  utilise son chemin attendu ; `contrat` et `autotest` l'ignorent.
 - **Sortie** : chaque sonde imprime des **grandeurs calculées** — jamais un « OK »
   constant, jamais un compte littéral. « 6/6 » codé en dur est un mensonge dès
   que la matrice en porte cinq. Sortie non nulle et message explicite en cas
@@ -190,12 +205,33 @@ tête du runbook ; ne la maquille pas en garantie.
 
 ## Contrat de SORTIE de la sonde — les `check:` en dépendent
 
-Chaque sous-commande écrit, **sur stdout et seulement en cas de succès**, une
-ligne unique de compteurs mesurés, de la forme `cle=valeur` séparés par des
-espaces — par exemple `cas=7 rejetes=6 regles=3`. Ce sont des grandeurs
-réellement comptées pendant la passe, jamais des constantes : une sortie
-constante satisfait « stdout non vide » sans rien mesurer, et c'est le faux
-positif exact que la règle vise.
+Chaque sous-commande écrit **sur stdout, et seulement en cas de succès** :
+
+1. **une ligne `cas_ok=<nom>` par axe réellement exercé ET franchi** — un axe
+   non exercé n'imprime rien, un axe échoué fait échouer la sonde. Le nom est
+   celui de l'axe (`cas_ok=verdict:NO_GO`, `cas_ok=index:une_ligne`,
+   `cas_ok=piege:cles_non_vide_sur_regles_zero`…) ;
+2. **puis une ligne finale de compteurs mesurés**, `cle=valeur` séparés par des
+   espaces — par exemple `cas=7 rejetes=6 regles=3`.
+
+Ce sont des grandeurs réellement comptées pendant la passe, jamais des
+constantes : une sortie constante satisfait « stdout non vide » sans rien
+mesurer, et c'est le faux positif exact que la règle vise.
+
+Le nombre de lignes `cas_ok=` **est** la quantité que chaque `check:` compte, et
+chacun porte un seuil. Tu dois les atteindre, et ils sont des planchers, pas des
+cibles :
+
+| sonde      | seuil du `check:` | ce que les axes couvrent                        |
+|------------|-------------------|-------------------------------------------------|
+| `contrat`  | 7                 | les 6 cas de matrice + l'axe du document         |
+| `decision` | 6                 | un par verdict du domaine                        |
+| `pont`     | 5                 | `.v1`, `.md`, `.v2` absent, index, `inchangee`   |
+| `entree`   | 7                 | les 5 passes, la CLI, la non-régression          |
+| `autotest` | 25                | 4 arbres valides + les 21 pièges énumérés plus bas |
+
+Un seuil manqué fait échouer le ticket jugé — c'est voulu : une sonde amputée de
+ses axes ne doit pas pouvoir rendre `done`.
 
 **Tout diagnostic d'échec part sur stderr**, jamais sur stdout, et la sonde rend
 un code non nul. Les `check:` du runbook capturent stdout dans une substitution
@@ -251,10 +287,12 @@ minimum, et chacun doit être refusé :
 Les faux modules sont de quelques lignes chacun, écrits dans le temporaire — ils
 ne sont pas commités ailleurs que dans le corps de `sonde_b.py`.
 
-**La sortie de l'autotest nomme les cas rejetés**, un par ligne ou en liste, avec
-leur compte. Un autotest qui imprime « tout va bien » ne prouve rien ; celui qui
-imprime la liste des trente et quelques pièges refusés prouve que l'instrument
-mord.
+**La sortie de l'autotest nomme les cas rejetés**, un par ligne au format
+`cas_ok=<nom>` du contrat de sortie ci-dessus — un arbre valide accepté et un
+piège refusé comptent chacun pour une ligne. Les vingt et un pièges énumérés
+ci-dessus plus les quatre arbres valides font le seuil de 25 ; en ajouter est
+bienvenu. Un autotest qui imprime « tout va bien » ne prouve rien ; celui qui
+nomme chaque piège refusé prouve que l'instrument mord.
 
 Si un cas cassé **passe**, l'autotest échoue en le nommant. C'est le résultat
 utile de ta session, pas un contretemps : rapporte-le tel quel.
@@ -281,10 +319,11 @@ dépôt est public à l'échelle de l'équipe et git garde ce qu'on y met.
 `/home/nuveo/hermes-os-plan-b`, les deux commandes qui rendent la preuve :
 
 ```bash
-python3 ops/checks/sonde_b.py autotest --facts '{}'
+python3 ops/checks/sonde_b.py autotest --facts '{}' | tee /dev/stderr | grep -c '^cas_ok='
 python3 -c 'import hashlib,pathlib;p=pathlib.Path("ops/checks/sonde_b.py");print("sceau concorde =", hashlib.sha256(p.read_bytes()).hexdigest()==pathlib.Path("ops/checks/sonde_b.sha256").read_text().split()[0])'
 ```
 
 Colle les deux sorties dans ton message de fin. La première doit lister les cas
-cassés refusés ; la seconde doit dire `True`. Un sceau qui ne concorde pas rendra
-les quatre `check:` suivants impossibles — vérifie-le, ne le suppose pas.
+cassés refusés et finir sur un compte **≥ 25** — en dessous, le `check:` de ce
+ticket échouera ; la seconde doit dire `True`. Un sceau qui ne concorde pas
+rendra les quatre `check:` suivants impossibles — vérifie-le, ne le suppose pas.

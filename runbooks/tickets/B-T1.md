@@ -15,6 +15,11 @@ forme exécutable du premier :
   verdicts**, machine-lisible, décrite en bas de ce prompt. C'est elle que le
   `check:` de B-T2 exécutera, verdict par verdict, sur l'implémentation.
 
+Le `check:` de ce ticket **compte** les lignes `cas_ok=` que la sonde `contrat`
+imprime : il en exige **sept** — un par cas de la matrice (les six verdicts du
+domaine, ni plus ni moins) plus l'axe du document rédigé. Une matrice amputée
+d'un verdict ne peut pas atteindre le seuil.
+
 ## Le problème
 
 `ops/plan_runner.py` fait passer chaque ticket par un gate Codex. Le gate rend un

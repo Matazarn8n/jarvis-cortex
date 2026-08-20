@@ -104,6 +104,11 @@ mais ne reproduit pas le `sha256` du contrat échoue ici, et pas six mois plus
 tard sur un dossier de mémoire dupliqué. La vérification du corps en est un
 troisième : renvoyer le bon nombre de dictionnaires vides ne passe pas.
 
+Le `check:` de ce ticket appelle la sonde avec `--module ops/verdict_regles.py`
+et **compte** les lignes `cas_ok=` qu'elle imprime : il en exige **six**, une par
+verdict du domaine réellement exercé. Une fonction qui n'en couvre que la moitié
+n'atteint pas le seuil, même si tout ce qu'elle rend est juste.
+
 Ne cherche pas à faire passer la sonde — fais marcher la fonction, la sonde
 suivra. Si un chiffre de la matrice te paraît faux, **ne le contourne pas dans
 le code** : le contrat fait foi, signale la divergence dans ton commit.

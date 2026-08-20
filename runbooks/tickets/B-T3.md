@@ -12,6 +12,11 @@ touche le disque, et où une erreur s'industrialise à la cadence des gates.
 Tu n'écris **pas** le point d'entrée qui relie les deux : c'est B-T4. Un seul
 livrable ici, `ops/brain_bridge.py`.
 
+Le `check:` appelle la sonde avec `--module ops/brain_bridge.py` et **compte**
+les lignes `cas_ok=` qu'elle imprime : il en exige **cinq** — `.v1` versionné,
+`.md` à jour, `.v2` absent au rejeu, une seule ligne d'index, et
+`etat == "inchangee"` décidé. Un axe non exercé ne compte pas.
+
 ## Le livrable — `ops/brain_bridge.py`
 
 Le pont, isolé dans son propre module neuf et autonome : il n'importe rien du
