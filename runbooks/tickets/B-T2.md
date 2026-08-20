@@ -10,9 +10,9 @@ déjà tranché par B-T1, tu l'implémentes.
 ce prompt et le contrat divergent, le contrat gagne — et signale la divergence
 dans ton message de commit.
 
-## Le livrable
+## Le livrable — un module neuf, `ops/verdict_regles.py`
 
-Une seule fonction, ajoutée à `ops/plan_runner.py` :
+Une seule fonction publique :
 
 ```python
 def regles_depuis_verdict(verdict: str, report: str) -> list[dict]:
@@ -20,6 +20,14 @@ def regles_depuis_verdict(verdict: str, report: str) -> list[dict]:
 
 Elle rend une liste de règles à écrire. Chaque règle est un `dict` portant au
 moins `slug`, `fait`, `why`.
+
+**Le module est neuf et autonome.** Il n'importe rien du moteur : ni
+`ops/plan_runner.py`, ni `ops/plan_doctor.py`, ni `ops/plan_factory.py`, que ce
+bloc **ne modifie jamais** et dont il ne dépend pas non plus. Une ligne de
+finding tient en quatre champs séparés par des `|` —
+`SEVERITE | fichier:ligne | problème | correctif` — et un `split("|", 3)` avec
+`strip()` suffit. Un import du moteur rendrait ce module inchargeable seul, et
+c'est précisément seul que le `check:` le charge.
 
 **Elle est pure.** Elle n'écrit rien, ne lit aucun fichier, ne lance aucun
 sous-processus, ne touche pas au `state`. L'écriture est le travail de B-T3.
@@ -39,6 +47,9 @@ un défaut récurrent créerait un fichier par session au lieu d'une règle
 versionnée, et le check recalcule le slug par `sha256` de toute façon. Aucun
 horodatage, aucun aléa, aucun compteur global.
 
+Le slug porte le préfixe `feedback_`. `brain.js` ne le redouble pas s'il est
+déjà là (brain.js:170-176) — c'est voulu, ne compense pas côté Python.
+
 ## Le comportement attendu
 
 Il est **entièrement écrit** dans `2026-08-21-b-contrat-injection.matrice.json`,
@@ -57,21 +68,13 @@ En résumé de ce qu'il fixe :
   deux branches où une implémentation se trompe sans que ça se voie. Le chiffre
   posé par la matrice fait foi, même s'il te surprend.
 
-Réutilise ce qui existe : `classer_findings()` (l. 4708) sait déjà découper le
-rapport par famille de sévérité, et une ligne de finding a quatre champs
-`SEVERITE | fichier:ligne | problème | correctif`. N'écris pas un second
-parseur.
-
-Le slug porte le préfixe `feedback_`. `brain.js` ne le redouble pas s'il est
-déjà là (brain.js:170-176) — c'est voulu, ne compense pas côté Python.
-
 ## Ce que le check fera — sache-le avant d'écrire
 
-Il **importe** `ops/plan_runner.py`, charge la matrice, et **appelle** ta
-fonction une fois par cas — les six verdicts, pas trois. Pour chaque cas il
-exige le nombre de règles annoncé ; et pour chaque règle attendue, il recalcule
-`"feedback_" + sha256(cle)[:12]` depuis la clé de la matrice et exige ce slug
-**exactement**.
+Il **importe** `ops/verdict_regles.py` par `importlib`, charge la matrice, et
+**appelle** ta fonction une fois par cas — les six verdicts, pas trois. Pour
+chaque cas il exige le nombre de règles annoncé ; et pour chaque règle attendue,
+il recalcule `"feedback_" + sha256(cle)[:12]` depuis la clé de la matrice et
+exige ce slug **exactement**.
 
 Les cas à zéro sont un test de mutation : un stub qui produit toujours une règle
 échoue, et un contrôle qui ne sait pas dire non ne mesure rien. Le recalcul du
@@ -83,14 +86,26 @@ Ne cherche pas à faire passer la sonde — fais marcher la fonction, la sonde
 suivra. Si un chiffre de la matrice te paraît faux, **ne le contourne pas dans
 le code** : le contrat fait foi, signale la divergence dans ton commit.
 
-Le module doit rester **importable sans effet de bord** : le `check:` charge
-`plan_runner.py` par `importlib`. Si ton ajout déclenche du travail à l'import,
-le check meurt sur l'outillage et pas sur ton code.
+Le module doit rester **importable sans effet de bord** : aucun travail au
+chargement, pas de lecture de fichier à l'import.
 
 ## Portée
 
-N'ajoute que cette fonction. Pas de pont vers `node` (c'est B-T3), pas d'appel
-depuis `process_session_ticket` (c'est B-T4). Un diff qui déborde se fera
-refuser au gate.
+Ce module, rien d'autre. Pas de pont vers `node` (c'est B-T3), pas de point
+d'entrée en ligne de commande (c'est B-T4), et **aucune retouche** d'un fichier
+de gouvernance du moteur — un diff qui déborde se fera refuser au gate.
 
-Commit atomique. Aucun secret, aucune donnée personnelle.
+## Fin — la commande finale et sa preuve observable
+
+Commit atomique du seul module. Aucun secret, aucune donnée personnelle.
+
+Termine en lançant, depuis `/home/nuveo/hermes-os-plan-b`, la commande qui exerce
+ta fonction sur toute la matrice et rapporte ce qu'elle a produit :
+
+```bash
+python3 -c 'import importlib.util,json,pathlib;s=importlib.util.spec_from_file_location("vr",pathlib.Path("ops/verdict_regles.py").resolve());m=importlib.util.module_from_spec(s);s.loader.exec_module(m);mat=json.load(open("docs/plans/2026-08-21-b-contrat-injection.matrice.json"));print(" ".join(c["verdict"]+"="+str(len(m.regles_depuis_verdict(c["verdict"],c["rapport"])))+"/"+str(c["regles"]) for c in mat["cas"]))'
+```
+
+Colle sa sortie dans ton message de fin : six couples `obtenu/attendu`, tous
+égaux. Un couple qui diverge est le vrai résultat de ta session — rapporte-le
+tel quel plutôt que de le maquiller.

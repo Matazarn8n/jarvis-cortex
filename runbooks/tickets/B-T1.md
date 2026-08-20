@@ -38,10 +38,14 @@ remplacé. Rien n'est perdu, mais rien n'est fusionné non plus.
 - Une ligne de finding a quatre champs :
   `SEVERITE | fichier:ligne | problème | correctif`.
 - `verdict_recalibre()` (l. 4748) re-décide un `NO_GO` selon les comptes.
-- **Point d'accroche retenu : `plan_runner.py:7327`**, juste après
-  `ts["verdict_motif"] = motif_verdict` et avant le branchement sur `verdict`.
-  À cet endroit le verdict est stable et recalibré, le rapport est complet, et
-  `save_state` n'a pas encore été appelé.
+- **Point d'accroche documenté — et laissé au moteur.** L'endroit juste après
+  `ts["verdict_motif"] = motif_verdict` (vers la ligne 7327) et avant le
+  branchement sur `verdict` est le bon : à cet endroit le verdict est stable et
+  recalibré, le rapport est complet, et `save_state` n'a pas encore été appelé.
+  Aucun ticket de B ne pose cet appel : une session de plan **ne modifie jamais**
+  un fichier de gouvernance du moteur. Le contrat consigne donc ce raccordement
+  en **dette**, nommément, avec le nom de la fonction à appeler et sa signature ;
+  B s'arrête au point d'entrée CLI livré par B-T4, que l'Owner branche ensuite.
 - Le module ne shelle **jamais** vers `node` aujourd'hui : `_run_bounded()`
   (l. 2882) est la primitive `Popen` unique. Aucune constante ne désigne
   `brain.js` ni le magasin de mémoire — tout est à créer.
@@ -150,16 +154,28 @@ compagnie. Ils sont commités.
 
 ## Ce que le check vérifiera
 
-Sur le document : la présence littérale de `plan_runner.py:7327`,
-`GO_AVEC_RESERVES`, `NO_VERDICT`, `REVIEWER_DOWN`, `brain.js`, `sha256`,
-`idempotence`, `MEMORY.md`, et l'absence de la formule interdite. Sur la
-matrice : les règles de forme ci-dessus.
+Sur le document : la présence littérale de `verdict_motif`, `GO_AVEC_RESERVES`,
+`NO_VERDICT`, `REVIEWER_DOWN`, `brain.js`, `sha256`, `idempotence`, `MEMORY.md`
+et `dette`, et l'absence de la formule interdite. Sur la matrice : les règles de
+forme ci-dessus.
 
 Ces ancres sont le plancher, pas le plafond : un document qui les contient sans
 trancher les sept points ci-dessus passera le check et se fera refuser au gate
 Codex.
 
-## Fin
+## Fin — la commande finale et sa preuve observable
 
 Commit atomique des deux livrables. Aucun secret, aucune donnée personnelle : ce
 dépôt est public à l'échelle de l'équipe et git garde ce qu'on y met.
+
+Termine ta session en lançant, depuis `/home/nuveo/hermes-os-plan-b`, la commande
+qui rend la preuve — elle lit la matrice et rapporte des grandeurs, elle ne se
+déclare pas vraie :
+
+```bash
+python3 -c 'import json;m=json.load(open("docs/plans/2026-08-21-b-contrat-injection.matrice.json"));print("cas="+str(len(m["cas"])),"regles="+str(sum(c["regles"] for c in m["cas"])),"productifs="+str([c["verdict"] for c in m["cas"] if c["regles"]]))'
+```
+
+Colle sa sortie dans ton message de fin. Six cas, au moins un productif, zéro sur
+les deux sentinelles de panne : si un chiffre te surprend, c'est la matrice qui
+est fausse, pas la commande.

@@ -6,15 +6,16 @@ résout, et tout fichier que tu produis doit y atterrir.
 **Modèle : `claude-opus-5` · effort : `high`.** C'est le ticket où la boucle
 touche le disque, et où une erreur s'industrialise à la cadence des gates.
 
-**Lis `docs/plans/2026-08-21-b-contrat-injection.md`** (fait foi) et la fonction
-`regles_depuis_verdict()` livrée par B-T2, qui te fournit les règles à écrire.
+**Lis `docs/plans/2026-08-21-b-contrat-injection.md`** (fait foi) et le module
+`ops/verdict_regles.py` livré par B-T2, qui te fournit les règles à écrire.
 
-Tu n'écris **pas** le branchement dans `plan_runner.py` : c'est B-T4. Un seul
+Tu n'écris **pas** le point d'entrée qui relie les deux : c'est B-T4. Un seul
 livrable ici, `ops/brain_bridge.py`.
 
 ## Le livrable — `ops/brain_bridge.py`
 
-Le pont, isolé dans son propre module — pas noyé dans `plan_runner.py`.
+Le pont, isolé dans son propre module neuf et autonome : il n'importe rien du
+moteur, dont ce bloc **ne modifie aucun** fichier de gouvernance.
 
 Il expose exactement deux noms :
 
@@ -42,8 +43,10 @@ Points de vigilance, tous mécaniques :
 - `brain.js store` sort en **code 1** avec `[brain] ...` sur stderr quand il
   refuse (cas `project` append-only). Traite l'échec, ne l'avale pas : lève avec
   le stderr dans le message.
-- Borne le temps d'exécution et remonte l'erreur. `_run_bounded()` (l. 2882) est
-  la primitive existante ; réutilise-la si elle convient, sinon dis pourquoi.
+- Borne le temps d'exécution et remonte l'erreur : `subprocess.run(..., timeout=)`
+  de la bibliothèque standard suffit, et garde le module autonome. La primitive
+  du moteur ferait entrer tout `ops/plan_runner.py` dans l'import — c'est le
+  contraire de ce qu'on veut ici.
 
 ## Les deux points à ne pas rater
 
@@ -102,7 +105,33 @@ La session est négligente ou opportuniste, pas un attaquant motivé. Pas de
 contre-mesure contre une attaque délibérée ; pas de critère de GO du type
 « aucun défaut CRITIQUE ni HAUTE », qui est inatteignable et bloque le plan.
 
-## Fin
+## Fin — la commande finale et sa preuve observable
+
+Termine en lançant, depuis `/home/nuveo/hermes-os-plan-b`, la séquence qui
+exerce ton pont en sandbox et rapporte ce que le disque porte ensuite — puis qui
+efface ses propres traces, fichiers **et** lignes d'index :
+
+```bash
+python3 - <<'PY'
+import importlib.util, os, pathlib, time
+s = importlib.util.spec_from_file_location("bb", pathlib.Path("ops/brain_bridge.py").resolve())
+bb = importlib.util.module_from_spec(s); s.loader.exec_module(bb)
+slug = f"feedback_preuve_b_t3_{os.getpid()}_{time.time_ns()}"
+box = bb.BRAIN_JS.parent / ".cache" / "sandbox-memory"; idx = box / "MEMORY.md"
+etats = [bb.ecrire_regle({"slug": slug, "fait": f, "why": "preuve B-T3"}, sandbox=True)["etat"]
+         for f in ("PREMIER", "SECOND", "SECOND")]
+print("brain.js =", bb.BRAIN_JS, "| etats =", etats,
+      "| v1 =", (box / f"{slug}.v1.md").exists(), "| v2 =", (box / f"{slug}.v2.md").exists(),
+      "| lignes d'index =", idx.read_text(encoding="utf-8").count(slug) if idx.exists() else 0)
+for p in box.glob(f"{slug}*.md"): p.unlink()
+if idx.exists():
+    idx.write_text("".join(l for l in idx.read_text(encoding="utf-8").splitlines(True) if slug not in l), encoding="utf-8")
+PY
+```
+
+Colle sa sortie dans ton message de fin. Attendu : `v1 = True`, `v2 = False`,
+une seule ligne d'index. Si `v2` est vrai, ton idempotence n'existe pas — dis-le
+plutôt que de relancer jusqu'à ce que ça passe.
 
 Commit atomique du seul module. Aucun secret, aucune donnée personnelle, et
 **aucun contenu de la mémoire recopié dans le dépôt** : les fichiers de règles
