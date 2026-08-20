@@ -26,19 +26,36 @@ sous-processus, ne touche pas au `state`. L'écriture est le travail de B-T3.
 C'est ce qui rend la sonde du `check:` possible : on peut l'appeler cent fois
 sans effet de bord.
 
-**Elle est déterministe.** La même entrée rend la même sortie, slug compris.
-Aucun horodatage, aucun aléa, aucun compteur global dans le slug — sinon un
-défaut récurrent crée un fichier par tour au lieu d'une règle versionnée.
+**Elle est déterministe, au sens cryptographique.** Le slug est imposé par le
+contrat :
+
+```python
+slug = "feedback_" + hashlib.sha256(cle.encode("utf-8")).hexdigest()[:12]
+```
+
+La composition de `cle` est tranchée par B-T1 — applique-la, ne la réinvente pas.
+N'utilise **pas** `hash()` : il est salé par processus (`PYTHONHASHSEED`), donc
+un défaut récurrent créerait un fichier par session au lieu d'une règle
+versionnée, et le check recalcule le slug par `sha256` de toute façon. Aucun
+horodatage, aucun aléa, aucun compteur global.
 
 ## Le comportement attendu
+
+Il est **entièrement écrit** dans `2026-08-21-b-contrat-injection.matrice.json`,
+livré par B-T1 : un cas par verdict du domaine, avec le nombre exact de règles
+attendu et la clé de chacune. Lis ce fichier en premier — c'est à la fois la
+spécification et le jeu d'épreuves.
+
+En résumé de ce qu'il fixe :
 
 - Verdict portant un défaut retenu par le contrat → une règle par défaut retenu.
 - Verdict `GO` sans finding → **liste vide**.
 - Sentinelles de panne (`NO_REVIEWER`, `REVIEWER_DOWN`) → **liste vide**, quel
   que soit le contenu du rapport. Une panne de reviewer n'est pas un défaut du
-  code.
-- Le filtre de sévérité et le traitement de `GO_AVEC_RESERVES` / `NO_VERDICT`
-  suivent le contrat.
+  code, et la matrice te donne exprès des rapports chargés sur ces deux cas.
+- `GO_AVEC_RESERVES` et `NO_VERDICT` ne sont pas des cas d'école : ce sont les
+  deux branches où une implémentation se trompe sans que ça se voie. Le chiffre
+  posé par la matrice fait foi, même s'il te surprend.
 
 Réutilise ce qui existe : `classer_findings()` (l. 4708) sait déjà découper le
 rapport par famille de sévérité, et une ligne de finding a quatre champs
@@ -50,18 +67,21 @@ déjà là (brain.js:170-176) — c'est voulu, ne compense pas côté Python.
 
 ## Ce que le check fera — sache-le avant d'écrire
 
-Il **importe** `ops/plan_runner.py` et **appelle** ta fonction trois fois :
+Il **importe** `ops/plan_runner.py`, charge la matrice, et **appelle** ta
+fonction une fois par cas — les six verdicts, pas trois. Pour chaque cas il
+exige le nombre de règles annoncé ; et pour chaque règle attendue, il recalcule
+`"feedback_" + sha256(cle)[:12]` depuis la clé de la matrice et exige ce slug
+**exactement**.
 
-1. sur un `NO_GO` portant une ligne `CRITIQUE` → exige **exactement 1** règle ;
-2. sur un `GO` sans finding → exige **0** ;
-3. sur `REVIEWER_DOWN` → exige **0**.
+Les cas à zéro sont un test de mutation : un stub qui produit toujours une règle
+échoue, et un contrôle qui ne sait pas dire non ne mesure rien. Le recalcul du
+slug en est un second : une dérivation maison qui « marche » dans ton processus
+mais ne reproduit pas le `sha256` du contrat échoue ici, et pas six mois plus
+tard sur un dossier de mémoire dupliqué.
 
-Puis il rappelle (1) et exige **le même slug**, et que ce slug commence par
-`feedback_`.
-
-Les cas 2 et 3 sont un test de mutation : un stub qui produit toujours une règle
-échoue, et un contrôle qui ne sait pas dire non ne mesure rien. Ne cherche pas à
-faire passer la sonde — fais marcher la fonction, la sonde suivra.
+Ne cherche pas à faire passer la sonde — fais marcher la fonction, la sonde
+suivra. Si un chiffre de la matrice te paraît faux, **ne le contourne pas dans
+le code** : le contrat fait foi, signale la divergence dans ton commit.
 
 Le module doit rester **importable sans effet de bord** : le `check:` charge
 `plan_runner.py` par `importlib`. Si ton ajout déclenche du travail à l'import,

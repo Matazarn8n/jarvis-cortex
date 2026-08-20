@@ -13,8 +13,8 @@
 #
 # DETTES MOTEUR (une ligne chacune, hors périmètre des tickets ci-dessous) :
 # dette: `--deny-write` ne borne pas les écritures d'un `check:` hors `repo:` — la sonde B-T3 écrit dans le `.cache/sandbox-memory` de jarvis-cortex, hors de ce dépôt.
-# dette: un script de check produit par un ticket AVAL n'a pas de sha256 épinglable à l'écriture du runbook — les quatre checks restent donc inline (13 à 26 lignes), et B-T3 est scindé de B-T4 pour qu'aucun ne dépasse.
-# dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
+# dette: un `check:` ne peut pas appeler un script livré par un ticket AVAL en épinglant son sha256 — le condensat n'existe pas quand le runbook s'écrit. Les checks restent donc inline ; la matrice de verdicts est sortie en livrable de B-T1, ce qui les ramène de 34 à ~16 lignes.
+# dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas, et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
 # dette: `AskUserQuestion` échoue en session de plan (`readonly database`) — un ticket ne peut pas poser la question que la consigne lui impose de poser.
 
 phase: "B"
@@ -40,24 +40,29 @@ tickets:
     prompt_file: tickets/B-T1.md
     produces:
       - docs/plans/2026-08-21-b-contrat-injection.md
-    # Le contrat est le livrable ; le check le lit directement, il ne fait
-    # confiance à aucun marqueur imprimé par la session.
+      - docs/plans/2026-08-21-b-contrat-injection.matrice.json
+    # Le contrat rédigé fixe la doctrine ; la matrice JSON la rend exécutable et
+    # devient le jeu d'épreuves de B-T2. Le check lit les deux livrables et ne
+    # fait confiance à aucun marqueur imprimé par la session. Il refuse une
+    # matrice dégénérée : couverture des six verdicts, au moins un cas productif,
+    # et zéro règle sur une panne de reviewer.
     check: |
       "$HERMES_CHECK_PYTHON" - <<'PY'
       import json, os, pathlib, sys
       json.loads(os.environ["HERMES_TICKET_FACTS"])
       d = pathlib.Path("docs/plans/2026-08-21-b-contrat-injection.md").read_text(encoding="utf-8")
-      ancres = ("plan_runner.py:7327", "GO_AVEC_RESERVES", "NO_VERDICT",
-                "REVIEWER_DOWN", "brain.js", "slug", "idempotence", "MEMORY.md")
-      manquant = [a for a in ancres if a not in d]
-      # littéraux scindés : le runbook ne doit pas contenir lui-même la formule
-      # interdite, sinon un contrôle statique du parc le signale à tort.
+      mat = json.loads(pathlib.Path("docs/plans/2026-08-21-b-contrat-injection.matrice.json").read_text(encoding="utf-8"))
+      cas = {c["verdict"]: c for c in mat["cas"]}
+      manque = [a for a in ("plan_runner.py:7327", "GO_AVEC_RESERVES", "NO_VERDICT", "REVIEWER_DOWN", "brain.js", "sha256", "idempotence", "MEMORY.md") if a not in d]
+      absents = [v for v in ("GO", "GO_AVEC_RESERVES", "NO_GO", "NO_VERDICT", "NO_REVIEWER", "REVIEWER_DOWN") if v not in cas]
+      # littéraux scindés : le runbook ne doit pas porter lui-même la formule interdite.
       interdit = [p for p in ("aucun " + "CRITIQUE", "aucune " + "HAUTE", "ni " + "HAUTE") if p in d]
-      if manquant:
-          sys.exit(f"contrat incomplet, ancres absentes: {manquant}")
-      if interdit:
-          sys.exit(f"critere de GO inatteignable dans le contrat: {interdit}")
-      print(f"B-T1 contrat: {len(ancres)}/{len(ancres)} ancres, aucun critere inatteignable")
+      if manque or absents or interdit:
+          sys.exit(f"contrat: ancres absentes={manque} verdicts hors matrice={absents} critere inatteignable={interdit}")
+      productifs = [c["verdict"] for c in mat["cas"] if c["regles"] > 0 and len(c.get("cles", [])) == c["regles"]]
+      if not productifs or cas["REVIEWER_DOWN"]["regles"] or cas["NO_REVIEWER"]["regles"] or "sha256" not in mat.get("derivation_slug", ""):
+          sys.exit(f"matrice degeneree: productifs_avec_cles={productifs} panne={cas['REVIEWER_DOWN']['regles']}/{cas['NO_REVIEWER']['regles']} derivation={mat.get('derivation_slug')!r}")
+      print(f"B-T1: 6/6 verdicts couverts, cas productifs={productifs}, slug derive par {mat['derivation_slug']}")
       PY
 
   - id: B-T2
@@ -70,28 +75,31 @@ tickets:
     prompt_file: tickets/B-T2.md
     produces:
       - ops/plan_runner.py
-    # Sonde comportementale à trois branches : la fonction est APPELÉE, sur un
-    # défaut (doit produire), sur un GO (doit se taire), sur une panne de
-    # reviewer (doit se taire). Les deux branches muettes sont le test de
-    # mutation : un stub qui produit toujours échoue ici.
+    # Sonde comportementale pilotée par la matrice de B-T1 : la fonction est
+    # APPELÉE sur les SIX verdicts du domaine, pas seulement sur trois. Les cas
+    # attendus à zéro (GO propre, NO_VERDICT, les deux pannes) sont le test de
+    # mutation : un stub qui produit toujours échoue.
+    # Le slug est recalculé ici par sha256 — une dérivation par `hash()`, non
+    # reproductible d'un processus à l'autre, ne peut pas passer.
     check: |
       "$HERMES_CHECK_PYTHON" - <<'PY'
-      import importlib.util, json, os, pathlib, sys
+      import hashlib, importlib.util, json, os, pathlib, sys
       json.loads(os.environ["HERMES_TICKET_FACTS"])
       spec = importlib.util.spec_from_file_location("pr", pathlib.Path("ops/plan_runner.py").resolve())
       m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
-      d = "CRITIQUE | ops/x.py:12 | le verdict n'ecrit aucune regle | cabler l'appel"
-      sur_defaut = m.regles_depuis_verdict("NO_GO", "VERDICT: NO_GO\n" + d)
-      sur_go = m.regles_depuis_verdict("GO", "VERDICT: GO\nRAS")
-      sur_panne = m.regles_depuis_verdict("REVIEWER_DOWN", d)
-      if len(sur_defaut) != 1 or sur_go or sur_panne:
-          sys.exit(f"sonde: defaut={len(sur_defaut)} (attendu 1) go={len(sur_go)} panne={len(sur_panne)} (attendus 0)")
-      s = sur_defaut[0]["slug"]
-      if s != m.regles_depuis_verdict("NO_GO", "VERDICT: NO_GO\n" + d)[0]["slug"]:
-          sys.exit(f"slug non deterministe: {s} puis un autre sur la meme entree")
-      if not s.startswith("feedback_"):
-          sys.exit(f"slug sans prefixe de type procedural: {s}")
-      print(f"sonde 3/3 · defaut->1 regle ({s}) · GO->0 · panne reviewer->0 · slug stable")
+      mat = json.loads(pathlib.Path("docs/plans/2026-08-21-b-contrat-injection.matrice.json").read_text(encoding="utf-8"))
+      ecarts = []
+      for c in mat["cas"]:
+          r = m.regles_depuis_verdict(c["verdict"], c["rapport"])
+          if len(r) != c["regles"]:
+              ecarts.append(f"{c['verdict']}->{len(r)} regle(s), attendu {c['regles']}")
+          for regle, cle in zip(r, c.get("cles", [])):
+              attendu = "feedback_" + hashlib.sha256(cle.encode("utf-8")).hexdigest()[:12]
+              if regle["slug"] != attendu:
+                  ecarts.append(f"{c['verdict']}: slug {regle['slug']!r} != sha256 attendu {attendu!r}")
+      if ecarts:
+          sys.exit("sonde matrice: " + " · ".join(ecarts))
+      print(f"sonde: {len(mat['cas'])} verdicts exerces, {sum(c['regles'] for c in mat['cas'])} regle(s) produite(s), slugs = sha256 du contrat")
       PY
 
   - id: B-T3
@@ -106,45 +114,34 @@ tickets:
       - ops/brain_bridge.py
     # Trois exigences, une seule sonde, sur le pont réel en sandbox :
     #  1. réécriture avec un fait DIFFÉRENT -> `.v1` garde l'ancien (régime M-T1) ;
-    #  2. écriture -> UNE ligne d'index (la rubrique 4 du constat : 328 fichiers
-    #     sur 432 ne sont dans aucun index, B ne doit pas grossir ce tas) ;
+    #  2. écriture -> UNE ligne d'index (rubrique 4 du constat : 328 fichiers sur
+    #     432 ne sont dans aucun index, B ne doit pas grossir ce tas) ;
     #  3. gate REJOUÉ à l'identique -> ni `.v2`, ni seconde ligne d'index.
     # Le slug porte le pid et l'horloge : deux exécutions concurrentes ne peuvent
-    # pas effacer leurs preuves mutuelles, et le nettoyage ne touche que le nôtre.
+    # pas effacer leurs preuves mutuelles. Le nettoyage retire les fichiers ET les
+    # lignes d'index de CETTE exécution — la sonde ne laisse pas de pointeur mort.
     check: |
       "$HERMES_CHECK_PYTHON" - <<'PY'
       import importlib.util, json, os, pathlib, sys, time
       json.loads(os.environ["HERMES_TICKET_FACTS"])
       spec = importlib.util.spec_from_file_location("bb", pathlib.Path("ops/brain_bridge.py").resolve())
       bb = importlib.util.module_from_spec(spec); spec.loader.exec_module(bb)
-      if not bb.BRAIN_JS.exists():
-          sys.exit(f"brain.js introuvable a l'emplacement resolu: {bb.BRAIN_JS}")
+      if not bb.BRAIN_JS.exists(): sys.exit(f"brain.js introuvable a l'emplacement resolu: {bb.BRAIN_JS}")
       slug = f"feedback_sonde_b_t3_{os.getpid()}_{time.time_ns()}"
-      box = bb.BRAIN_JS.parent / ".cache" / "sandbox-memory"
-      idx = box / "MEMORY.md"
-      f, v1, v2 = box / f"{slug}.md", box / f"{slug}.v1.md", box / f"{slug}.v2.md"
-      base = {"slug": slug, "why": "sonde B-T3"}
+      box = bb.BRAIN_JS.parent / ".cache" / "sandbox-memory"; idx = box / "MEMORY.md"
+      lu = lambda nom: (box / nom).read_text(encoding="utf-8") if (box / nom).exists() else ""
       try:
-          bb.ecrire_regle({**base, "fait": "PREMIER"}, sandbox=True)
-          apres_1 = idx.read_text(encoding="utf-8").count(slug)
-          bb.ecrire_regle({**base, "fait": "SECOND"}, sandbox=True)
-          bb.ecrire_regle({**base, "fait": "SECOND"}, sandbox=True)  # gate rejoue
-          if not v1.exists() or "PREMIER" not in v1.read_text(encoding="utf-8"):
-              sys.exit("regime procedural absent: la reecriture a ecrase la version precedente")
-          if "SECOND" not in f.read_text(encoding="utf-8"):
-              sys.exit("reecriture non appliquee: le fichier courant ne porte pas le nouveau fait")
-          if v2.exists():
-              sys.exit("idempotence: un gate rejoue a l'identique empile une version de plus")
-          apres_3 = idx.read_text(encoding="utf-8").count(slug)
-          if (apres_1, apres_3) != (1, 1):
-              sys.exit(f"indexation: {apres_1} ligne(s) d'index a l'ecriture, {apres_3} apres rejeu (attendu 1 et 1)")
-          print(f"sonde pont: .v1 garde PREMIER · courant SECOND · rejeu inerte (pas de .v2) · 1 ligne d'index")
+          index = []
+          for fait in ("PREMIER", "SECOND", "SECOND"):  # 3e appel = gate rejoue a l'identique
+              bb.ecrire_regle({"slug": slug, "fait": fait, "why": "sonde B-T3"}, sandbox=True)
+              index.append(lu("MEMORY.md").count(slug))
+          etat = ("PREMIER" in lu(f"{slug}.v1.md"), "SECOND" in lu(f"{slug}.md"), (box / f"{slug}.v2.md").exists(), index)
+          if etat != (True, True, False, [1, 1, 1]):
+              sys.exit(f"sonde pont: v1_garde_PREMIER={etat[0]} courant_SECOND={etat[1]} v2_empilee={etat[2]} lignes_index={etat[3]} (attendu True/True/False/[1,1,1])")
+          print(f"sonde pont: .v1 garde PREMIER · courant SECOND · rejeu inerte (pas de .v2) · index {index}")
       finally:
-          # on n'efface que ce que CETTE execution a cree. Les lignes d'index
-          # restent : l'index sandbox est append-only cote brain.js, et les
-          # reecrire ferait perdre celles d'une execution concurrente.
-          for p in (f, v1, v2):
-              if p.exists(): p.unlink()
+          for p in box.glob(f"{slug}*.md"): p.unlink()
+          if idx.exists(): idx.write_text("".join(l for l in idx.read_text(encoding="utf-8").splitlines(True) if slug not in l), encoding="utf-8")
       PY
 
   - id: B-T4
@@ -157,39 +154,32 @@ tickets:
     prompt_file: tickets/B-T4.md
     produces:
       - ops/plan_runner.py
-    # La sonde APPELLE `injecter_regles()` avec son propre écrivain injecté :
-    # elle exerce donc le branchement lui-même, pas seulement les briques.
-    # Deuxième passe avec un écrivain qui lève : la boucle ne doit ni tomber
-    # (un gate ne casse pas parce que la mémoire n'a pas pu s'écrire) ni avaler
-    # l'échec — il doit atterrir dans le state du ticket, visible au rapport.
-    # La lecture de la source ne vérifie qu'une chose que l'appel ne peut pas
-    # montrer : que le point d'accroche est bien à 7327 et pas ailleurs.
+    # La sonde APPELLE `injecter_regles()` avec son propre écrivain injecté : elle
+    # exerce le branchement lui-même, pas seulement les briques. Passe 3 avec un
+    # écrivain qui lève : la boucle ne doit ni tomber (un gate ne casse pas parce
+    # que la mémoire n'a pas pu s'écrire) ni avaler l'échec — il doit atterrir
+    # dans le state du ticket, visible au rapport.
+    # Le point d'accroche est vérifié par AST — un vrai nœud `Call`, pas une
+    # sous-chaîne : un commentaire mentionnant `injecter_regles(` ne passe pas.
     check: |
       "$HERMES_CHECK_PYTHON" - <<'PY'
-      import importlib.util, json, os, pathlib, sys
+      import ast, importlib.util, json, pathlib, os, sys
       json.loads(os.environ["HERMES_TICKET_FACTS"])
-      spec = importlib.util.spec_from_file_location("pr", pathlib.Path("ops/plan_runner.py").resolve())
+      src = pathlib.Path("ops/plan_runner.py").resolve()
+      spec = importlib.util.spec_from_file_location("pr", src)
       m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
       rap = "VERDICT: NO_GO\nCRITIQUE | ops/x.py:12 | le verdict n'ecrit aucune regle | cabler l'appel"
       vus = []
-      def ok(regle, **kw):
-          vus.append(regle["slug"]); return {"etat": "ecrite", "fichier": regle["slug"] + ".md"}
-      def casse(regle, **kw):
-          raise RuntimeError("brain.js code 1: [brain] store refuse")
-      ts_ok, ts_ko, ts_go = {}, {}, {}
-      m.injecter_regles("NO_GO", rap, ts_ok, ecrire=ok)
-      m.injecter_regles("GO", "VERDICT: GO\nRAS", ts_go, ecrire=ok)
-      m.injecter_regles("NO_GO", rap, ts_ko, ecrire=casse)  # ne doit PAS lever
-      etats = [e.get("etat", "") for e in ts_ko.get("regles_memoire", [])]
-      if [e.get("etat") for e in ts_ok.get("regles_memoire", [])] != ["ecrite"] or len(vus) != 1:
-          sys.exit(f"branchement muet: {len(vus)} ecriture(s) sur NO_GO, journal={ts_ok.get('regles_memoire')}")
-      if ts_go.get("regles_memoire"):
-          sys.exit(f"branchement bavard: un GO sans finding a produit {ts_go['regles_memoire']}")
-      if not any(e.startswith("echec") for e in etats):
-          sys.exit(f"echec d'ecriture avale: rien de visible dans le state du ticket (etats={etats})")
-      src = pathlib.Path("ops/plan_runner.py").read_text(encoding="utf-8")
-      i = src.find('ts["verdict_motif"] = motif_verdict')
-      if i < 0 or not 0 < src.find("injecter_regles(", i) - i < 1200:
-          sys.exit("point d'accroche: injecter_regles() n'est pas appele apres ts['verdict_motif']")
-      print(f"sonde branchement: NO_GO->1 ecriture journalisee · GO->0 · echec remonte ({etats}) · accroche a 7327")
+      def ok(regle, **kw): vus.append(regle["slug"]); return {"etat": "ecrite", "fichier": regle["slug"] + ".md"}
+      def casse(regle, **kw): raise RuntimeError("brain.js code 1: [brain] store refuse")
+      res = []
+      for verdict, rapport, ecrivain in (("NO_GO", rap, ok), ("GO", "VERDICT: GO\nRAS", ok), ("NO_GO", rap, casse)):
+          ts = {}; m.injecter_regles(verdict, rapport, ts, ecrire=ecrivain)  # passe 3 : ne doit PAS lever
+          res.append([e.get("etat", "") for e in ts.get("regles_memoire", [])])
+      arbre = ast.parse(src.read_text(encoding="utf-8"))
+      pose = [n.lineno for n in ast.walk(arbre) if isinstance(n, ast.Constant) and n.value == "verdict_motif"]
+      appels = [n.lineno for n in ast.walk(arbre) if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "injecter_regles"]
+      if res[0] != ["ecrite"] or len(vus) != 1 or res[1] or not any(e.startswith("echec") for e in res[2]) or not any(0 <= a - p < 40 for p in pose for a in appels):
+          sys.exit(f"branchement: NO_GO={res[0]} ecritures={len(vus)} GO={res[1]} echec={res[2]} accroche(verdict_motif={pose[:3]}, appels_AST={appels[:3]})")
+      print(f"sonde branchement: NO_GO->1 ecriture journalisee · GO->0 · echec remonte {res[2]} · appel AST en {appels} apres verdict_motif {pose}")
       PY

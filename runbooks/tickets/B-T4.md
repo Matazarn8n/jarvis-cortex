@@ -32,9 +32,11 @@ l'outillage si l'import de tête échouait.
 et avant le branchement sur `verdict`. À cet endroit le verdict est stable et
 recalibré, le rapport est complet, et `save_state` n'a pas encore été appelé.
 
-Un seul appel, à cet endroit. Le check lit la source autour de
-`ts["verdict_motif"] = motif_verdict` et exige d'y trouver `injecter_regles(` :
-définir la fonction sans la brancher ne passe pas.
+Un seul appel, à cet endroit. Le check **parse la source en AST** et exige un
+véritable nœud d'appel à `injecter_regles` dans les quarante lignes qui suivent
+`ts["verdict_motif"]`. Définir la fonction sans la brancher ne passe pas, et un
+commentaire ou une chaîne mentionnant `injecter_regles(` non plus — c'est
+l'arbre syntaxique qui est interrogé, pas le texte.
 
 ### L'échec ne doit ni tomber, ni disparaître
 
@@ -73,7 +75,7 @@ son propre écrivain injecté :
 3. le même `NO_GO`, écrivain qui **lève** → exige que l'appel **ne lève pas** et
    qu'une entrée porte un `etat` commençant par `echec`.
 
-Puis il lit la source pour vérifier le point d'accroche.
+Puis il vérifie le point d'accroche par AST, comme décrit plus haut.
 
 Le cas 2 est un test de mutation : un branchement qui écrit toujours échoue. Le
 cas 3 aussi : un `try/except: pass` échoue. Ne cherche pas à faire passer la

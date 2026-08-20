@@ -71,7 +71,7 @@ le même fait, rends `{"etat": "inchangee"}` **sans appeler `brain.js`**. Une
 lecture évitée vaut mieux qu'une version fabriquée.
 
 L'index compte autant que le fichier : le constat du bloc M mesure 328 fichiers
-sur 431 sans ligne d'index. Une règle écrite par B vaut **exactement une** ligne
+sur 432 sans ligne d'index. Une règle écrite par B vaut **exactement une** ligne
 d'index — pas zéro, pas une par rejeu.
 
 ## Ce que le check fera
@@ -87,7 +87,11 @@ l'exécution (pid + horloge, pour ne pas marcher sur une autre exécution) :
 - le `MEMORY.md` de la sandbox porte **une** ligne mentionnant le slug après la
   première écriture, et **toujours une** après le rejeu.
 
-Puis il efface les fichiers qu'il a créés, et eux seuls.
+Puis il efface ce qu'il a créé, et rien d'autre : ses fichiers, **et ses lignes
+d'index**. Une sonde qui laisserait ses lignes derrière elle fabriquerait à
+chaque exécution le pointeur mort que la rubrique 4 du constat dénombre — un
+contrôle ne dégrade pas ce qu'il mesure. Comme le slug porte le pid et
+l'horloge, ce nettoyage ne peut pas emporter les preuves d'une autre exécution.
 
 C'est une sonde comportementale : elle exerce le pont réel, elle ne lit aucun
 marqueur que ta session aurait imprimé.

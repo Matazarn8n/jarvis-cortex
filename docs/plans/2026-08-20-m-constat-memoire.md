@@ -1,14 +1,3 @@
-# Constat de l'état réel de la mémoire — M-TGEN
-
-Ce document mesure ce que le dossier de mémoire contient **aujourd'hui**, avant
-que la boucle du bloc B ne se mette à y écrire toute seule. M-T1 a posé les
-régimes d'écriture pour l'avenir ; il ne disait rien du passé déjà écrit.
-
-Lire d'abord « Provenance des chiffres » : les neuf métriques sont exactes, mais
-aucune n'a été mesurée par la session elle-même.
-
-## Bloc de métriques
-
 ```
 user: 2
 feedback: 116
@@ -25,6 +14,15 @@ fichiers_non_indexes: 328
 empreinte: f870424f1bb06ce0
 fichiers: 433
 ```
+
+# Constat de l'état réel de la mémoire — M-TGEN
+
+Ce document mesure ce que le dossier de mémoire contient **aujourd'hui**, avant
+que la boucle du bloc B ne se mette à y écrire toute seule. M-T1 a posé les
+régimes d'écriture pour l'avenir ; il ne disait rien du passé déjà écrit.
+
+Lire d'abord « Provenance des chiffres » : les neuf métriques sont exactes, mais
+aucune n'a été mesurée par la session elle-même.
 
 L'empreinte est le SHA-256 des noms de fichiers `*.md` du dossier, triés par
 ordre croissant, joints par un saut de ligne, tronqué à 16 caractères hex. Les
@@ -139,13 +137,13 @@ propre à l'un d'eux.
 
 ## 4. L'index `MEMORY.md`
 
-- 156 lignes, en-tête « index compacté 2026-07-30 ».
+- 156 lignes.
 - 104 pointeurs distincts vers des fichiers du dossier.
 - **0 pointeur mort** : tout ce que l'index désigne existe.
 - **328 fichiers n'ont aucune ligne d'index**, soit 75,9 % du dossier.
 
 L'index n'est pas cassé, il est **partiel** — et il l'est délibérément. Son
-en-tête annonce un compactage, et sa structure le confirme : rubriques
+en-tête annonce un compactage antérieur, et sa structure le confirme : rubriques
 thématiques, une ligne par saga, pointeurs datés, renvois vers des pages de liens
 plutôt que vers chaque fichier. L'absence totale de pointeur mort est le signe
 d'un index tenu, pas d'un index abandonné : quand on l'a réduit, on a retiré des
@@ -179,8 +177,8 @@ c'est la seule portée qu'il puisse avoir honnêtement.
 **Le vrai manque n'est pas un manque de format.** Les 328 fichiers non indexés
 sont un problème de rappel, pas de structure : leur `metadata.type` est correct,
 leur contenu est intact, ils sont simplement absents de l'index. Une migration de
-format n'y changerait rien, et regonfler l'index à 432 lignes annulerait la
-décision de compactage du 2026-07-30 sans que personne ne l'ait demandée.
+format n'y changerait rien, et regonfler l'index à 432 lignes annulerait le
+compactage délibéré que sa structure atteste, sans que personne ne l'ait demandé.
 
 **Le coût est asymétrique.** Une migration réécrit en lot un dossier de fichiers
 personnels dont le contenu ne peut pas être relu à la revue, contre un bénéfice
