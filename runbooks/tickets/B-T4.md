@@ -44,8 +44,29 @@ réutilise cette sonde. Défaut déjà payé ici : le texte d'un runbook est lu 
 une norme, et une norme absolue devient un blocage que personne ne peut lever.
 
 La non-régression tolère donc la présence de ces noms dans un fichier de
-gouvernance **si et seulement si** ce fichier porte aussi, sur une de ses lignes,
-un marqueur de raccordement daté de la forme :
+gouvernance. **Aucune exception, et surtout pas un marqueur.**
+
+Une version antérieure de ce prompt tolérait la présence si le fichier portait un
+marqueur daté « posé à la main par l'Owner ». C'était une faute, relevée par
+l'audit adverse du 2026-08-20 : `governed_files()` protège
+`/home/nuveo/hermes-os`, PAS les copies sous `/home/nuveo/hermes-os-plan-b`. Une
+session peut donc raccorder le hook elle-même, recopier le marqueur qu'elle vient
+de lire dans son propre prompt, et verdir sur une modification hors périmètre.
+Un marqueur que la session connaît n'est pas une preuve : c'est une chaîne de
+caractères qu'elle sait écrire.
+
+Pour ce run : la sonde compare ces trois fichiers **octet à octet** à leur version
+dans le `base_sha` fourni par `$HERMES_TICKET_FACTS`. Toute différence est un
+échec, quel que soit son contenu.
+
+La dette de raccordement ne disparaît pas pour autant : `injecter_regles` devra un
+jour être appelée depuis `ops/plan_runner.py:7327`, et c'est l'Owner qui posera
+cette ligne à la main. Elle est consignée en tête du runbook et dans son
+« Encore à Faire ». Ce qui change, c'est qu'elle cesse d'être auto-certifiable :
+une exception future devra s'appuyer sur une preuve ANTÉRIEURE à la session — un
+sha épinglé avant son lancement — jamais sur un texte que la session peut
+produire.
+
 
 ```
 # raccordement B verdict->regle, pose a la main le YYYY-MM-DD par l'Owner
