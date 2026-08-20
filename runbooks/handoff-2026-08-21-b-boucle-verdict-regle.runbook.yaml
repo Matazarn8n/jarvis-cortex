@@ -27,14 +27,25 @@
 # règle des quinze lignes, tenue et non pas exemptée : aucun `check:` de ce
 # runbook ne porte de programme.
 #
+# ET CHACUN DES QUATRE REJOUE L'AUTOTEST AVANT SA PROPRE SONDE. Un runbook ne
+# peut pas épingler le sha256 d'un script que l'un de ses tickets crée (dette
+# ci-dessous) : le sceau et la sonde naissent ensemble en B-T0, et une session
+# aval qui amputerait la sonde pour se faire accepter n'aurait qu'à refaire le
+# sceau. Le rejeu ferme ce trou par le comportement au lieu du condensat — les
+# 36 cas de l'autotest construisent des arbres cassés et EXIGENT leur refus, donc
+# une sonde adoucie tombe là, avant d'avoir jugé quoi que ce soit. Reste hors de
+# portée le cas d'une session qui fabriquerait 36 fausses lignes `cas_ok=` : ça
+# n'est plus de la négligence, c'est un faux délibéré, et le modèle de menace du
+# bloc s'arrête avant.
+#
 # PRÉREQUIS : le régime versionné vit dans le worktree du bloc M. Si `BRAIN_JS`
 # résolvait vers un jarvis-cortex qui ne le porte pas encore, la sonde B-T3
 # échouerait sur `.v1` absent — c'est le bon signal, pas un faux négatif.
 #
 # DETTES MOTEUR (une ligne chacune, hors périmètre des tickets ci-dessous) :
 # dette: le raccordement du moteur (un appel après `ts["verdict_motif"]`, vers 7327) reste à faire par le mainteneur du moteur — une session de plan ne touche pas aux fichiers de gouvernance, et B s'arrête donc au point d'entrée CLI livré par B-T4.
-# dette: un runbook ne peut pas épingler le sha256 d'un script que l'un de ses propres tickets crée — le condensat n'existe pas à l'écriture ; le sceau `ops/checks/sonde_b.sha256`, écrit par B-T0 et relu par chaque sonde, est le plus proche substitut atteignable sans changement du moteur.
-# dette: le runner ne borne pas les écritures d'un `check:` hors `repo:` — les sondes B-T3 et B-T4 écrivent dans un bac à sable propre à l'exécution, sous le `.cache/` de jarvis-cortex, hors de ce dépôt.
+# dette: un runbook ne peut pas épingler le sha256 d'un script que l'un de ses propres tickets crée — le condensat n'existe pas à l'écriture ; à défaut, le sceau `ops/checks/sonde_b.sha256` et le rejeu de l'autotest par chacun des quatre `check:` aval (ci-dessus) tiennent la sonde par son comportement, et l'épinglage littéral resterait à faire le jour où le moteur saurait produire la sonde dans un bloc antérieur.
+# dette: le runner ne borne pas les écritures d'un `check:` hors `repo:` — les sondes B-T3 et B-T4 écrivent dans un `tempfile.mkdtemp()` propre à l'exécution, hors de ce dépôt, effacé dans un `finally`.
 # dette: aucun `check:` ne peut lire la liste des fichiers du diff du ticket ; la non-régression de périmètre se borne donc au contenu des trois fichiers de gouvernance, pas à une whitelist du commit.
 # dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas, et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
 # dette: `brain.js` ne prend aucun verrou pour indexer — un écrivain qui l'appelle directement et dont l'ajout tombe entre la dernière vérification de `os.stat()` du pont et son `os.replace()` perd sa ligne ; fermer cette fenêtre exige un changement de `brain.js`, hors du dépôt de B, et B-T3 se borne donc à ne jamais retirer une ligne qui n'est pas un doublon de son propre slug.
@@ -83,7 +94,7 @@ tickets:
     effort: high
     codex_gate: true
     max_budget_usd: 3.00
-    # Le ticket le plus long du bloc : un script, ses 37 cas d'autotest, un
+    # Le ticket le plus long du bloc : un script, ses 36 cas d'autotest, un
     # sceau. Bornes explicites — les défauts du moteur (120 tours, 90 min)
     # laissent une session égarée brûler le budget avant de buter dessus.
     max_turns: 70
@@ -98,7 +109,7 @@ tickets:
     # vérificateur permissif — celui qui aurait laissé passer les défauts de
     # l'audit — échoue ici, avant d'avoir servi.
     # La QUANTITÉ mesurée est le nombre de lignes `cas_ok=` que l'autotest émet,
-    # une par piège réellement construit puis refusé (B-T0.md en énumère 37 au
+    # une par piège réellement construit puis refusé (B-T0.md en énumère 36 au
     # minimum) : un vérificateur amputé de ses cas cassés n'atteint pas le
     # seuil, là où un `test -s` sur le script l'aurait laissé passer. stderr
     # n'est PAS capturé — un échec doit rester lisible dans le journal du
@@ -112,7 +123,7 @@ tickets:
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 37
+      && test "$cas" -ge 36
       && echo "$sortie"
       && echo "B-T0 sonde=autotest cas_ok=${cas}"
 
@@ -154,7 +165,10 @@ tickets:
     # document. Une matrice amputée d'un verdict ou d'une décision n'atteint pas
     # le seuil.
     check: >-
-      sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py contrat
+      auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      --facts "$HERMES_TICKET_FACTS")
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 36
+      && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py contrat
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
       && test "$cas" -ge 14
@@ -191,7 +205,10 @@ tickets:
     # le nombre de `cas_ok=`, un par verdict du domaine réellement exercé — un
     # module qui n'en couvre que la moitié n'atteint pas le seuil.
     check: >-
-      sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py decision
+      auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      --facts "$HERMES_TICKET_FACTS")
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 36
+      && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py decision
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/verdict_regles.py)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
@@ -219,9 +236,14 @@ tickets:
       - ops/brain_bridge.py
     # Module NEUF — aucun fichier de gouvernance n'est touché ici.
     # La sonde `pont` travaille dans un bac à sable PROPRE À L'EXÉCUTION
-    # (`racine=`, dossier neuf portant pid et horloge) : aucun `MEMORY.md`
-    # partagé, donc aucune course entre deux exécutions, et le nettoyage retire
-    # le dossier entier — rien d'autre. Quatre exigences, un seul passage :
+    # (`racine=`, un `tempfile.mkdtemp()`) : aucun chemin fixe, donc aucun
+    # `MEMORY.md` partagé ni glob de nettoyage qui pourrait emporter les preuves
+    # d'une autre exécution — le `finally` retire ce dossier-là, rien d'autre.
+    # `racine` est tenable sans toucher à `brain.js` : son magasin se choisit par
+    # le `config/workspace.json` posé À CÔTÉ de lui (brain.js:18-20), donc une
+    # copie octet à octet de l'oracle dans la racine suffit. `--sandbox`, lui, ne
+    # convient PAS — sa cible est un chemin fixe, c'est la course qu'on ferme.
+    # Quatre exigences, un seul passage :
     #  1. réécriture avec un fait DIFFÉRENT -> `.v1` garde l'ancien (régime M-T1) ;
     #  2. écriture -> UNE ligne d'index (rubrique 4 du constat : 328 fichiers sur
     #     438 ne sont dans aucun index, B ne doit pas grossir ce tas) ;
@@ -251,7 +273,10 @@ tickets:
     # Treize axes, donc treize `cas_ok=` attendus : c'est la quantité que le
     # check compte, sur l'artefact que `--module` nomme.
     check: >-
-      sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont
+      auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      --facts "$HERMES_TICKET_FACTS")
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 36
+      && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/brain_bridge.py
       --oracle /home/nuveo/projects/jarvis-cortex/brain.js)
@@ -296,7 +321,10 @@ tickets:
     # fichiers de gouvernance.
     # Huit axes, donc huit `cas_ok=` : les cinq passes, les deux CLI, le périmètre.
     check: >-
-      sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py entree
+      auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      --facts "$HERMES_TICKET_FACTS")
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 36
+      && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py entree
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/verdict_hook.py)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')

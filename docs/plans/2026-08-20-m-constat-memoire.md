@@ -141,17 +141,29 @@ main : là, la réécriture est attestée. Ici, elle n'est que possible.
 
 ## 4. L'index `MEMORY.md`
 
-- 158 lignes.
-- 106 pointeurs distincts vers des fichiers du dossier.
-- **0 pointeur mort** : tout ce que l'index désigne existe.
-- **328 fichiers n'ont aucune ligne d'index**, soit 74,9 % du dossier.
+Les trois nombres qui suivent sortent tous du **même ensemble** que
+`fichiers_non_indexes`, et se recoupent donc au fichier près :
 
-L'index n'est pas cassé, il est **partiel** — et il l'est délibérément. Son
-en-tête annonce un compactage antérieur, et sa structure le confirme : rubriques
-thématiques, une ligne par saga, pointeurs datés, renvois vers des pages de liens
-plutôt que vers chaque fichier. L'absence totale de pointeur mort est le signe
-d'un index tenu, pas d'un index abandonné : quand on l'a réduit, on a retiré des
-lignes au lieu de les laisser pourrir.
+- **328 fichiers n'ont aucune ligne d'index**, soit 74,9 % des 438.
+- **110 sont donc désignés par un pointeur** (438 − 328), soit 25,1 %.
+- **0 pointeur mort** : tout ce que l'index désigne existe — les pointeurs sont
+  exactement inclus dans les fichiers présents.
+
+Un arbitrage est signalé ici, pas tranché : la rubrique demande aussi le nombre
+de **lignes** de `MEMORY.md`. Ce nombre n'est pas dérivable des neuf métriques —
+une ligne d'index peut ne désigner aucun fichier (un titre de rubrique) ou
+plusieurs — et il n'est pas dans le reçu. Le tour précédent en avançait un (158)
+et un compte de pointeurs (106) qui ne se déduisaient d'aucune mesure et
+contredisaient arithmétiquement les 328 : les deux sont retirés plutôt que
+recopiés. Ce qui reste ci-dessus est mesuré. La correction tient en une clé
+`index_lignes` à ajouter à `scripts/releve-memoire.py` au prochain relevé de
+l'Owner ; elle ne change aucune des neuf métriques.
+
+L'index n'est pas cassé, il est **partiel**. L'absence totale de pointeur mort
+est le signe d'un index tenu, pas d'un index abandonné : ce qui a disparu du
+dossier a aussi disparu de l'index. Un index laissé à l'abandon accumule au
+contraire des pointeurs vers des fichiers effacés — ici, zéro. La couverture à
+25 % se lit donc comme une réduction assumée, pas comme une dérive.
 
 La conséquence est réelle quand même : trois fichiers sur quatre ne sont
 atteignables que si l'on connaît déjà leur existence. Pour B, cela veut dire
@@ -182,8 +194,9 @@ c'est la seule portée qu'il puisse avoir honnêtement.
 **Le vrai manque n'est pas un manque de format.** Les 328 fichiers non indexés
 sont un problème de rappel, pas de structure : leur `metadata.type` est correct,
 leur contenu est intact, ils sont simplement absents de l'index. Une migration de
-format n'y changerait rien, et regonfler l'index à 438 lignes annulerait le
-compactage délibéré que sa structure atteste, sans que personne ne l'ait demandé.
+format n'y changerait rien, et regonfler l'index à 438 pointeurs — quatre fois sa
+couverture actuelle — est une décision de l'Owner sur un fichier qu'il charge à
+chaque session, pas un effet de bord d'une migration de format.
 
 **Le coût est asymétrique.** Une migration réécrit en lot un dossier de fichiers
 personnels dont le contenu ne peut pas être relu à la revue, contre un bénéfice

@@ -199,8 +199,14 @@ indiscernables.
 verrou : deux exécutions concurrentes pouvaient perdre ou ressusciter les lignes
 l'une de l'autre, malgré des slugs distincts. Tu ne partages plus rien :
 
-- fabrique un dossier neuf, `<parent de brain.js>/.cache/sonde-b-<pid>-<ns>/`,
-  et passe-le à `ecrire_regle(..., racine=<ce dossier>)` ;
+- fabrique un dossier neuf par `tempfile.mkdtemp(prefix="sonde-b-")` — aucun
+  chemin fixe, aucun glob de nettoyage, donc rien à effacer qui appartienne à
+  une autre exécution — et passe-le à `ecrire_regle(..., racine=<ce dossier>)` ;
+- **ne présuppose pas la disposition interne de cette racine.** C'est B-T3 qui
+  la choisit (il y dépose une copie de l'oracle et un `config/workspace.json`,
+  cf. son prompt) : localise l'index par `next(Path(racine).rglob("MEMORY.md"))`
+  et les fichiers de règles par `rglob("<slug>*.md")`. Une sonde qui code en dur
+  `<racine>/memory/` juge une implémentation au lieu d'un comportement ;
 - le `MEMORY.md` de ce dossier n'appartient qu'à cette exécution : aucune course,
   aucun verrou nécessaire, et le nettoyage est un `shutil.rmtree` du dossier —
   il ne peut emporter que ce que cette exécution a créé. Nettoie dans un
@@ -314,8 +320,9 @@ passes, donc.
    l'exécution (même discipline que la sonde `pont` : dossier neuf, `rmtree` en
    `finally`). C'est la passe qui exerce l'import paresseux du pont et la
    mutation réelle. **La preuve est le fichier apparu sur le disque** — le
-   `<slug>.md` attendu existe et porte le fait — pas l'état rendu par la
-   fonction, qu'un stub peut fabriquer.
+   `<slug>.md` attendu, cherché par `rglob` sous la racine comme pour `pont`,
+   existe et porte le fait — pas l'état rendu par la fonction, qu'un stub peut
+   fabriquer.
 5. **Chemin par défaut contre une racine impossible** (un chemin non
    inscriptible, ou un `BRAIN_JS` pointé sur un fichier inexistant via
    l'environnement) → aucune exception, et un `etat` commençant par `echec`.
@@ -373,9 +380,13 @@ cibles :
 |------------|-------------------|-------------------------------------------------|
 | `contrat`  | 14                | les 6 cas de matrice + les 7 décisions + l'axe du document |
 | `decision` | 6                 | un par verdict du domaine                        |
-| `pont`     | 11                | `.v1`, `.md`, `.v2` absent, index, `inchangee`, révision du `why`, index après révision, + les 4 axes concurrents |
+| `pont`     | 13                | `oracle:epingle`, `.v1`, `.md`, `.v2` absent, index, `inchangee`, révision du `why`, index après révision (8 séquentiels) + les 5 axes concurrents |
 | `entree`   | 8                 | les 5 passes, les 2 CLI, la non-régression       |
-| `autotest` | 35                | 4 arbres valides + les 31 pièges énumérés plus bas |
+| `autotest` | 36                | 4 arbres valides + les 32 pièges énumérés plus bas |
+
+Ces cinq nombres sont ceux du YAML du runbook, et `tickets/B-T3.md` énumère les
+treize axes de `pont` un par un. Trois listes, un seul décompte : si tu en
+trouves une qui diverge, c'est un défaut à signaler, pas un choix à faire.
 
 Un seuil manqué fait échouer le ticket jugé — c'est voulu : une sonde amputée de
 ses axes ne doit pas pouvoir rendre `done`.
@@ -451,7 +462,10 @@ minimum, et chacun doit être refusé :
   n'ouvre jamais `<racine>/.memory.lock`** — celui-là doit être refusé par l'axe
   de prise du verrou, et pas seulement par chance d'ordonnancement ; **un qui
   prend bien le verrou mais réécrit l'index depuis un instantané pris avant
-  l'appel à `node`**, et efface donc la ligne de l'écrivain direct. Rends ces
+  l'appel à `node`**, et efface donc la ligne de l'écrivain direct ; **un qui
+  relâche le verrou avant son `os.replace()`** — celui-là n'est refusé que par
+  l'axe 13, et sans ce piège cet axe n'aurait jamais été exercé à vide.
+  Rends ces
   pièges *déterministes* plutôt qu'aléatoires : le faux pont dort quelques
   dizaines de millisecondes entre sa lecture de l'index et sa réécriture, ce qui
   garantit l'entrelacement au lieu de l'espérer — un piège qui ne mord qu'une
@@ -469,8 +483,8 @@ ne sont pas commités ailleurs que dans le corps de `sonde_b.py`.
 
 **La sortie de l'autotest nomme les cas rejetés**, un par ligne au format
 `cas_ok=<nom>` du contrat de sortie ci-dessus — un arbre valide accepté et un
-piège refusé comptent chacun pour une ligne. Les trente-et-un pièges énumérés
-ci-dessus plus les quatre arbres valides font le seuil de 35 ; en ajouter est
+piège refusé comptent chacun pour une ligne. Les trente-deux pièges énumérés
+ci-dessus plus les quatre arbres valides font le seuil de 36 ; en ajouter est
 bienvenu. Un autotest qui imprime « tout va bien » ne prouve rien ; celui qui
 nomme chaque piège refusé prouve que l'instrument mord.
 
@@ -506,13 +520,13 @@ python3 ops/checks/sonde_b.py autotest --facts '{}' | tee /dev/stderr | grep -c 
 
 `set -o pipefail` n'est pas décoratif : sans lui, le code de retour du pipeline
 est celui de `grep`, et un autotest qui **échoue** après avoir imprimé trente
-lignes afficherait quand même « 37 » et te laisserait croire que c'est passé. Le
+lignes afficherait quand même « 36 » et te laisserait croire que c'est passé. Le
 `&&` ne l'est pas davantage : sur deux commandes séparées, le statut de la
 séquence est celui de la dernière, et un `sha256sum -c` vert reverdirait un
 autotest rouge. C'est du Bash — lance donc ce bloc sous `bash`, pas sous `sh`.
 
 Colle les deux sorties dans ton message de fin. La première doit lister les cas
-cassés refusés et finir sur un compte **≥ 37** — en dessous, le `check:` de ce
+cassés refusés et finir sur un compte **≥ 36** — en dessous, le `check:` de ce
 ticket échouera ; la seconde doit dire `ops/checks/sonde_b.py: OK`, ce qui exige
 que le sceau soit au format standard décrit plus haut.
 

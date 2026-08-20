@@ -13,12 +13,25 @@ Tu n'écris **pas** le point d'entrée qui relie les deux : c'est B-T4. Un seul
 livrable ici, `ops/brain_bridge.py`.
 
 Le `check:` appelle la sonde avec `--module ops/brain_bridge.py` et **compte**
-les lignes `cas_ok=` qu'elle imprime : il en exige **neuf** — `.v1` versionné,
-`.md` à jour, `.v2` absent au rejeu, une seule ligne d'index,
-`etat == "inchangee"` décidé, une révision du seul `why` qui produit `.v2`,
-l'index toujours à une ligne après elle, puis **deux écrivains concurrents sur
-une racine partagée** qui doivent produire leurs deux règles et leurs deux
-lignes d'index. Un axe non exercé ne compte pas.
+les lignes `cas_ok=` qu'elle imprime : il en exige **treize**, et cette liste
+fait foi — c'est la même dans `tickets/B-T0.md`, dans le YAML du runbook et
+ici :
+
+1. l'oracle est celui que le runbook épingle (`oracle:epingle`) ;
+2. `<slug>.v1.md` versionné, contenant `PREMIER` ;
+3. `<slug>.md` à jour, contenant `SECOND` ;
+4. `<slug>.v2.md` absent après le rejeu à l'identique ;
+5. une seule ligne d'index après chacun des trois premiers appels ;
+6. le rejeu rend `etat == "inchangee"`, décidé et non subi ;
+7. une révision du seul `why` produit `.v2` et rend `ecrite` ;
+8. l'index tient toujours une seule ligne après cette révision ;
+9. deux écrivains concurrents produisent leurs **deux** `<slug>.md` ;
+10. et leurs **deux** lignes d'index, une par slug ;
+11. le verrou `<racine>/.memory.lock` est réellement pris (refus observé) ;
+12. une ligne ajoutée par un écrivain **direct** pendant le cycle survit ;
+13. le verrou n'est rendu qu'**après** le `os.replace()` de l'index.
+
+Un axe non exercé ne compte pas : la sonde ne l'imprime pas, et le seuil manque.
 
 ## Le livrable — `ops/brain_bridge.py`
 
@@ -49,14 +62,34 @@ réelle est une racine partagée**, et deux gates qui rendent leur verdict en m�
 temps y écrivent en même temps. Voir plus bas — c'est le verrou, pas le bac à
 sable, qui répond à celle-là.
 
-Établis **sur le disque** comment `brain.js` accepte une racine de magasin —
-variable d'environnement lue à son démarrage, option de ligne de commande, ou
-`--sandbox` s'il n'expose que celle-là. Consigne en tête du module ce que tu as
-trouvé et comment tu le passes (via `env=` de `subprocess`, en toute logique).
-Si `brain.js` n'offre **aucun** moyen de choisir sa racine, c'est ta trouvaille
-et elle prime sur ce prompt : consigne-la en dette, nommément, et dis-le dans ton
-message de fin — ne simule pas l'isolation en écrivant les fichiers toi-même,
-tu casserais le régime versionné décrit ci-dessous.
+**Le mécanisme de racine est établi, sur le disque, et il n'est pas
+`--sandbox`.** Vérifié le 2026-08-20 sur l'oracle épinglé
+(`/home/nuveo/projects/jarvis-cortex/brain.js`, l. 18-22) :
+
+```js
+const WS   = JSON.parse(fs.readFileSync(path.join(__dirname, 'config', 'workspace.json')));
+const ROOT = path.resolve(__dirname, WS.root || '..');
+const MEM  = path.join(ROOT, ...(WS.memoryDir || 'shared/memory').split('/'));
+const SANDBOX = path.join(__dirname, '.cache', 'sandbox-memory');   // FIXE
+```
+
+`--sandbox` ne convient pas : sa cible est un chemin **fixe**, dérivé du seul
+`__dirname`, donc partagé par toutes les exécutions — exactement la course que
+`racine` doit supprimer. Le magasin se choisit en revanche par
+`config/workspace.json`, **lu à côté de `brain.js`**. D'où la seule construction
+qui donne une racine arbitraire sans toucher à la dépendance :
+
+- copie l'oracle en `<racine>/brain.js`, **octet pour octet** (`shutil.copy2`) —
+  c'est le même code, donc le même régime versionné, et la sonde de B-T0 vérifie
+  ce condensat ;
+- écris `<racine>/config/workspace.json` = `{"root": ".", "memoryDir": "memory"}`,
+  d'où `MEM = <racine>/memory` et l'index `<racine>/memory/MEMORY.md` ;
+- appelle `node <racine>/brain.js store …`, **sans** `--sandbox`.
+
+`racine=None` garde le chemin nominal : `node <BRAIN_JS> store …`, la mémoire
+réelle, aucune copie. Consigne les deux chemins en tête du module. N'écris jamais
+les fichiers toi-même pour simuler l'isolation : tu casserais le régime versionné
+décrit ci-dessous, qui est précisément ce que ce ticket doit préserver.
 
 Points de vigilance, tous mécaniques :
 
@@ -181,8 +214,10 @@ Le `check:` de ton ticket est un appel d'une ligne à la sonde `pont` de
 `ops/checks/sonde_b.py`, livré par B-T0 — écrite **avant** ton module, elle n'a
 pas été taillée pour le laisser passer. Lis-la.
 
-Elle importe ton module, vérifie que `BRAIN_JS` **existe** sur le disque, crée un
-dossier neuf `<parent de brain.js>/.cache/sonde-b-<pid>-<ns>/` et appelle
+Elle importe ton module, vérifie que `BRAIN_JS` **existe** sur le disque et qu'il
+est bien l'oracle épinglé, crée un dossier neuf (`tempfile.mkdtemp`, propre à
+l'exécution — aucun chemin fixe, donc aucune course entre deux contrôles) et
+appelle
 `ecrire_regle(..., racine=<ce dossier>)` **quatre fois** sur le même slug —
 le quatrième ne change que le `why` :
 
@@ -210,7 +245,7 @@ Elle exige ensuite :
 
 Puis elle exerce la **concurrence**, ce que les quatre appels séquentiels ne
 peuvent pas faire : dans un sous-dossier neuf du bac à sable — une racine
-**partagée**, cette fois. **Quatre** axes, et deux d'entre eux ne se contentent
+**partagée**, cette fois. **Cinq** axes, et trois d'entre eux ne se contentent
 pas d'espérer un entrelacement.
 
 D'abord deux écrivains simultanés (deux `threading.Thread`, ou deux
@@ -223,7 +258,7 @@ sous-processus) sur **deux slugs distincts** :
 Ces deux axes-là sont nécessaires mais **ne prouvent rien à eux seuls**, et
 l'audit l'a dit : deux fils lancés une fois peuvent être ordonnancés
 séquentiellement, auquel cas un pont sans le moindre verrou les passe. D'où les
-deux axes suivants, qui ne dépendent pas de l'ordonnanceur :
+trois axes suivants, qui ne dépendent pas de l'ordonnanceur :
 
 - **le verrou est réellement pris.** Pendant qu'un `ecrire_regle` est en vol dans
   un fil, la sonde tente elle-même, en boucle serrée,
@@ -239,7 +274,15 @@ deux axes suivants, qui ne dépendent pas de l'ordonnanceur :
   le verrou. Le moment est choisi, pas espéré. Une fois le fil joint, cette ligne
   doit **toujours être là**. Un pont qui réécrit l'index depuis un instantané
   périmé l'a effacée ; celui qui ne retire que ses propres doublons et revérifie
-  `os.stat()` avant `os.replace()` l'a gardée.
+  `os.stat()` avant `os.replace()` l'a gardée ;
+- **le verrou couvre jusqu'au `os.replace()`.** L'axe de prise constate un refus,
+  il ne dit rien de l'instant du relâchement — un pont qui rend le verrou avant
+  de remplacer l'index laisse béante la fenêtre qu'il prétend fermer. La sonde
+  poursuit donc sa boucle `LOCK_EX | LOCK_NB` **au-delà du premier refus** et
+  retient le premier essai qui *réussit*, le fil étant toujours en vol : à cet
+  instant, ton cycle doit être **fini sur le disque** — `<slug>.md` existe et
+  `MEMORY.md` porte déjà sa ligne. Garde donc le verrou jusqu'après le
+  `os.replace()`, pas seulement pendant `node`.
 
 Puis elle efface le dossier entier, dans un `finally`. Elle ne peut emporter que
 ce qu'elle a créé : le dossier n'a pas existé avant elle. C'est aussi pourquoi
@@ -264,24 +307,26 @@ ensuite, puis efface ce dossier et rien d'autre :
 
 ```bash
 python3 - <<'PY'
-import importlib.util, os, pathlib, shutil, threading, time
+import importlib.util, pathlib, shutil, tempfile, threading
 s = importlib.util.spec_from_file_location("bb", pathlib.Path("ops/brain_bridge.py").resolve())
 bb = importlib.util.module_from_spec(s); s.loader.exec_module(bb)
-box = bb.BRAIN_JS.parent / ".cache" / f"preuve-b-t3-{os.getpid()}-{time.time_ns()}"
-box.mkdir(parents=True)
+# Racine propre a cette execution : aucun chemin fixe, rien hors de ce dossier,
+# et le rmtree final ne peut emporter que ce que cette execution a cree.
+box = pathlib.Path(tempfile.mkdtemp(prefix="preuve-b-t3-"))
+# La disposition interne de la racine appartient a ton pont : on la cherche.
+trouve = lambda r, motif: next(iter(sorted(r.rglob(motif))), None)
 slug = "feedback_preuve_b_t3"
-v2 = box / f"{slug}.v2.md"
 try:
     etats = []
     for fait, why in (("PREMIER", "WHY_A"), ("SECOND", "WHY_A"), ("SECOND", "WHY_A"), ("SECOND", "WHY_B")):
         etats.append(bb.ecrire_regle({"slug": slug, "fait": fait, "why": why, "type": "feedback"}, racine=box)["etat"])
         if len(etats) == 3:
-            print("v2 apres le rejeu identique =", v2.exists(), "(attendu False)")
-    idx = box / "MEMORY.md"
+            print("v2 apres le rejeu identique =", trouve(box, f"{slug}.v2.md") is not None, "(attendu False)")
+    idx, v1, v2 = trouve(box, "MEMORY.md"), trouve(box, f"{slug}.v1.md"), trouve(box, f"{slug}.v2.md")
     print("brain.js =", bb.BRAIN_JS, "| etats =", etats,
-          "| v1 =", (box / f"{slug}.v1.md").exists(), "| v2 apres revision du why =", v2.exists(),
-          "| v2 porte WHY_A =", v2.exists() and "WHY_A" in v2.read_text(encoding="utf-8"),
-          "| lignes d'index =", idx.read_text(encoding="utf-8").count(slug) if idx.exists() else 0)
+          "| v1 =", v1 is not None, "| v2 apres revision du why =", v2 is not None,
+          "| v2 porte WHY_A =", bool(v2) and "WHY_A" in v2.read_text(encoding="utf-8"),
+          "| lignes d'index =", idx.read_text(encoding="utf-8").count(slug) if idx else 0)
     part = box / "partagee"; part.mkdir()
     slugs = ["feedback_preuve_b_t3_a", "feedback_preuve_b_t3_b"]
     fils = [threading.Thread(target=bb.ecrire_regle,
@@ -289,9 +334,10 @@ try:
                              kwargs={"racine": part}) for s in slugs]
     for f in fils: f.start()
     for f in fils: f.join()
-    ipart = (part / "MEMORY.md").read_text(encoding="utf-8") if (part / "MEMORY.md").exists() else ""
-    print("concurrence: regles =", [(part / f"{s}.md").exists() for s in slugs],
-          "| lignes d'index =", [ipart.count(s) for s in slugs], "(attendu [True, True] et [1, 1])")
+    ipart = trouve(part, "MEMORY.md")
+    txt = ipart.read_text(encoding="utf-8") if ipart else ""
+    print("concurrence: regles =", [trouve(part, f"{s}.md") is not None for s in slugs],
+          "| lignes d'index =", [txt.count(s) for s in slugs], "(attendu [True, True] et [1, 1])")
 finally:
     shutil.rmtree(box, ignore_errors=True)
 PY

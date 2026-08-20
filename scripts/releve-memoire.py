@@ -30,6 +30,20 @@ MEM = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
 # Ces deux motifs et la définition de l'empreinte DOIVENT rester identiques à
 # ceux du `check:` de M-TGEN : le reçu remplace un recalcul, il ne le redéfinit
 # pas. Toute divergence ici change silencieusement ce que le constat affirme.
+#
+# UN AUDIT A DEMANDÉ D'ÉLARGIR `REVISE` à « plusieurs dates distinctes », et
+# c'est refusé ici, pour deux raisons. (1) Le reçu du 2026-08-20 est figé et
+# commité ; le dossier qu'il mesure n'est plus atteignable depuis une session de
+# plan. Élargir le motif rendrait ce script incapable de reproduire le reçu qu'il
+# a produit, sans qu'aucun recalcul ne puisse arbitrer — on perdrait la seule
+# vérifiabilité du constat pour un chiffre qu'on ne pourrait pas obtenir. (2) La
+# multi-date est déjà mesurée, sur `project`, par `project_multidate` — et la
+# rubrique 3 du constat explique pourquoi elle est un INDICE et non une preuve de
+# révision (un compte rendu couvrant une période porte plusieurs dates sans avoir
+# jamais été réécrit). La verser dans `feedback_revises` importerait cette
+# ambiguïté dans la seule métrique qui repose sur une trace ATTESTÉE. La rubrique
+# 2 borne donc son chiffre par le bas — « au moins 36 » — ce qui est la forme
+# correcte d'un compte de traces volontaires.
 REVISE = re.compile(r"mis[e]?\s+[àa]\s+jour|R[ÉE]VOQU|CORRECTION|corrig[ée]", re.I)
 DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
 
