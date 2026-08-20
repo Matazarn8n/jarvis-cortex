@@ -183,3 +183,46 @@ verdicts — si le régime procédural est mal compris, la boucle écrasera des 
 au lieu de les versionner, et à grande vitesse. C'est pourquoi B vient **après**
 M-T1. Et un nom de fichier privé recopié dans un dépôt git n'en ressort plus :
 l'historique le garde même après suppression.
+
+---
+
+## TOUR CORRECTIF DU 2026-08-20 — périmètre borné, lis ceci avant le rapport Codex
+
+Ce tour est le **dernier disponible**. Il a un périmètre fermé. Le rapport de
+l'audit adverse t'est fourni : c'est un **constat**, pas un cahier des charges.
+Un de ses findings demande quelque chose que tu ne peux pas faire ; le chasser
+brûlerait le tour sans rien fermer.
+
+### À réparer — tout est dans ce worktree, tu as Read/Edit/Write
+
+1. **`runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml` ne
+   déclare pas `project:`.** C'est un champ **requis** du moteur
+   (`plan_runner.py:549`) : `load_runbook` lève « runbook: champ requis manquant
+   `project` » et **B ne peut pas démarrer du tout**. Vérifié en direct.
+   La valeur doit être `b-boucle-verdict-regle-2026-08-21` — exactement le suffixe
+   de la branche du worktree de B (`plan/<project>`, règle du moteur). Ne change
+   ni `repo:` ni `phase:`, ils sont justes.
+
+2. **Les quatre HAUTE de l'audit qui portent sur les `check:` de B** : le check
+   B-T3 n'exerce jamais le branchement dans `plan_runner.py` ; une mutation
+   échouée est journalisée puis oubliée ; l'indexation exigée par le constat
+   n'est ni demandée ni vérifiée ; l'idempotence d'un gate rejoué n'est pas
+   sondée. Ce sont des défauts réels de **ton** livrable. Répare-les.
+
+3. **La MOYENNE sur la suppression par glob** (slug fixe, dépôt externe) : deux
+   exécutions peuvent effacer leurs preuves mutuelles. Slug propre à
+   l'exécution, et ne nettoie que ce que cette exécution a créé.
+
+### Hors de ta portée — ne le chasse pas
+
+Le finding « la session n'a pas lu le corpus de mémoire » est **exact et
+structurel** : le dossier est hors du worktree, `Glob`/`Grep` n'existent pas dans
+ce harness et `Read` n'énumère pas un répertoire. Tu l'as déjà documenté
+honnêtement dans le constat, et c'est la bonne conduite. **Ne réécris pas le
+constat pour prétendre le contraire, et ne dépense pas ce tour à essayer.** La
+réserve est consignée pour l'Owner, qui l'a lue et l'a acceptée telle quelle.
+Les neuf métriques du constat sont exactes — le contrôle les recalcule lui-même.
+
+Ne touche pas non plus à la citation de l'en-tête de `MEMORY.md` si la retirer
+casse la rubrique 4, qui l'exige nommément : signale l'arbitrage, ne tranche pas
+contre le contrat.
