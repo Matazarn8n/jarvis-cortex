@@ -10,9 +10,10 @@ les relies, tu n'en réécris aucun.
 **Lis `docs/plans/2026-08-21-b-contrat-injection.md`.** Il fait foi.
 
 Le `check:` appelle la sonde avec `--module ops/verdict_hook.py` et **compte**
-les lignes `cas_ok=` qu'elle imprime : il en exige **sept** — les cinq passes
-détaillées plus bas, la CLI en sous-processus, la non-régression de périmètre.
-Un chemin non exercé n'imprime rien et fait manquer le seuil.
+les lignes `cas_ok=` qu'elle imprime : il en exige **huit** — les cinq passes
+détaillées plus bas, les **deux** invocations de la CLI en sous-processus (celle
+qui réussit et celle qui doit rater), la non-régression de périmètre. Un chemin
+non exercé n'imprime rien et fait manquer le seuil.
 
 ## Le périmètre, avant tout le reste
 
@@ -104,17 +105,37 @@ C'est elle qui rend le bloc utilisable sans toucher au moteur, et c'est elle qui
 produit la preuve observable :
 
 ```
-python3 ops/verdict_hook.py --verdict NO_GO --rapport <fichier|-> [--dry-run]
+python3 ops/verdict_hook.py --verdict NO_GO --rapport <fichier|-> [--racine <dir>] [--dry-run]
 ```
 
 - `--rapport -` lit le rapport sur l'entrée standard ;
+- `--racine <dir>` est transmis tel quel à `injecter_regles` : c'est ce qui rend
+  la CLI exerçable hors de la mémoire réelle, dans les deux sens (un bac à sable
+  qui marche, une racine qui ne peut pas marcher) ;
 - `--dry-run` **n'écrit rien** : il passe un écrivain qui simule, et imprime une
   ligne par règle qui serait écrite, slug compris (`feedback_…`) ;
 - sans `--dry-run`, l'écriture passe par le pont de B-T3 ;
 - la sortie finale rapporte des grandeurs — nombre de règles, états — pas un
-  « OK » constant ;
-- code de retour 0 quand la décision a abouti, même si zéro règle en découle :
-  « aucune règle à écrire » est un résultat, pas une panne.
+  « OK » constant.
+
+**Le code de retour de la CLI.** Il est à toi de le poser, et c'est le seul
+endroit de B où un échec d'écriture se traduit en code non nul :
+
+- **0** quand la décision a abouti et qu'aucune règle n'est en `echec` — y
+  compris si zéro règle en découle : « aucune règle à écrire » est un résultat,
+  pas une panne ;
+- **non nul** dès qu'au moins une règle a fini en `echec`, **et** la ligne
+  correspondante part sur la sortie, nommément. Les deux ensemble : un code non
+  nul muet ne diagnostique rien, et un `echec…` imprimé qui sort en 0 est
+  exactement le défaut relevé par l'audit — l'appelant qui ne lit que le code
+  croit que la boucle a écrit.
+
+Cela **ne contredit pas** le §2 ci-dessus. `injecter_regles()` reste non
+bloquante et ne lève jamais : c'est elle que le moteur appellera un jour, et une
+règle non écrite ne doit pas faire tomber un ticket. La CLI, elle, est un outil
+qu'on lance à la main ou depuis un script : à cette frontière-là, un échec doit
+se voir dans `$?`. La traduction se fait dans le `main()`, en lisant
+`ts["regles_memoire"]` — pas en changeant le comportement de la fonction.
 
 Documente en tête du module, en trois lignes, comment le moteur s'y raccordera :
 le nom de la fonction, sa signature, et l'endroit visé (juste après
@@ -146,16 +167,24 @@ exercent l'import paresseux du pont et la mutation réelle :
    et un `etat` commençant par `echec`. C'est le comportement d'échec du chemin
    réel ; les écrivains injectés ne peuvent pas le prouver.
 
-Puis elle lance la CLI en sous-processus, `--dry-run`, rapport sur l'entrée
-standard, et exige un code 0 et un `feedback_` dans la sortie réelle. Enfin elle
-lit les trois fichiers de gouvernance et exige qu'aucun ne mentionne
+Puis elle lance la CLI en sous-processus **deux fois** :
+
+6. `--dry-run`, rapport sur l'entrée standard → code **0** et un `feedback_`
+   dans la sortie réelle ;
+7. **sans `--dry-run`**, `--racine <chemin impossible>` → code **non nul** *et*
+   une ligne portant `echec` dans la sortie réelle. C'est la seule passe qui
+   exerce le chemin de mutation *à travers la CLI* : sans elle, un `main()` qui
+   imprime `echec…` puis sort en 0 passait le contrôle sans que rien ne le dise.
+
+Enfin elle lit les trois fichiers de gouvernance et exige qu'aucun ne mentionne
 `injecter_regles`, `regles_depuis_verdict` ni `ecrire_regle`.
 
 Le cas 2 est un test de mutation : un chemin qui écrit toujours échoue. Le cas 3
 aussi : un `try/except: pass` échoue. Le cas 4 en est un troisième, et c'est le
 plus important : il n'y a aucun moyen de le passer sans que le chemin de
-production fonctionne. Ne cherche pas à faire passer la sonde — fais marcher le
-point d'entrée, la sonde suivra.
+production fonctionne. Le cas 7 en est un quatrième, sur la frontière : il
+n'existe aucun moyen de le passer en avalant l'échec. Ne cherche pas à faire
+passer la sonde — fais marcher le point d'entrée, la sonde suivra.
 
 ## Modèle de menace — borné
 
@@ -168,15 +197,24 @@ contre-mesure contre une attaque délibérée ; pas de critère de GO du type
 Commit atomique du seul module. Aucun secret, aucune donnée personnelle : ce
 dépôt est public à l'échelle de l'équipe et git garde ce qu'on y met.
 
-Termine en lançant, depuis `/home/nuveo/hermes-os-plan-b`, la commande qui
-exerce ton point d'entrée de bout en bout sans rien écrire :
+Termine en lançant, depuis `/home/nuveo/hermes-os-plan-b`, les **trois**
+commandes qui exercent tes deux chemins et ta frontière — aucune n'écrit dans la
+mémoire réelle :
 
 ```bash
-printf 'VERDICT: NO_GO\nCRITIQUE | ops/x.py:12 | le verdict n%s ecrit aucune regle | cabler l appel\n' "'" \
-  | python3 ops/verdict_hook.py --verdict NO_GO --rapport - --dry-run
+rapport() { printf 'VERDICT: NO_GO\nCRITIQUE | ops/x.py:12 | le verdict n%s ecrit aucune regle | cabler l appel\n' "'"; }
+
+rapport | python3 ops/verdict_hook.py --verdict NO_GO --rapport - --dry-run;      echo "code = $?"
+printf '' | python3 ops/verdict_hook.py --verdict GO --rapport - --dry-run;       echo "code = $?"
+rapport | python3 ops/verdict_hook.py --verdict NO_GO --rapport - --racine /proc/impossible-b-t4; echo "code = $?"
 ```
 
-Colle sa sortie dans ton message de fin : elle doit nommer au moins un slug
-`feedback_…`. Rejoue-la avec `--verdict GO` sur un rapport vide et colle aussi
-cette sortie — zéro règle. Les deux ensemble sont la preuve ; une seule ne prouve
-que la moitié.
+Colle les trois sorties dans ton message de fin :
+
+1. au moins un slug `feedback_…`, `code = 0` ;
+2. zéro règle, `code = 0` — « rien à écrire » n'est pas une panne ;
+3. une ligne portant `echec`, et un `code` **non nul** — la mutation réelle a été
+   tentée à travers la CLI et a raté, visiblement.
+
+Les trois ensemble sont la preuve ; deux n'en prouvent que les deux tiers. Si la
+troisième sort en 0, ta CLI avale ses échecs : dis-le plutôt que de la relancer.

@@ -1,18 +1,18 @@
 ```
 user: 2
-feedback: 119
+feedback: 120
 project: 281
-reference: 30
+reference: 31
 sans_type: 4
-feedback_revises: 35
+feedback_revises: 36
 project_multidate: 89
 index_pointeurs_morts: 0
 fichiers_non_indexes: 328
 ```
 
 ```
-empreinte: aa4954b13b2d1a3b
-fichiers: 437
+empreinte: f2b9b2a100fa845f
+fichiers: 439
 ```
 
 # Constat de l'état réel de la mémoire — M-TGEN
@@ -26,7 +26,7 @@ aucune n'a été mesurée par la session elle-même.
 
 L'empreinte est le SHA-256 des noms de fichiers `*.md` du dossier, triés par
 ordre croissant, joints par un saut de ligne, tronqué à 16 caractères hex. Les
-437 fichiers comptés incluent `MEMORY.md` ; les 436 autres sont ceux que les cinq
+439 fichiers comptés incluent `MEMORY.md` ; les 438 autres sont ceux que les cinq
 premières métriques répartissent.
 
 ## Provenance des chiffres — à lire avant de s'en servir
@@ -38,42 +38,37 @@ dans ce harness — vérifié par appel direct, par le registre des outils diff�
 et par un sous-agent lancé pour écarter une restriction propre à la session
 principale. `Read` fonctionne sur un chemin de fichier, jamais sur un répertoire.
 
-Les neuf métriques viennent donc toutes du **contrôle du ticket**, qui recalcule
-le dossier réel à chaque tour, et non de la session. Deux voies, toutes deux de
-première main :
+Les neuf métriques et l'empreinte sont donc **reportées d'un relevé daté et
+commité**, produit hors session par le ticket humain M-T0 :
+`docs/plans/2026-08-20-recu-memoire.txt`, horodaté `2026-08-20T16:43:43+02:00`.
+Ce reçu ne contient que des agrégats et l'empreinte — aucun nom de fichier,
+aucun extrait — et c'est lui que le contrôle du ticket compare, ligne à ligne, au
+bloc de tête ci-dessus. Aucune valeur n'est estimée, et aucune n'a été mesurée
+par la session.
 
-1. **Imprimées en objection** quand le document divergeait : `feedback`,
-   `project`, ainsi que l'empreinte et le nombre de fichiers. Le contrôle a
-   refusé la valeur déclarée et publié la sienne, reportée ici telle quelle.
-2. **Validées sans objection** au tour suivant : `user`, `reference`,
-   `sans_type`, `feedback_revises`, `project_multidate`,
-   `index_pointeurs_morts`, `fichiers_non_indexes`. Le contrôle compare chaque
-   ligne du bloc à son propre recalcul et échoue sur tout écart ; une métrique
-   qu'il n'objecte pas est, par construction, égale à ce qu'il a mesuré.
+Cette cible figée remplace un recalcul en direct, et le motif vaut d'être écrit :
+le corpus est écrit en continu par d'autres sessions — 431 puis 439 fichiers dans
+la seule journée du 2026-08-20. Un contrôle qui recomptait à chaque tour comparait
+le document à un dossier qui avait bougé depuis, et a fait échouer quatre tours
+d'affilée sur cette seule dérive. Mesurer une fois, dater le relevé et le commiter
+est la seule façon d'obtenir un chiffre qu'un lecteur puisse vérifier plus tard.
 
-Aucune métrique n'est estimée. `feedback_revises` l'a été dans une version
-précédente de ce document, faute de pouvoir ouvrir les fichiers procéduraux ; le
-contrôle a refusé la valeur inventée et imprimé la vraie, qui est reportée ici.
-La rubrique 2 est réécrite en conséquence.
-
-Le corpus bouge pendant que ce document s'écrit : de tour en tour, il est passé
-de 432 à 433, puis 435, puis 437 fichiers — deux `project` et trois `feedback`
-de plus, tous indexés dans la foulée, puisque le compte des non-indexés n'a pas
-bougé d'un tour à l'autre. Les chiffres ci-dessus sont donc un **instantané**,
+Conséquence à garder en tête : les chiffres ci-dessus sont un **instantané**,
 identifié par son empreinte, et non une propriété stable du dossier. Un lecteur
 qui recompte demain trouvera d'autres valeurs sans que celles-ci deviennent
-fausses : elles décrivent le corpus d'empreinte `aa4954b13b2d1a3b`.
+fausses : elles décrivent le corpus d'empreinte `f2b9b2a100fa845f`, tel qu'il
+était à l'horodatage du reçu.
 
 Le point à retenir : l'empreinte figure ici comme identifiant du corpus mesuré,
 pas comme preuve que la session a parcouru le dossier. Elle ne l'a pas parcouru.
 
 ## 1. Répartition par `metadata.type`
 
-Sur 436 fichiers hors index :
+Sur 438 fichiers hors index :
 
-- `project` — 281, soit 64,4 %
-- `feedback` — 119, soit 27,3 %
-- `reference` — 30, soit 6,9 %
+- `project` — 281, soit 64,2 %
+- `feedback` — 120, soit 27,4 %
+- `reference` — 31, soit 7,1 %
 - `user` — 2, soit 0,5 %
 - sans type exploitable — 4, soit 0,9 %
 
@@ -85,7 +80,7 @@ que B va alimenter — pèse un quart du volume. C'est cohérent avec ce que B
 automatise : B écrit dans le petit tas, pas dans le gros.
 
 Ensuite, **le registre `user` est vide en pratique**. Deux fichiers pour décrire
-qui est l'Owner, ses préférences et son mode de travail, quand 119 règles
+qui est l'Owner, ses préférences et son mode de travail, quand 120 règles
 procédurales existent : ce qui devrait tenir dans une identité stable a été
 dispersé en règles ponctuelles. Ce n'est pas un défaut de format, c'est un choix
 d'usage, et il n'appelle aucune correction rétroactive.
@@ -95,13 +90,13 @@ pour cent, et le seul lot que l'on pourrait corriger à la main en une passe.
 
 ## 2. Révisions dans le registre procédural
 
-**35 fichiers `feedback` sur 119 portent une trace de révision, soit 29,4 %.**
+**36 fichiers `feedback` sur 120 portent une trace de révision, soit 30,0 %.**
 
 La trace est une mention laissée dans le corps du fichier : une règle marquée
 révoquée, une correction datée, une reformulation annoncée comme telle. Elle est
 manuscrite, au sens où quelqu'un a pensé à l'écrire au moment de réécrire la
 règle. Rien ne l'imposait, et rien ne la vérifie : le compte réel des règles
-réécrites est donc **au moins** 35, jamais moins.
+réécrites est donc **au moins** 36, jamais moins.
 
 Le mécanisme est toujours le même. La règle a été modifiée sur place, l'énoncé
 antérieur a disparu, et la seule mémoire de ce qu'il disait est la phrase que
@@ -140,7 +135,7 @@ ne porte pas la garantie qu'un usage daté supposerait — que ce soit par
 réécriture ou par construction.
 
 C'est le même angle mort que la rubrique 2, dans une proportion voisine (31,7 %
-contre 29,4 %) mais sur deux fois et demie plus de fichiers. À la différence près
+contre 30,0 %) mais sur deux fois et demie plus de fichiers. À la différence près
 que la rubrique 2 s'appuie sur une trace *explicite* de révision, laissée à la
 main : là, la réécriture est attestée. Ici, elle n'est que possible.
 
@@ -149,7 +144,7 @@ main : là, la réécriture est attestée. Ici, elle n'est que possible.
 - 158 lignes.
 - 106 pointeurs distincts vers des fichiers du dossier.
 - **0 pointeur mort** : tout ce que l'index désigne existe.
-- **328 fichiers n'ont aucune ligne d'index**, soit 75,2 % du dossier.
+- **328 fichiers n'ont aucune ligne d'index**, soit 74,9 % du dossier.
 
 L'index n'est pas cassé, il est **partiel** — et il l'est délibérément. Son
 en-tête annonce un compactage antérieur, et sa structure le confirme : rubriques
@@ -173,8 +168,8 @@ malformé — les 4 fichiers sans type — représente 0,9 % du dossier et se co
 la main en une passe. Appeler cela une migration serait gonfler un chantier pour
 avoir l'air d'en avoir un.
 
-**Migrer les 124 fichiers signalés reviendrait à leur inventer une histoire.**
-Les 89 du journal et les 35 du registre procédural posent le même problème : les
+**Migrer les 125 fichiers signalés reviendrait à leur inventer une histoire.**
+Les 89 du journal et les 36 du registre procédural posent le même problème : les
 faire passer au régime versionné demanderait de séparer un énoncé d'origine de sa
 révision. Or cette séparation n'est pas dans les fichiers — il n'y reste que du
 texte et des dates — et pour les 89, on ne sait même pas si une révision a eu
@@ -187,7 +182,7 @@ c'est la seule portée qu'il puisse avoir honnêtement.
 **Le vrai manque n'est pas un manque de format.** Les 328 fichiers non indexés
 sont un problème de rappel, pas de structure : leur `metadata.type` est correct,
 leur contenu est intact, ils sont simplement absents de l'index. Une migration de
-format n'y changerait rien, et regonfler l'index à 436 lignes annulerait le
+format n'y changerait rien, et regonfler l'index à 438 lignes annulerait le
 compactage délibéré que sa structure atteste, sans que personne ne l'ait demandé.
 
 **Le coût est asymétrique.** Une migration réécrit en lot un dossier de fichiers
@@ -231,7 +226,7 @@ Le runbook B — `runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yam
 été lu dans le code livré par M-T1 (`brain.js`, remplacement versionné en
 `<base>.vN.md` pour `--type feedback`), pas supposé.
 
-Ce que ce constat change pour B : la boucle écrira dans un registre de 119
+Ce que ce constat change pour B : la boucle écrira dans un registre de 120
 fichiers, pas dans les 281 du journal ; elle devra poser sa ligne d'index en même
 temps que la règle ; et elle n'a aucun stock à reprendre, puisque la
 recommandation est de ne rien migrer.

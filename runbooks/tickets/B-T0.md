@@ -15,9 +15,13 @@ Ici tu n'as rien à ménager.
 
 - `ops/checks/sonde_b.py` — le vérificateur, un seul fichier, bibliothèque
   standard uniquement ;
-- `ops/checks/sonde_b.sha256` — le **sceau** : le sha256 hexadécimal du fichier
-  ci-dessus, seul sur la première ligne. Écris-le en dernier, après le gel du
-  script.
+- `ops/checks/sonde_b.sha256` — le **sceau**, au **format standard `sha256sum`** :
+  une seule ligne, `<64 hex><deux espaces>ops/checks/sonde_b.py`. C'est
+  exactement ce que produit `sha256sum ops/checks/sonde_b.py` lancé depuis la
+  racine du dépôt, et c'est ce qui rend le sceau vérifiable par
+  `sha256sum -c ops/checks/sonde_b.sha256` — ce que fait le `check:` de ce
+  ticket, en premier. Écris-le en dernier, après le gel du script : un sceau
+  faux ferait échouer les quatre `check:` suivants, qui passent tous `--sceau`.
 
 ## Pourquoi un script et pas du YAML
 
@@ -49,8 +53,9 @@ sonde_b.py {contrat|decision|pont|entree|autotest} --facts <json> [--sceau <fich
 - `--facts` porte la valeur de `$HERMES_TICKET_FACTS`. **Parse-la** (`json.loads`)
   et échoue si elle n'est pas un JSON valide : un contrôle qui ne sait pas dans
   quel ticket il tourne ne contrôle rien.
-- `--sceau`, s'il est fourni : relis ta propre source, calcule son sha256, compare
-  au fichier, **abandonne sur écart**. Une session aval qui bricolerait la sonde
+- `--sceau`, s'il est fourni : relis ta propre source, calcule son sha256,
+  compare au **premier champ de la première ligne** du fichier (format
+  `sha256sum`), **abandonne sur écart**. Une session aval qui bricolerait la sonde
   pour se faire passer devrait aussi rééditer le sceau — un geste de plus, hors
   du modèle de menace borné ci-dessous. `autotest` n'exige pas le sceau, qui
   n'existe pas encore quand il tourne.
@@ -150,16 +155,37 @@ l'une de l'autre, malgré des slugs distincts. Tu ne partages plus rien :
   il ne peut emporter que ce que cette exécution a créé. Nettoie dans un
   `finally`.
 
-Trois appels sur le même slug, faits `PREMIER`, `SECOND`, `SECOND`. Exigences :
+**Quatre** appels sur le même slug, dans cet ordre — le quatrième ne change que
+le `why`, et c'est lui qui distingue une idempotence correcte d'une idempotence
+qui perd les révisions :
+
+| # | `fait`    | `why`   | attendu                              |
+|---|-----------|---------|--------------------------------------|
+| 1 | `PREMIER` | `WHY_A` | `etat == "ecrite"`                   |
+| 2 | `SECOND`  | `WHY_A` | `etat == "ecrite"`, `.v1` apparaît   |
+| 3 | `SECOND`  | `WHY_A` | `etat == "inchangee"`, rien n'apparaît |
+| 4 | `SECOND`  | `WHY_B` | `etat == "ecrite"`, `.v2` apparaît   |
+
+Exigences, une par axe :
 
 - `<slug>.v1.md` existe et contient `PREMIER` — la réécriture a versionné ;
 - `<slug>.md` contient `SECOND` ;
-- `<slug>.v2.md` **absent** — le rejeu à l'identique n'a rien empilé ;
+- `<slug>.v2.md` **absent après le troisième appel** — le rejeu à l'identique
+  n'a rien empilé ;
 - le `MEMORY.md` du bac à sable porte **une** ligne mentionnant le slug après
-  chacun des trois appels — pas zéro, pas une par rejeu.
-
-Vérifie aussi que le troisième appel rend `etat == "inchangee"` : l'idempotence
-doit être *décidée*, pas obtenue par accident.
+  chacun des trois premiers appels — pas zéro, pas une par rejeu ;
+- le troisième appel rend `etat == "inchangee"` : l'idempotence doit être
+  *décidée*, pas obtenue par accident ;
+- **le quatrième appel rend `etat == "ecrite"`, `<slug>.v2.md` apparaît et
+  contient `WHY_A`, et `<slug>.md` contient `WHY_B`.** L'égalité qui décide de
+  l'idempotence porte sur **tout le contenu persistant** de la règle — `fait`,
+  `why`, `type` — pas sur le seul `fait`. Un pont qui ne compare que le `fait`
+  déclare `inchangee` une règle dont la justification a été corrigée : la
+  révision est perdue en silence, sans version, sans trace. C'est exactement le
+  défaut que M-T1 ferme, et une boucle automatique le reproduirait à la cadence
+  des gates ;
+- `MEMORY.md` porte **toujours une seule** ligne après le quatrième appel : une
+  révision versionne le fichier, elle ne duplique pas l'index.
 
 Imprime l'état du disque constaté, pas un verdict binaire.
 
@@ -190,9 +216,24 @@ passes, donc.
    C'est le comportement d'échec du chemin réel, celui que les écrivains
    injectés ne peuvent pas prouver.
 
-Puis la **CLI** en sous-processus : `--verdict NO_GO --rapport - --dry-run`,
-rapport sur l'entrée standard. Exige un code de retour 0 et un `feedback_` dans
-la sortie réelle — c'est le texte produit qui compte, pas le code seul.
+Puis la **CLI** en sous-processus, sur ses **deux** chemins — deux axes, pas un :
+
+6. `--verdict NO_GO --rapport - --dry-run`, rapport sur l'entrée standard. Exige
+   un code de retour **0** et un `feedback_` dans la sortie réelle — c'est le
+   texte produit qui compte, pas le code seul.
+7. `--verdict NO_GO --rapport - --racine <chemin impossible>`, **sans
+   `--dry-run`** : la mutation est tentée pour de bon et ne peut que rater.
+   Exige un code de retour **non nul** *et* une ligne portant `echec` sur la
+   sortie réelle. Les deux, pas l'un ou l'autre : le défaut visé est une CLI qui
+   imprime `echec…` puis sort en 0, auquel cas un appelant qui ne lit que le
+   code croit que tout s'est bien passé. Un code non nul sans message ne
+   diagnostique rien ; un message sans code ne se voit pas.
+
+   Cet axe porte sur la **CLI**, qui est un outil qu'on lance à la main ou
+   depuis un script. Il ne contredit pas la passe 5 : `injecter_regles()` reste
+   non bloquante et ne lève jamais, pour que le raccordement futur au moteur ne
+   puisse pas faire tomber un ticket. C'est la CLI qui traduit l'état `echec` en
+   code de sortie, à sa frontière à elle.
 
 Enfin la **non-régression de périmètre** : `injecter_regles`,
 `regles_depuis_verdict` et `ecrire_regle` sont absents des trois fichiers de
@@ -226,9 +267,9 @@ cibles :
 |------------|-------------------|-------------------------------------------------|
 | `contrat`  | 7                 | les 6 cas de matrice + l'axe du document         |
 | `decision` | 6                 | un par verdict du domaine                        |
-| `pont`     | 5                 | `.v1`, `.md`, `.v2` absent, index, `inchangee`   |
-| `entree`   | 7                 | les 5 passes, la CLI, la non-régression          |
-| `autotest` | 25                | 4 arbres valides + les 21 pièges énumérés plus bas |
+| `pont`     | 7                 | `.v1`, `.md`, `.v2` absent, index, `inchangee`, révision du `why`, index après révision |
+| `entree`   | 8                 | les 5 passes, les 2 CLI, la non-régression       |
+| `autotest` | 27                | 4 arbres valides + les 23 pièges énumérés plus bas |
 
 Un seuil manqué fait échouer le ticket jugé — c'est voulu : une sonde amputée de
 ses axes ne doit pas pouvoir rendre `done`.
@@ -280,17 +321,21 @@ minimum, et chacun doit être refusé :
   un qui rend un `type` autre que `feedback` ; un qui dérive le slug autrement
   que par `sha256` ; un stub qui rend toujours une règle.
 - `pont` : un faux pont qui n'écrit pas de `.v1` ; un qui empile un `.v2` au
-  rejeu ; un qui ajoute une ligne d'index par appel.
+  rejeu ; un qui ajoute une ligne d'index par appel ; **un qui ne compare que le
+  `fait` et rend donc `inchangee` quand seul le `why` change** — c'est le piège
+  qui garde l'idempotence honnête.
 - `entree` : un module qui lève au lieu de journaliser l'échec ; un qui écrit
-  même sur `GO` ; un dont le chemin par défaut ne touche jamais le disque.
+  même sur `GO` ; un dont le chemin par défaut ne touche jamais le disque ;
+  **une CLI qui imprime `echec…` mais sort quand même en 0** sur une racine
+  impossible.
 
 Les faux modules sont de quelques lignes chacun, écrits dans le temporaire — ils
 ne sont pas commités ailleurs que dans le corps de `sonde_b.py`.
 
 **La sortie de l'autotest nomme les cas rejetés**, un par ligne au format
 `cas_ok=<nom>` du contrat de sortie ci-dessus — un arbre valide accepté et un
-piège refusé comptent chacun pour une ligne. Les vingt et un pièges énumérés
-ci-dessus plus les quatre arbres valides font le seuil de 25 ; en ajouter est
+piège refusé comptent chacun pour une ligne. Les vingt-trois pièges énumérés
+ci-dessus plus les quatre arbres valides font le seuil de 27 ; en ajouter est
 bienvenu. Un autotest qui imprime « tout va bien » ne prouve rien ; celui qui
 nomme chaque piège refusé prouve que l'instrument mord.
 
@@ -320,10 +365,12 @@ dépôt est public à l'échelle de l'équipe et git garde ce qu'on y met.
 
 ```bash
 python3 ops/checks/sonde_b.py autotest --facts '{}' | tee /dev/stderr | grep -c '^cas_ok='
-python3 -c 'import hashlib,pathlib;p=pathlib.Path("ops/checks/sonde_b.py");print("sceau concorde =", hashlib.sha256(p.read_bytes()).hexdigest()==pathlib.Path("ops/checks/sonde_b.sha256").read_text().split()[0])'
+sha256sum -c ops/checks/sonde_b.sha256
 ```
 
 Colle les deux sorties dans ton message de fin. La première doit lister les cas
-cassés refusés et finir sur un compte **≥ 25** — en dessous, le `check:` de ce
-ticket échouera ; la seconde doit dire `True`. Un sceau qui ne concorde pas
-rendra les quatre `check:` suivants impossibles — vérifie-le, ne le suppose pas.
+cassés refusés et finir sur un compte **≥ 27** — en dessous, le `check:` de ce
+ticket échouera ; la seconde doit dire `ops/checks/sonde_b.py: OK`, ce qui exige
+que le sceau soit au format standard décrit plus haut. C'est la commande exacte
+que lance le `check:` : un sceau mal formé ou périmé rendrait les quatre `check:`
+suivants impossibles — vérifie-le, ne le suppose pas.

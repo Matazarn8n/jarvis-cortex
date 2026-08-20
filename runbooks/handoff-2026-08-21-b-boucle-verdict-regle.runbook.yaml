@@ -29,6 +29,13 @@
 # dette: aucun `check:` ne peut lire la liste des fichiers du diff du ticket ; la non-régression de périmètre se borne donc au contenu des trois fichiers de gouvernance, pas à une whitelist du commit.
 # dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas, et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
 # dette: `AskUserQuestion` échoue en session de plan (`readonly database`) — un ticket ne peut pas poser la question que la consigne lui impose de poser.
+#
+# ABSENCE DE `chain:` — DÉLIBÉRÉE, PAS UN OUBLI. B est le dernier maillon du
+# programme : la seule suite identifiée par le constat du bloc M (rubrique 5,
+# point 4 — la couverture de l'index) exige une décision de l'Owner que ce
+# runbook n'a pas à préempter, et la dette ci-dessus interdit à une session de
+# plan de la lui demander. Un bloc `chain:` absent est licite et déclenche le
+# gate humain de fin de bloc : c'est ce gate qui portera la question.
 
 phase: "B"
 project: b-boucle-verdict-regle-2026-08-21
@@ -67,16 +74,21 @@ tickets:
     # vérificateur permissif — celui qui aurait laissé passer les défauts de
     # l'audit — échoue ici, avant d'avoir servi.
     # La QUANTITÉ mesurée est le nombre de lignes `cas_ok=` que l'autotest émet,
-    # une par piège réellement construit puis refusé (B-T0.md en énumère 25 au
+    # une par piège réellement construit puis refusé (B-T0.md en énumère 27 au
     # minimum) : un vérificateur amputé de ses cas cassés n'atteint pas le
     # seuil, là où un `test -s` sur le script l'aurait laissé passer. stderr
     # n'est PAS capturé — un échec doit rester lisible dans le journal du
     # runner.
+    # Le SECOND livrable est vérifié en premier : `sha256sum -c` sur le sceau,
+    # au format standard. Un sceau faux rendrait les quatre `check:` suivants
+    # impossibles (chacun passe `--sceau`), et B-T0 pouvait finir `done` sans
+    # que rien ne l'ait relu. Sa sortie (`…sonde_b.py: OK`) est observable.
     check: >-
-      sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      sha256sum -c ops/checks/sonde_b.sha256
+      && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 25
+      && test "$cas" -ge 27
       && echo "$sortie"
       && echo "B-T0 sonde=autotest cas_ok=${cas}"
 
@@ -165,19 +177,23 @@ tickets:
     # La sonde `pont` travaille dans un bac à sable PROPRE À L'EXÉCUTION
     # (`racine=`, dossier neuf portant pid et horloge) : aucun `MEMORY.md`
     # partagé, donc aucune course entre deux exécutions, et le nettoyage retire
-    # le dossier entier — rien d'autre. Trois exigences, un seul passage :
+    # le dossier entier — rien d'autre. Quatre exigences, un seul passage :
     #  1. réécriture avec un fait DIFFÉRENT -> `.v1` garde l'ancien (régime M-T1) ;
     #  2. écriture -> UNE ligne d'index (rubrique 4 du constat : 328 fichiers sur
-    #     434 ne sont dans aucun index, B ne doit pas grossir ce tas) ;
-    #  3. gate REJOUÉ à l'identique -> ni `.v2`, ni seconde ligne d'index.
-    # Cinq axes, donc cinq `cas_ok=` attendus : c'est la quantité que le check
+    #     436 ne sont dans aucun index, B ne doit pas grossir ce tas) ;
+    #  3. gate REJOUÉ à l'identique -> ni `.v2`, ni seconde ligne d'index ;
+    #  4. réécriture où SEUL le `why` change -> `.v2` apparaît. L'égalité porte
+    #     sur tout le contenu persistant, pas sur le seul `fait` : une règle dont
+    #     la justification est corrigée est une RÉVISION, et la déclarer
+    #     `inchangee` la perdrait sans bruit — le défaut exact que M-T1 ferme.
+    # Sept axes, donc sept `cas_ok=` attendus : c'est la quantité que le check
     # compte, sur l'artefact que `--module` nomme.
     check: >-
       sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/brain_bridge.py)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 5
+      && test "$cas" -ge 7
       && echo "$sortie"
       && echo "B-T3 sonde=pont cas_ok=${cas}"
 
@@ -204,14 +220,20 @@ tickets:
     #    exercés, et la preuve est le FICHIER apparu sur le disque, pas l'état
     #    rendu ; puis le même chemin par défaut contre une racine impossible,
     #    qui doit rendre un `echec` observable sans lever.
-    # Enfin la CLI en sous-processus, dont on lit la sortie réelle, et la
-    # non-régression de périmètre sur les trois fichiers de gouvernance.
-    # Sept axes, donc sept `cas_ok=` : les cinq passes, la CLI, le périmètre.
+    # Enfin la CLI en sous-processus, sur ses DEUX chemins, dont on lit la
+    # sortie réelle : `--dry-run` -> code 0 et un slug ; puis SANS `--dry-run`,
+    # contre une racine impossible -> code NON NUL et une ligne `echec` visible.
+    # C'est la mutation réelle qui est exercée là : sans elle, un chemin
+    # d'écriture qui avale sa panne, imprime `echec…` et sort en 0 passait le
+    # contrôle. Le code non nul est celui de la CLI, PAS du hook moteur, qui
+    # reste non bloquant. Enfin la non-régression de périmètre sur les trois
+    # fichiers de gouvernance.
+    # Huit axes, donc huit `cas_ok=` : les cinq passes, les deux CLI, le périmètre.
     check: >-
       sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py entree
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/verdict_hook.py)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 7
+      && test "$cas" -ge 8
       && echo "$sortie"
       && echo "B-T4 sonde=entree cas_ok=${cas}"

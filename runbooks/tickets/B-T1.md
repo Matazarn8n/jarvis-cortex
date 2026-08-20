@@ -90,9 +90,20 @@ ta trouvaille : consigne-la, elle prime sur ce prompt.
    empiler une version par tentative. Dis à quelle condition on réécrit et à
    quelle condition on s'abstient. C'est le point le plus coûteux à rater : la
    boucle tourne vite.
+
+   Le piège est de trancher trop court. L'égalité qui décide de s'abstenir porte
+   sur **tout le contenu persistant** de la règle — au minimum `fait`, `why` et
+   `type` — et pas sur le seul `fait`. Une règle dont la seule justification a
+   changé **est** une révision : la déclarer inchangée la perd sans version ni
+   trace, et le cas est fréquent puisqu'un même défaut se reconstate d'un gate à
+   l'autre avec un motif reformulé. Énumère donc nommément les champs comparés,
+   ceux qui sont exclus (horodatage, tout champ que le magasin regénère) et la
+   normalisation appliquée des deux côtés — un espace de fin non normalisé
+   suffit à empiler une version par rejeu, soit le défaut d'en face. B-T3
+   implémente cette règle et la sonde `pont` l'exerce dans les deux sens.
 5. **Le contenu.** Ce qui part dans le fait, ce qui part dans `--why`. Le fait
    doit rester lisible seul, des mois plus tard, sans le rapport d'origine.
-6. **L'index `MEMORY.md`.** Le constat du bloc M mesure 328 fichiers sur 434
+6. **L'index `MEMORY.md`.** Le constat du bloc M mesure 328 fichiers sur 436
    sans aucune ligne d'index : trois sur quatre ne sont atteignables que si l'on
    connaît déjà leur existence. Une règle que B écrit doit poser sa ligne
    d'index **au moment de l'écriture**, pas plus tard. `brain.js` l'appose déjà
