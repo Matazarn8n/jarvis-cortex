@@ -69,8 +69,8 @@ le check meurt sur l'outillage et pas sur ton code.
 
 ## Portée
 
-N'ajoute que cette fonction. Pas d'appel depuis `process_session_ticket`, pas de
-pont vers `node`, pas de configuration : c'est B-T3. Un diff qui déborde se fera
+N'ajoute que cette fonction. Pas de pont vers `node` (c'est B-T3), pas d'appel
+depuis `process_session_ticket` (c'est B-T4). Un diff qui déborde se fera
 refuser au gate.
 
 Commit atomique. Aucun secret, aucune donnée personnelle.

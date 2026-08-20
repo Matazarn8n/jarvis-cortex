@@ -4,16 +4,21 @@
 # qui en découle est écrite À LA MAIN, plus tard, si quelqu'un y pense. B câble
 # la réinjection : un verdict qui révèle un défaut écrit lui-même sa règle via
 # `brain.js store --type feedback`, donc au régime procédural versionné posé en
-# M-T1 (brain.js:190-206 — un `feedback` réécrit copie l'ancien en `<base>.vN.md`
+# M-T1 (brain.js:197-206 — un `feedback` réécrit copie l'ancien en `<base>.vN.md`
 # avant d'être remplacé ; rien n'est perdu).
+#
+# PRÉREQUIS : ce régime versionné vit dans le worktree du bloc M. Si `BRAIN_JS`
+# résolvait vers un jarvis-cortex qui ne le porte pas encore, la sonde B-T3
+# échouerait sur `.v1` absent — c'est le bon signal, pas un faux négatif.
 #
 # DETTES MOTEUR (une ligne chacune, hors périmètre des tickets ci-dessous) :
 # dette: `--deny-write` ne borne pas les écritures d'un `check:` hors `repo:` — la sonde B-T3 écrit dans le `.cache/sandbox-memory` de jarvis-cortex, hors de ce dépôt.
-# dette: un script de check produit par un ticket AVAL n'a pas de sha256 épinglable à l'écriture du runbook — les trois checks restent donc inline (12 à 18 lignes).
+# dette: un script de check produit par un ticket AVAL n'a pas de sha256 épinglable à l'écriture du runbook — les quatre checks restent donc inline (13 à 26 lignes), et B-T3 est scindé de B-T4 pour qu'aucun ne dépasse.
 # dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
 # dette: `AskUserQuestion` échoue en session de plan (`readonly database`) — un ticket ne peut pas poser la question que la consigne lui impose de poser.
 
 phase: "B"
+project: b-boucle-verdict-regle-2026-08-21
 repo: /home/nuveo/hermes-os-plan-b
 description: >-
   Câbler la réinjection verdict → règle : un défaut relevé par un gate Codex
@@ -43,7 +48,7 @@ tickets:
       json.loads(os.environ["HERMES_TICKET_FACTS"])
       d = pathlib.Path("docs/plans/2026-08-21-b-contrat-injection.md").read_text(encoding="utf-8")
       ancres = ("plan_runner.py:7327", "GO_AVEC_RESERVES", "NO_VERDICT",
-                "REVIEWER_DOWN", "brain.js", "slug", "idempotence")
+                "REVIEWER_DOWN", "brain.js", "slug", "idempotence", "MEMORY.md")
       manquant = [a for a in ancres if a not in d]
       # littéraux scindés : le runbook ne doit pas contenir lui-même la formule
       # interdite, sinon un contrôle statique du parc le signale à tort.
@@ -91,39 +96,100 @@ tickets:
 
   - id: B-T3
     kind: session
-    title: L'écriture — pont vers brain.js, et preuve que la réécriture versionne
+    title: L'écriture — pont vers brain.js, versionnement, index, idempotence
     model: claude-opus-5
     effort: high
     codex_gate: true
-    max_budget_usd: 3.00
+    max_budget_usd: 2.00
     prompt_file: tickets/B-T3.md
     produces:
       - ops/brain_bridge.py
+    # Trois exigences, une seule sonde, sur le pont réel en sandbox :
+    #  1. réécriture avec un fait DIFFÉRENT -> `.v1` garde l'ancien (régime M-T1) ;
+    #  2. écriture -> UNE ligne d'index (la rubrique 4 du constat : 328 fichiers
+    #     sur 432 ne sont dans aucun index, B ne doit pas grossir ce tas) ;
+    #  3. gate REJOUÉ à l'identique -> ni `.v2`, ni seconde ligne d'index.
+    # Le slug porte le pid et l'horloge : deux exécutions concurrentes ne peuvent
+    # pas effacer leurs preuves mutuelles, et le nettoyage ne touche que le nôtre.
+    check: |
+      "$HERMES_CHECK_PYTHON" - <<'PY'
+      import importlib.util, json, os, pathlib, sys, time
+      json.loads(os.environ["HERMES_TICKET_FACTS"])
+      spec = importlib.util.spec_from_file_location("bb", pathlib.Path("ops/brain_bridge.py").resolve())
+      bb = importlib.util.module_from_spec(spec); spec.loader.exec_module(bb)
+      if not bb.BRAIN_JS.exists():
+          sys.exit(f"brain.js introuvable a l'emplacement resolu: {bb.BRAIN_JS}")
+      slug = f"feedback_sonde_b_t3_{os.getpid()}_{time.time_ns()}"
+      box = bb.BRAIN_JS.parent / ".cache" / "sandbox-memory"
+      idx = box / "MEMORY.md"
+      f, v1, v2 = box / f"{slug}.md", box / f"{slug}.v1.md", box / f"{slug}.v2.md"
+      base = {"slug": slug, "why": "sonde B-T3"}
+      try:
+          bb.ecrire_regle({**base, "fait": "PREMIER"}, sandbox=True)
+          apres_1 = idx.read_text(encoding="utf-8").count(slug)
+          bb.ecrire_regle({**base, "fait": "SECOND"}, sandbox=True)
+          bb.ecrire_regle({**base, "fait": "SECOND"}, sandbox=True)  # gate rejoue
+          if not v1.exists() or "PREMIER" not in v1.read_text(encoding="utf-8"):
+              sys.exit("regime procedural absent: la reecriture a ecrase la version precedente")
+          if "SECOND" not in f.read_text(encoding="utf-8"):
+              sys.exit("reecriture non appliquee: le fichier courant ne porte pas le nouveau fait")
+          if v2.exists():
+              sys.exit("idempotence: un gate rejoue a l'identique empile une version de plus")
+          apres_3 = idx.read_text(encoding="utf-8").count(slug)
+          if (apres_1, apres_3) != (1, 1):
+              sys.exit(f"indexation: {apres_1} ligne(s) d'index a l'ecriture, {apres_3} apres rejeu (attendu 1 et 1)")
+          print(f"sonde pont: .v1 garde PREMIER · courant SECOND · rejeu inerte (pas de .v2) · 1 ligne d'index")
+      finally:
+          # on n'efface que ce que CETTE execution a cree. Les lignes d'index
+          # restent : l'index sandbox est append-only cote brain.js, et les
+          # reecrire ferait perdre celles d'une execution concurrente.
+          for p in (f, v1, v2):
+              if p.exists(): p.unlink()
+      PY
+
+  - id: B-T4
+    kind: session
+    title: Le branchement — l'appel à 7327, et l'échec d'écriture qui se voit
+    model: claude-sonnet-5
+    effort: medium
+    codex_gate: true
+    max_budget_usd: 1.50
+    prompt_file: tickets/B-T4.md
+    produces:
       - ops/plan_runner.py
-    # La sonde écrit DEUX FOIS la même règle en sandbox et exige que la première
-    # version survive dans `.v1.md`. C'est le seul contrôle qui distingue le
-    # régime procédural de M-T1 d'un simple écrasement — le défaut que B
-    # pourrait industrialiser s'il était mal câblé.
+    # La sonde APPELLE `injecter_regles()` avec son propre écrivain injecté :
+    # elle exerce donc le branchement lui-même, pas seulement les briques.
+    # Deuxième passe avec un écrivain qui lève : la boucle ne doit ni tomber
+    # (un gate ne casse pas parce que la mémoire n'a pas pu s'écrire) ni avaler
+    # l'échec — il doit atterrir dans le state du ticket, visible au rapport.
+    # La lecture de la source ne vérifie qu'une chose que l'appel ne peut pas
+    # montrer : que le point d'accroche est bien à 7327 et pas ailleurs.
     check: |
       "$HERMES_CHECK_PYTHON" - <<'PY'
       import importlib.util, json, os, pathlib, sys
       json.loads(os.environ["HERMES_TICKET_FACTS"])
-      spec = importlib.util.spec_from_file_location("bb", pathlib.Path("ops/brain_bridge.py").resolve())
+      spec = importlib.util.spec_from_file_location("pr", pathlib.Path("ops/plan_runner.py").resolve())
       m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
-      if not m.BRAIN_JS.exists():
-          sys.exit(f"brain.js introuvable a l'emplacement resolu: {m.BRAIN_JS}")
-      box = m.BRAIN_JS.parent / ".cache" / "sandbox-memory"
-      box.mkdir(parents=True, exist_ok=True)
-      for p in box.glob("feedback_sonde_b_t3*.md"): p.unlink()
-      r = {"slug": "feedback_sonde_b_t3", "fait": "PREMIER", "why": "sonde B-T3"}
-      m.ecrire_regle(r, sandbox=True)
-      m.ecrire_regle({**r, "fait": "SECOND"}, sandbox=True)
-      f, v1 = box / "feedback_sonde_b_t3.md", box / "feedback_sonde_b_t3.v1.md"
-      if not v1.exists():
-          sys.exit("regime procedural absent: reecriture sans .v1, la regle precedente est perdue")
-      if "PREMIER" not in v1.read_text(encoding="utf-8"):
-          sys.exit("version perdue: .v1 ne conserve pas le fait initial")
-      if "SECOND" not in f.read_text(encoding="utf-8"):
-          sys.exit("reecriture non appliquee: le fichier courant ne porte pas le nouveau fait")
-      print(f"sonde versionnee: {v1.name} garde PREMIER, {f.name} porte SECOND")
+      rap = "VERDICT: NO_GO\nCRITIQUE | ops/x.py:12 | le verdict n'ecrit aucune regle | cabler l'appel"
+      vus = []
+      def ok(regle, **kw):
+          vus.append(regle["slug"]); return {"etat": "ecrite", "fichier": regle["slug"] + ".md"}
+      def casse(regle, **kw):
+          raise RuntimeError("brain.js code 1: [brain] store refuse")
+      ts_ok, ts_ko, ts_go = {}, {}, {}
+      m.injecter_regles("NO_GO", rap, ts_ok, ecrire=ok)
+      m.injecter_regles("GO", "VERDICT: GO\nRAS", ts_go, ecrire=ok)
+      m.injecter_regles("NO_GO", rap, ts_ko, ecrire=casse)  # ne doit PAS lever
+      etats = [e.get("etat", "") for e in ts_ko.get("regles_memoire", [])]
+      if [e.get("etat") for e in ts_ok.get("regles_memoire", [])] != ["ecrite"] or len(vus) != 1:
+          sys.exit(f"branchement muet: {len(vus)} ecriture(s) sur NO_GO, journal={ts_ok.get('regles_memoire')}")
+      if ts_go.get("regles_memoire"):
+          sys.exit(f"branchement bavard: un GO sans finding a produit {ts_go['regles_memoire']}")
+      if not any(e.startswith("echec") for e in etats):
+          sys.exit(f"echec d'ecriture avale: rien de visible dans le state du ticket (etats={etats})")
+      src = pathlib.Path("ops/plan_runner.py").read_text(encoding="utf-8")
+      i = src.find('ts["verdict_motif"] = motif_verdict')
+      if i < 0 or not 0 < src.find("injecter_regles(", i) - i < 1200:
+          sys.exit("point d'accroche: injecter_regles() n'est pas appele apres ts['verdict_motif']")
+      print(f"sonde branchement: NO_GO->1 ecriture journalisee · GO->0 · echec remonte ({etats}) · accroche a 7327")
       PY

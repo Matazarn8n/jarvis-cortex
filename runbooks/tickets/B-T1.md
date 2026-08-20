@@ -63,7 +63,14 @@ ta trouvaille : consigne-la, elle prime sur ce prompt.
    boucle tourne vite.
 5. **Le contenu.** Ce qui part dans le fait, ce qui part dans `--why`. Le fait
    doit rester lisible seul, des mois plus tard, sans le rapport d'origine.
-6. **Ce que la boucle ne fera jamais.** Borne-la. Au minimum : elle n'efface
+6. **L'index `MEMORY.md`.** Le constat du bloc M mesure 328 fichiers sur 431
+   sans aucune ligne d'index : trois sur quatre ne sont atteignables que si l'on
+   connaît déjà leur existence. Une règle que B écrit doit poser sa ligne
+   d'index **au moment de l'écriture**, pas plus tard. `brain.js` l'appose déjà
+   (l. 208-220), mais **en append-only** : dis explicitement combien de lignes
+   une règle vaut, et ce qui se passe à la réécriture. C'est le même arbitrage
+   que le point 4, vu depuis l'index.
+7. **Ce que la boucle ne fera jamais.** Borne-la. Au minimum : elle n'efface
    rien, elle n'écrit pas hors du magasin, elle ne fusionne pas deux règles.
 
 ## Modèle de menace — borné
@@ -83,10 +90,11 @@ document s'il contient cette formule.
 
 Il lit ton document et exige d'y trouver, littéralement :
 `plan_runner.py:7327`, `GO_AVEC_RESERVES`, `NO_VERDICT`, `REVIEWER_DOWN`,
-`brain.js`, `slug`, `idempotence` — et l'absence de la formule interdite.
+`brain.js`, `slug`, `idempotence`, `MEMORY.md` — et l'absence de la formule
+interdite.
 
 Ces ancres sont le plancher, pas le plafond : un document qui les contient sans
-trancher les six points ci-dessus passera le check et se fera refuser au gate
+trancher les sept points ci-dessus passera le check et se fera refuser au gate
 Codex.
 
 ## Fin
