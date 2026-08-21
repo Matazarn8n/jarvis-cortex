@@ -66,10 +66,16 @@ injecter_regles(verdict, report, ts, racine=None)
 ```
 
 Trois positionnels, `racine` nommé. **Dans la fonction qui porte l'ancre**, pas
-ailleurs dans le fichier. Les trois positionnels sont les **variables vivantes**
-du chemin — jamais des littéraux : `injecter_regles("GO", "", 0)` compile, passe
-un contrôle naïf, et n'injecte rien du verdict réel. B-T6 vérifie ces trois
-points par l'AST.
+ailleurs dans le fichier. Les trois positionnels portent **exactement ces
+noms-là** — `verdict`, `report`, `ts` — et sont les variables vivantes du
+chemin : ni littéraux (`injecter_regles("GO", "", 0)`), ni variables
+quelconques (`injecter_regles(foo, bar, baz)`), qui compilent tous deux et
+n'injectent rien du verdict réel. B-T6 compare les `.id` par l'AST.
+
+**L'ancre est celle de `ts`, pas de `cs`.** Le fichier porte trois affectations
+de `verdict_motif` : deux sur `cs`, l'état de chaîne, une sur `ts`, l'état de
+ticket. C'est après cette dernière — le gate de session — que l'appel se pose.
+Accroché à `cs`, le hook laisse les verdicts de ticket ordinaires débranchés.
 
 Repère l'ancre par son **nom**, `verdict_motif`, jamais par un numéro de ligne :
 les numéros dérivent à chaque commit du moteur, et une mémoire antérieure en

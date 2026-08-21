@@ -23,24 +23,39 @@ git status -sb                       # arbre propre avant toute fusion
 git merge --no-ff plan/jarvis-cortex-m-memoire-regimes
 ```
 
-## Le contrôle — comportemental, pas un grep
+## Le contrôle — comportemental, dans le bac à sable
 
 Un `grep` sur `.v1` dirait seulement que le mot est écrit quelque part. Ce qui
-compte est que le régime FONCTIONNE :
+compte est que le régime FONCTIONNE.
+
+**`--sandbox` est obligatoire ici.** Sans lui, `brain.js` écrit dans
+`MEM` — soit, via `config/workspace.json`,
+`/home/nuveo/.claude/projects/-home-nuveo/memory`, la mémoire RÉELLE de l'Owner
+— et appende une ligne d'index par écriture dans le vrai `MEMORY.md`. Un
+contrôle de plan n'a rien à y faire, et le nettoyage des fichiers seuls y
+laisserait deux pointeurs morts, là où la rubrique 4 du constat en mesure zéro.
+Relevé P2 de l'audit a5 du 2026-08-21.
 
 ```bash
 cd /home/nuveo/projects/jarvis-cortex
-node brain.js store "controle B-TM" --type feedback --name b-tm-controle
-node brain.js store "controle B-TM, fait different" --type feedback --name b-tm-controle
-ls memory/b-tm-controle*
+node brain.js store "controle B-TM" --type feedback --name b-tm-controle --sandbox
+node brain.js store "controle B-TM, fait different" --type feedback --name b-tm-controle --sandbox
+ls .cache/sandbox-memory/feedback_b_tm_controle*
 ```
+
+Le nom est **normalisé** par `brain.js:167-176` : le slug `b-tm-controle` perd
+ses tirets et prend son préfixe de type, d'où `feedback_b_tm_controle.md`. Un
+`ls` sur le slug brut ne trouverait rien, même après un versionnement réussi.
 
 La seconde écriture doit laisser **deux** fichiers : la règle courante et son
 `.v1` portant l'énoncé antérieur. Un seul fichier = la fusion n'a pas pris le
 régime, reprends, ne passe pas au suivant.
 
-Retire ensuite les fichiers de contrôle — ils n'ont rien à faire dans la
-mémoire réelle.
+Puis jette le bac entier, index compris :
+
+```bash
+rm -rf .cache/sandbox-memory
+```
 
 ## Ce que ce ticket ne prouve pas
 

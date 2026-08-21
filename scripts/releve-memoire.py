@@ -25,7 +25,10 @@ import sys
 from datetime import datetime
 
 # Le nom porte la date du jour : un reçu déjà commité est une photo opposable,
-# le réécrire effacerait la mesure qu'un constat cite. Chaque relevé date le sien.
+# le réécrire effacerait la mesure qu'un constat cite. Chaque relevé date le sien
+# — et REFUSE d'écraser celui du jour, cas le plus probable puisqu'un tour
+# correctif relance ce script le même jour (relevé P2, audit a5 du 2026-08-21).
+# Écraser en silence perdrait exactement ce que ce nommage prétend préserver.
 SORTIE = pathlib.Path(f"docs/plans/{datetime.now().date().isoformat()}-recu-memoire.txt")
 MEM = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
 
@@ -47,8 +50,12 @@ MEM = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
 # un compte rendu couvrant une période porte plusieurs dates sans avoir jamais
 # été réécrit (même raison que `project_multidate`, rubrique 3). Fusionner
 # importerait cette ambiguïté dans la seule métrique adossée à une trace
-# volontaire. Les garder séparés encadre le vrai chiffre au lieu d'en publier un
-# seul, indéfendable dans un sens comme dans l'autre.
+# volontaire.
+#
+# NI L'UN NI L'AUTRE N'EST UNE BORNE HAUTE, et le constat ne doit pas le
+# prétendre : une réécriture non annoncée et sans seconde date échappe aux deux
+# critères. `feedback_revises` borne par le BAS, `feedback_revises_large` est un
+# indicateur large — pas un plafond.
 REVISE = re.compile(r"mis[e]?\s+[àa]\s+jour|R[ÉE]VOQU|CORRECTION|corrig[ée]", re.I)
 DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
 
@@ -114,6 +121,11 @@ def releve() -> dict:
 
 
 def main() -> int:
+    if SORTIE.exists():
+        raise SystemExit(
+            f"ECHEC: un recu de ce jour existe deja: {SORTIE}\n"
+            f"       Il est peut-etre cite par un constat. Renomme-le ou "
+            f"supprime-le a la main, puis relance.")
     m = releve()
     quand = datetime.now().astimezone().replace(microsecond=0).isoformat()
     lignes = [f"# releve du corpus de memoire — {quand}",

@@ -395,7 +395,17 @@ absence laissait la boucle définitivement inerte :
    (`python -c "import ops.verdict_hook"`, `cwd=<moteur>`), pas dans le tien : un
    module de gouvernance chargé dans le processus du contrôle y reste.
 3. `cas_ok=ancre:verdict_motif` — dans l'AST, une affectation dont une cible est
-   un `Subscript` d'indice littéral `verdict_motif`. Retiens sa `lineno`.
+   un `Subscript` d'indice littéral `verdict_motif` **et dont le receveur est le
+   `Name` `ts`**. Retiens sa `lineno`.
+
+   Le receveur n'est pas un détail. Le moteur gouverné porte TROIS affectations
+   de cet indice, et deux sont sur `cs`, l'état de CHAÎNE
+   (`plan_runner.py:6057` et `:6199`), contre une seule sur `ts`, l'état de
+   TICKET (`:7562`). C'est celle-là, le gate de session, que la boucle doit
+   accrocher. Sans contrainte sur le receveur, un hook posé après une
+   affectation `cs` satisfait l'axe 3 puis l'axe 4 pendant que les verdicts de
+   ticket ordinaires restent débranchés — relevé P1 de l'audit a5 du
+   2026-08-21.
 4. `cas_ok=appel:apres_ancre` — dans l'AST, un nœud **`ast.Call`** dont la
    fonction se nomme `injecter_regles` (`Name.id` ou `Attribute.attr`), dont la
    `lineno` est **strictement supérieure** à celle de l'affectation de l'axe 3.
@@ -415,10 +425,13 @@ absence laissait la boucle définitivement inerte :
    - **Signature exacte.** L'appel est
      `injecter_regles(verdict, report, ts, racine=None)` — trois positionnels et
      le nommé `racine` facultatif. Refuse tout autre arité.
-   - **Arguments vivants.** Les trois positionnels sont des `ast.Name`, jamais
-     des `ast.Constant` : un `injecter_regles("GO", "", 0)` est un appel
-     syntaxiquement valide qui n'injecte rien du verdict réel. Imprime les noms
-     constatés.
+   - **Arguments vivants, et NOMMÉMENT ceux-là.** Les trois positionnels sont
+     des `ast.Name` dont les `.id` valent exactement `verdict`, `report`, `ts`,
+     dans cet ordre. Le type de nœud seul ne suffit pas :
+     `injecter_regles(foo, bar, baz, racine=None)` est fait de trois `Name` et
+     n'a aucun lien avec le verdict vivant, tout comme
+     `injecter_regles("GO", "", 0)` avec des littéraux. B-T5 impose ces trois
+     noms ; la sonde les compare. Imprime les `.id` constatés.
 5. `cas_ok=invocation:dry_run` — lance en sous-processus, `cwd=<moteur>`, le
    point d'entrée **installé là-bas** :
    `python ops/verdict_hook.py --verdict NO_GO --rapport - --dry-run`, rapport

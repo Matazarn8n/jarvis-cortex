@@ -109,16 +109,22 @@ manuscrite, au sens où quelqu'un a pensé à l'écrire au moment de réécrire 
 règle. Rien ne l'imposait, et rien ne la vérifie : le compte réel des règles
 réécrites est donc **au moins** 36, jamais moins.
 
-Borne haute mesurée, sur demande de l'audit. Un second relevé daté du
+Seconde mesure, plus large, sur demande de l'audit. Un relevé daté du
 2026-08-21 (`docs/plans/2026-08-21-recu-memoire.txt`, empreinte `a74967b25ae61ecf`,
 451 fichiers) compte les deux définitions côte à côte : `feedback_revises: 38`
 pour la trace attestée, `feedback_revises_large: 50` pour l'union
-trace-ou-seconde-date, sur 130 `feedback`. Soit **entre 29,2 % et 38,5 %**. Les
-deux chiffres restent séparés à dessein : une seconde date est un indice, pas
-une preuve — un compte rendu couvrant une période en porte plusieurs sans avoir
-jamais été réécrit (voir rubrique 3). Les fusionner importerait cette ambiguïté
-dans la seule métrique adossée à un geste volontaire ; les garder distincts
-encadre le vrai chiffre au lieu d'en publier un seul, indéfendable.
+trace-ou-seconde-date, sur 130 `feedback` — soit 29,2 % et 38,5 %.
+
+**Ce n'est pas un encadrement, et 50 n'est pas une borne haute.** Les deux
+critères se ratent mutuellement dans les deux sens : une réécriture non
+annoncée, sans seconde date ISO, échappe aux deux ; un document jamais réécrit
+mais couvrant une période porte plusieurs dates et entre dans le large. 38 borne
+par le bas — ce sont des traces volontaires, elles ne s'inventent pas. 50 est un
+**indicateur large**, pas un plafond : le compte réel peut le dépasser.
+
+Les deux restent séparés à dessein. Fusionner importerait l'ambiguïté de la
+multi-date (voir rubrique 3) dans la seule métrique adossée à un geste
+volontaire.
 
 Le mécanisme est toujours le même. La règle a été modifiée sur place, l'énoncé
 antérieur a disparu, et la seule mémoire de ce qu'il disait est la phrase que

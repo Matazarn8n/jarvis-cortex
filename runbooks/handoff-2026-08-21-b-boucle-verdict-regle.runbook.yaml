@@ -483,7 +483,10 @@ tickets:
     #     dans le worktree, et un import paresseux tolérant à l'absence laissait
     #     le hook définitivement inerte sans que rien ne rougisse ;
     #  3. `ancre:verdict_motif` — l'affectation de `ts["verdict_motif"]` est un
-    #     nœud d'affectation réel, localisé par l'AST ;
+    #     nœud d'affectation réel, localisé par l'AST. Le RECEVEUR compte : le
+    #     moteur porte deux `cs["verdict_motif"]` (état de chaîne) pour un seul
+    #     `ts["verdict_motif"]` (état de ticket), et c'est ce dernier qu'il faut
+    #     — accroché à `cs`, le hook laisse les verdicts de ticket débranchés ;
     #  4. `appel:apres_ancre` — un nœud `Call` sur `injecter_regles` existe et sa
     #     ligne est APRÈS celle de l'affectation. Par l'AST, jamais par
     #     sous-chaîne : un import, un commentaire ou une chaîne de caractères
@@ -491,7 +494,9 @@ tickets:
     #     l'audit a4 du 2026-08-21, qui a montré trois verts atteignables sans
     #     boucle : l'appel doit être dans la MÊME fonction que l'ancre, porter la
     #     signature `injecter_regles(verdict, report, ts, racine=None)`, et
-    #     recevoir des `ast.Name` — jamais des littéraux ;
+    #     recevoir des `ast.Name` dont les `.id` valent EXACTEMENT `verdict`,
+    #     `report`, `ts` — ni littéraux, ni variables quelconques, ce dernier cas
+    #     ayant été relevé par l'audit a5 ;
     #  5. `invocation:dry_run` — le point d'entrée INSTALLÉ dans le dépôt
     #     gouverné est exercé en dry-run, en sous-processus, et sa sortie réelle
     #     porte un slug. Un module copié mais cassé à l'import tombe ici.
