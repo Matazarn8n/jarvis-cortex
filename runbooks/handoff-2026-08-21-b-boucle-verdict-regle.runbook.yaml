@@ -8,24 +8,30 @@
 # `feedback` réécrit copie l'ancien en `<base>.vN.md` avant d'être remplacé ;
 # rien n'est perdu).
 #
-# CE QUE B NE FAIT PAS, ET IL FAUT LE LIRE AVANT LE RESTE : livré tel quel,
-# AUCUN verdict de gate n'écrit de règle tout seul. Le dernier fil — l'appel posé
-# dans `ops/plan_runner.py` après `ts["verdict_motif"]` — est une DETTE du moteur
-# (première ligne de la liste ci-dessous), pas un ticket : une session de plan ne
-# modifie jamais un fichier de gouvernance. B s'arrête au point d'entrée CLI, et
-# c'est l'Owner qui branche. Le mot « automatique » ne s'applique donc qu'à ce
-# qui se passe APRÈS ce raccordement.
+# CE QUE B NE FAIT PAS, ET IL FAUT LE LIRE AVANT LE RESTE : aucune SESSION de ce
+# bloc n'écrit la ligne qui referme la boucle. Le dernier fil — l'appel posé dans
+# `ops/plan_runner.py` juste après l'affectation de `ts["verdict_motif"]` — n'est
+# pas un ticket de session, parce qu'une session de plan ne modifie jamais un
+# fichier de gouvernance. Il n'est pas non plus une dette muette : c'est B-T5, un
+# ticket `kind: human` que l'Owner exécute à la main sur `/home/nuveo/hermes-os`,
+# et dont le `check:` imprime les lignes réellement trouvées dans le moteur — pas
+# un marqueur, pas une déclaration. La boucle est donc close par le runbook, mais
+# par une main humaine, et le plan ne peut pas finir `done` sans que ce geste ait
+# été posé et constaté.
 #
-# PÉRIMÈTRE — B ne touche AUCUN fichier de gouvernance du moteur. Les trois
-# fichiers `ops/plan_runner.py`, `ops/plan_doctor.py` et `ops/plan_factory.py` ne
-# sont jamais modifiés par ce bloc : B livre un vérificateur, trois modules neufs
-# et un point d'entrée en ligne de commande. Le raccordement du moteur à ce point
-# d'entrée est une dette, pas un ticket — c'est l'Owner qui le tranche.
+# PÉRIMÈTRE — aucune SESSION de B ne touche un fichier de gouvernance du moteur.
+# Les trois fichiers `ops/plan_runner.py`, `ops/plan_doctor.py` et
+# `ops/plan_factory.py` sortent de B-T0 à B-T4 identiques octet pour octet à leur
+# `base_sha` : B livre un vérificateur, trois modules neufs et un point d'entrée
+# en ligne de commande. Seul B-T5, humain, touche le moteur — et il le touche
+# hors du worktree, sur le dépôt gouverné, où aucune session ne peut écrire.
 #
 # LES CONTRÔLES SONT UN LIVRABLE, PAS DU YAML. B-T0 écrit `ops/checks/sonde_b.py`
-# et son sceau ; les quatre `check:` suivants sont un appel d'une ligne. C'est la
-# règle des quinze lignes, tenue et non pas exemptée : aucun `check:` de ce
-# runbook ne porte de programme.
+# et son sceau ; les quatre `check:` de session suivants sont un appel d'une
+# ligne. Le seul qui ne passe pas par la sonde est celui de B-T5 : il vise un
+# dépôt AUTRE que `repo:`, que la sonde n'a aucune raison de connaître, et tient
+# en dix lignes. C'est la règle des quinze lignes, tenue et non pas exemptée :
+# aucun `check:` de ce runbook ne porte de programme.
 #
 # ET CHACUN DES QUATRE REJOUE L'AUTOTEST AVANT SA PROPRE SONDE. Un runbook ne
 # peut pas épingler le sha256 d'un script que l'un de ses tickets crée (dette
@@ -43,15 +49,16 @@
 # échouerait sur `.v1` absent — c'est le bon signal, pas un faux négatif.
 #
 # DETTES MOTEUR (une ligne chacune, hors périmètre des tickets ci-dessous) :
-# dette: le raccordement du moteur (un appel après `ts["verdict_motif"]`, vers 7327) reste à faire par le mainteneur du moteur — une session de plan ne touche pas aux fichiers de gouvernance, et B s'arrête donc au point d'entrée CLI livré par B-T4.
+# dette: le moteur n'expose à aucun `check:` le moyen d'observer qu'un verdict a RÉELLEMENT déclenché une écriture de règle en production ; le `check:` de B-T5 se borne donc à constater la présence de l'appel dans `ops/plan_runner.py`, et c'est l'exécution suivante d'un gate qui vaudra preuve de bout en bout.
 # dette: un runbook ne peut pas épingler le sha256 d'un script que l'un de ses propres tickets crée — le condensat n'existe pas à l'écriture ; à défaut, le sceau `ops/checks/sonde_b.sha256` et le rejeu de l'autotest par chacun des quatre `check:` aval (ci-dessus) tiennent la sonde par son comportement, et l'épinglage littéral resterait à faire le jour où le moteur saurait produire la sonde dans un bloc antérieur.
 # dette: le runner ne borne pas les écritures d'un `check:` hors `repo:` — les sondes B-T3 et B-T4 écrivent dans un `tempfile.mkdtemp()` propre à l'exécution, hors de ce dépôt, effacé dans un `finally`.
 # dette: aucun `check:` ne peut lire la liste des fichiers du diff du ticket ; la non-régression de périmètre se borne donc au contenu des trois fichiers de gouvernance, pas à une whitelist du commit.
 # dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas, et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
 # dette: `brain.js` ne prend aucun verrou pour indexer — un écrivain qui l'appelle directement et dont l'ajout tombe entre la dernière vérification de `os.stat()` du pont et son `os.replace()` perd sa ligne ; fermer cette fenêtre exige un changement de `brain.js`, hors du dépôt de B, et B-T3 se borne donc à ne jamais retirer une ligne qui n'est pas un doublon de son propre slug.
+# dette: rien ne distingue un ticket `kind: human` d'un ticket de session aux yeux des contrôles amont — B-T5 porte donc un `model:` inerte qu'aucune exécution ne lira, faute de pouvoir déclarer « ce ticket n'a pas de modèle ».
 # dette: `AskUserQuestion` échoue en session de plan (`readonly database`) — un ticket ne peut pas poser la question que la consigne lui impose de poser.
 # dette: le sha256 de `brain.js` n'est pas épinglé, seulement son chemin (`requires_access` ci-dessus, `--oracle` du check B-T3) : le fichier vit hors du dépôt de B et M-T1 le modifie légitimement, un condensat littéral serait périmé avant le premier run — la sonde imprime donc celui qu'elle a réellement chargé, et prouve le régime versionné par comportement au lieu de faire confiance au fichier.
-# dette: aucune exception de non-régression n'est tolérée sur les trois fichiers de gouvernance (comparaison octet à octet au `base_sha`) ; en tolérer une exigerait que le moteur expose au `check:` une preuve antérieure à la session, capacité absente — le raccordement de l'Owner fera donc rougir la sonde tant que cette capacité manque, et c'est assumé.
+# dette: la non-régression de périmètre est une comparaison octet à octet au `base_sha`, sans aucune exception ni marqueur — elle dit « ce ticket ne les a pas changés », jamais « ces symboles n'y figurent pas ». Le raccordement humain de B-T5 ne la fait donc PAS rougir : une fois commité, il est dans le `base_sha` des exécutions suivantes. Ce qui reste hors de portée est plus étroit : un `check:` ne peut pas lire la liste des fichiers du diff, donc la borne porte sur le contenu de ces trois fichiers, pas sur le commit.
 #
 # ABSENCE DE `chain:` — DÉLIBÉRÉE, PAS UN OUBLI. B est le dernier maillon du
 # programme : la seule suite identifiée par le constat du bloc M (rubrique 5,
@@ -66,8 +73,9 @@ repo: /home/nuveo/hermes-os-plan-b
 description: >-
   Outiller la réinjection verdict → règle jusqu'à un point d'entrée appelable :
   contrat, décision pure, pont vers le régime procédural versionné de M-T1, CLI.
-  Aucun fichier de gouvernance n'est touché, donc rien ne s'écrit
-  automatiquement à la livraison : le raccordement du moteur reste une dette.
+  Aucune session ne touche un fichier de gouvernance ; le raccordement du moteur
+  est le ticket humain B-T5, que l'Owner pose à la main et dont le contrôle
+  imprime les lignes trouvées dans le moteur gouverné.
 
 requires_access:
   - file: /home/nuveo/hermes-os-plan-b/.git
@@ -78,6 +86,12 @@ requires_access:
   # chemin en `--oracle` — un `BRAIN_JS` résolu ailleurs fait échouer la sonde au
   # lieu de verdir sur un oracle quelconque.
   - file: /home/nuveo/projects/jarvis-cortex/brain.js
+  # LE MOTEUR GOUVERNÉ, cible du seul ticket humain du bloc (B-T5). Il est lu,
+  # jamais écrit par une session : `governed_files()` protège `/home/nuveo/
+  # hermes-os` et pas les copies en worktree, ce qui fait justement de ce chemin
+  # le seul endroit où le raccordement soit constatable sans qu'une session
+  # puisse le fabriquer.
+  - file: /home/nuveo/hermes-os/ops/plan_runner.py
 
 tickets:
 
@@ -240,9 +254,14 @@ tickets:
     # `MEMORY.md` partagé ni glob de nettoyage qui pourrait emporter les preuves
     # d'une autre exécution — le `finally` retire ce dossier-là, rien d'autre.
     # `racine` est tenable sans toucher à `brain.js` : son magasin se choisit par
-    # le `config/workspace.json` posé À CÔTÉ de lui (brain.js:18-20), donc une
-    # copie octet à octet de l'oracle dans la racine suffit. `--sandbox`, lui, ne
-    # convient PAS — sa cible est un chemin fixe, c'est la course qu'on ferme.
+    # le `config/workspace.json` posé À CÔTÉ de lui (brain.js:18-20). Le pont
+    # copie donc l'oracle octet à octet dans un sous-dossier QU'IL CRÉE,
+    # `<racine>/.brain-runtime/`, et n'écrit jamais à la racine elle-même : celle
+    # de la CLI de B-T4 est fournie par un humain, et une racine mal visée sur un
+    # dossier habité y écraserait `brain.js` et `config/workspace.json`. Racine
+    # déjà porteuse d'un `brain.js` ou d'un `config/` -> le pont lève.
+    # `--sandbox`, lui, ne convient PAS — sa cible est un chemin fixe, c'est la
+    # course qu'on ferme.
     # Quatre exigences, un seul passage :
     #  1. réécriture avec un fait DIFFÉRENT -> `.v1` garde l'ancien (régime M-T1) ;
     #  2. écriture -> UNE ligne d'index (rubrique 4 du constat : 328 fichiers sur
@@ -331,3 +350,45 @@ tickets:
       && test "$cas" -ge 8
       && echo "$sortie"
       && echo "B-T4 sonde=entree cas_ok=${cas}"
+
+  - id: B-T5
+    kind: human
+    title: Raccorder le moteur — l'appel après `ts["verdict_motif"]`, posé à la main
+    why: >-
+      Sans ce geste, B livre quatre modules et aucun verdict n'écrit jamais de
+      règle : le bloc s'appellerait « boucle » sans en être une. Il est HUMAIN
+      parce qu'une session de plan ne modifie pas un fichier de gouvernance — et
+      il est un TICKET, pas une dette, parce qu'une dette en commentaire laisse
+      le plan finir `done` sur une boucle ouverte, défaut déjà payé ici.
+    codex_gate: true
+    depends_on: [B-T4]
+    # `model:` INERTE, et déclaré quand même. Un ticket `kind: human` n'ouvre
+    # aucune session, donc ce champ ne sert à rien ici — mais le contrôle du
+    # bloc M l'exige sur CHAQUE ticket, sans regarder le `kind:`. Le laisser
+    # absent rendait le runbook rouge (« B-T5: model absent ») alors que
+    # l'omission était le geste juste. Valeur la plus petite du parc, pour que
+    # personne ne lise ici une intention d'exécution.
+    model: claude-haiku-4-5
+    prompt_file: tickets/B-T5.md
+    # Aucun `produces:` — ce ticket ne livre pas un artefact de `repo:`, il pose
+    # une ligne dans un AUTRE dépôt. Le déclarer ferait chercher au moteur un
+    # fichier qui n'apparaîtra jamais ici.
+    # Aucun `model:` ni `effort:` : il n'y a pas de session, donc pas de modèle.
+    # Le contrôle observe le dépôt GOUVERNÉ `/home/nuveo/hermes-os`, pas le
+    # worktree de B — `governed_files()` y interdit l'écriture à toute session,
+    # ce qui rend l'observation infalsifiable par le bloc lui-même. Il imprime
+    # les numéros de ligne réellement trouvés (sortie réelle, jamais un exit 0
+    # seul) et exige que l'appel tombe APRÈS l'ancre `verdict_motif`, jamais
+    # avant. Un appel posé mais inatteignable resterait invisible ici : c'est la
+    # borne de ce contrôle, et la dette en tête du runbook la nomme.
+    check: >-
+      "$HERMES_CHECK_PYTHON" -c "import json, os, pathlib, sys;
+      p = os.environ.get('HERMES_TICKET_FACTS');
+      faits = json.loads(pathlib.Path(p).read_text(encoding='utf-8')) if p else {};
+      src = pathlib.Path('/home/nuveo/hermes-os/ops/plan_runner.py').read_text(encoding='utf-8').splitlines();
+      appels = [i for i, l in enumerate(src, 1) if 'injecter_regles' in l];
+      ancres = [i for i, l in enumerate(src, 1) if 'verdict_motif' in l];
+      print('base_sha=%s ticket=%s' % (faits.get('base_sha'), faits.get('ticket_id')));
+      print('moteur_lignes=%d ancres_verdict_motif=%s appels_injecter_regles=%s'
+      % (len(src), ancres, appels));
+      sys.exit(0 if appels and ancres and max(appels) > min(ancres) else 1)"

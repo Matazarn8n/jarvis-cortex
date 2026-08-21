@@ -79,12 +79,36 @@ const SANDBOX = path.join(__dirname, '.cache', 'sandbox-memory');   // FIXE
 `config/workspace.json`, **lu à côté de `brain.js`**. D'où la seule construction
 qui donne une racine arbitraire sans toucher à la dépendance :
 
-- copie l'oracle en `<racine>/brain.js`, **octet pour octet** (`shutil.copy2`) —
-  c'est le même code, donc le même régime versionné, et la sonde de B-T0 vérifie
-  ce condensat ;
-- écris `<racine>/config/workspace.json` = `{"root": ".", "memoryDir": "memory"}`,
-  d'où `MEM = <racine>/memory` et l'index `<racine>/memory/MEMORY.md` ;
-- appelle `node <racine>/brain.js store …`, **sans** `--sandbox`.
+**Le pont n'écrase jamais `<racine>/brain.js` ni `<racine>/config/`.** Il se
+creuse un sous-dossier qu'il crée et dont il est seul propriétaire,
+`<racine>/.brain-runtime/`, et n'y touche que deux noms de fichiers, les siens.
+Ce détour n'est pas de la précaution décorative : `--racine` est exposé **en
+ligne de commande** par B-T4, à un humain qui peut le viser de travers ; une
+racine posée par erreur sur un dossier habité y écraserait sinon son `brain.js`
+et son `config/workspace.json`. C'est exactement la négligence que borne le
+modèle de menace du bloc, pas une attaque.
+
+Les seuls noms que le pont crée sous une racine sont donc les siens :
+`.brain-runtime/` (sa copie de l'oracle), `.memory.lock` (le verrou décrit plus
+bas) et `memory/`, que `brain.js` fabrique lui-même. Il ne supprime rien.
+
+- copie l'oracle en `<racine>/.brain-runtime/brain.js`, **octet pour octet**
+  (`shutil.copy2`) — c'est le même code, donc le même régime versionné, et la
+  sonde de B-T0 vérifie ce condensat ;
+- écris `<racine>/.brain-runtime/config/workspace.json` =
+  `{"root": "..", "memoryDir": "memory"}` : `__dirname` vaut alors
+  `<racine>/.brain-runtime`, donc `ROOT = <racine>`, `MEM = <racine>/memory` et
+  l'index reste `<racine>/memory/MEMORY.md` — le contrat de la sonde est
+  inchangé ;
+- appelle `node <racine>/.brain-runtime/brain.js store …`, **sans** `--sandbox`.
+
+Deux refus, et ils sont durs. Si `<racine>` existe et contient déjà un
+`brain.js` ou un `config/`, **lève** — la racine désigne un dossier déjà habité
+par autre chose, et l'intention de l'appelant n'est pas déductible. Si
+`<racine>/.brain-runtime` existe mais n'est pas un dossier, **lève** aussi. Le
+pont ne supprime rien, jamais : `makedirs(exist_ok=True)` sur son propre
+sous-dossier, et c'est tout. Le nettoyage appartient à qui a créé la racine — la
+sonde efface son `mkdtemp()`, personne d'autre n'efface pour elle.
 
 `racine=None` garde le chemin nominal : `node <BRAIN_JS> store …`, la mémoire
 réelle, aucune copie. Consigne les deux chemins en tête du module. N'écris jamais

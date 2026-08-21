@@ -73,6 +73,11 @@ def releve() -> dict:
     presents = {p.name for p in MEM.glob("*.md")} - {"MEMORY.md"}
     m["index_pointeurs_morts"] = len(pointeurs - presents - {"MEMORY.md"})
     m["fichiers_non_indexes"] = len(presents - pointeurs)
+    # Demandé par la rubrique 4 du constat, qui exige le nombre de LIGNES de
+    # l'index. Il ne se dérive d'aucune autre métrique : une ligne peut ne
+    # désigner aucun fichier (titre de rubrique) ou plusieurs. Un agrégat de
+    # plus, aucun nom ni extrait — le reçu reste opposable sans rien divulguer.
+    m["index_lignes"] = len(idx_txt.splitlines())
     noms = sorted(p.name for p in MEM.glob("*.md"))
     m["fichiers_total"] = len(noms)
     m["empreinte"] = hashlib.sha256("\n".join(noms).encode("utf-8")).hexdigest()[:16]

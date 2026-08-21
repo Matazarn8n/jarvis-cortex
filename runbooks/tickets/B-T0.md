@@ -203,8 +203,9 @@ l'une de l'autre, malgré des slugs distincts. Tu ne partages plus rien :
   chemin fixe, aucun glob de nettoyage, donc rien à effacer qui appartienne à
   une autre exécution — et passe-le à `ecrire_regle(..., racine=<ce dossier>)` ;
 - **ne présuppose pas la disposition interne de cette racine.** C'est B-T3 qui
-  la choisit (il y dépose une copie de l'oracle et un `config/workspace.json`,
-  cf. son prompt) : localise l'index par `next(Path(racine).rglob("MEMORY.md"))`
+  la choisit (il se creuse un sous-dossier à lui et y dépose une copie de
+  l'oracle et un `config/workspace.json` — jamais à la racine même, cf. son
+  prompt) : localise l'index par `next(Path(racine).rglob("MEMORY.md"))`
   et les fichiers de règles par `rglob("<slug>*.md")`. Une sonde qui code en dur
   `<racine>/memory/` juge une implémentation au lieu d'un comportement ;
 - le `MEMORY.md` de ce dossier n'appartient qu'à cette exécution : aucune course,
@@ -348,14 +349,26 @@ Puis la **CLI** en sous-processus, sur ses **deux** chemins — deux axes, pas u
    puisse pas faire tomber un ticket. C'est la CLI qui traduit l'état `echec` en
    code de sortie, à sa frontière à elle.
 
-Enfin la **non-régression de périmètre** : `injecter_regles`,
-`regles_depuis_verdict` et `ecrire_regle` sont absents des trois fichiers de
-gouvernance — `ops/plan_runner.py`, `ops/plan_doctor.py`, `ops/plan_factory.py`.
+Enfin la **non-régression de périmètre**, et elle a **un seul** énoncé : les
+trois fichiers de gouvernance — `ops/plan_runner.py`, `ops/plan_doctor.py`,
+`ops/plan_factory.py` — sont **identiques octet pour octet** à leur version au
+`base_sha` que porte `$HERMES_TICKET_FACTS`. Toute différence est un échec, quel
+que soit son contenu, et il n'existe aucune route « avec marqueur, rend 0 ».
 
-Ne prétends pas plus que cela. Un contrôle ne peut pas lire la liste des fichiers
-du diff du ticket : cette non-régression borne le **contenu** de ces trois
-fichiers, elle n'est pas une whitelist du commit. La dette est déjà consignée en
-tête du runbook ; ne la maquille pas en garantie.
+**N'ajoute pas, en plus, un contrôle d'absence des symboles** `injecter_regles`,
+`regles_depuis_verdict`, `ecrire_regle` dans ces fichiers. Les deux exigences
+sont incompatibles, et c'est la seconde qui est fausse : la finalité de B est
+qu'`injecter_regles` **apparaisse** un jour dans `ops/plan_runner.py` (B-T5). Le
+jour où cette ligne est commitée, elle est dans le `base_sha` des tickets
+suivants, la comparaison repart de ce commit-là et reste verte d'elle-même —
+alors qu'une absence absolue rougirait pour toujours sur un geste légitime, sans
+que personne puisse lever le blocage. Une norme absolue écrite dans un runbook
+est un blocage incorrigible : défaut déjà payé ici.
+
+Ne prétends pas plus que cela non plus. Un contrôle ne peut pas lire la liste des
+fichiers du diff du ticket : cette non-régression borne le **contenu** de ces
+trois fichiers, elle n'est pas une whitelist du commit. La dette est déjà
+consignée en tête du runbook ; ne la maquille pas en garantie.
 
 ## Contrat de SORTIE de la sonde — les `check:` en dépendent
 

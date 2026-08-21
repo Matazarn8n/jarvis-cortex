@@ -20,12 +20,18 @@ non exercé n'imprime rien et fait manquer le seuil.
 Une session de plan **ne modifie jamais** un fichier de gouvernance du moteur —
 ni `ops/plan_runner.py`, ni `ops/plan_doctor.py`, ni `ops/plan_factory.py`. Ce
 ticket ne fait donc **pas** le raccordement dans le moteur : il livre un point
-d'entrée autonome et exerçable, et le raccordement reste une **dette** consignée
-par le contrat de B-T1, que l'Owner tranche ensuite.
+d'entrée autonome et exerçable. Le raccordement est **B-T5**, le ticket
+`kind: human` qui suit le tien et que l'Owner pose à la main sur le dépôt
+gouverné. Ce n'est plus une dette en commentaire : c'est un maillon, avec son
+contrôle.
 
 Le check le vérifie dans les deux sens : ton module doit marcher seul, et les
-noms `injecter_regles`, `regles_depuis_verdict` et `ecrire_regle` doivent rester
-**absents** des trois fichiers de gouvernance.
+trois fichiers de gouvernance doivent sortir de ton ticket **identiques octet
+pour octet** à ce qu'ils étaient à son `base_sha`. C'est le seul énoncé du
+contrat, et il n'y en a pas d'autre : ce qui est interdit est que **tu** les
+changes, pas que ces noms y figurent un jour. Un contrôle d'absence absolue
+dirait la seconde chose, et deviendrait un blocage le jour où l'Owner paiera la
+dette de raccordement — voir juste en dessous.
 
 Sache exactement ce que cela vaut, et ne compte pas sur plus. Un `check:` ne peut
 pas lire la liste des fichiers du diff de ton ticket — la capacité n'existe pas
@@ -62,10 +68,15 @@ Pour ce run : la sonde compare ces trois fichiers **octet à octet** à leur ver
 dans le `base_sha` fourni par `$HERMES_TICKET_FACTS`. Toute différence est un
 échec, quel que soit son contenu.
 
-La dette de raccordement ne disparaît pas pour autant : `injecter_regles` devra un
-jour être appelée depuis `ops/plan_runner.py:7327`, et c'est l'Owner qui posera
-cette ligne à la main. Elle est consignée en tête du runbook et dans son
-« Encore à Faire ». Ce qui change, c'est qu'elle cesse d'être auto-certifiable :
+Le raccordement ne disparaît pas pour autant : `injecter_regles` devra être
+appelée depuis `ops/plan_runner.py`, **juste après l'affectation de
+`ts["verdict_motif"]`** — repère l'ancre par son nom, pas par un numéro de ligne,
+qui dérive à chaque commit du moteur. Ce geste est désormais **B-T5**, le dernier
+ticket du runbook : un ticket `kind: human`, que l'Owner exécute à la main sur
+`/home/nuveo/hermes-os`, et dont le `check:` imprime les lignes réellement
+trouvées. Ce n'est plus à toi de le faire, et ce n'est plus une dette muette. Ce
+qui change pour ton axe à toi, c'est que la présence du symbole cesse d'être
+auto-certifiable :
 une exception future devra s'appuyer sur une preuve ANTÉRIEURE à la session — un
 sha épinglé avant son lancement — jamais sur un texte que la session peut
 produire. Aucune route « avec marqueur, rend 0 » n'existe sur cet axe : la
@@ -86,7 +97,13 @@ paresseusement dans le corps de la fonction**. L'import paresseux évite qu'un
 `brain.js` absent fasse échouer le simple chargement du module.
 
 `racine` est transmis tel quel à l'écrivain par défaut (`racine=None` → mémoire
-réelle ; `racine=<dossier>` → ce dossier, cf. B-T3). C'est ce qui permet au
+réelle ; `racine=<dossier>` → ce dossier, cf. B-T3). **Tu ne valides pas `racine`
+toi-même, et tu ne crées aucun dossier** : le pont de B-T3 se creuse son propre
+`<racine>/.brain-runtime/` et refuse une racine déjà habitée par un `brain.js` ou
+un `config/`. Ta CLI expose `--racine` à un humain qui peut le viser de travers ;
+c'est le pont qui lève, et ta CLI qui rend le message lisible avec un code non
+nul. Ne rattrape pas cette exception, ne la double pas d'un contrôle à toi qui
+divergerait du sien. C'est ce transit qui permet au
 contrôle d'exercer le **chemin par défaut**, celui qui servira en production,
 sans écrire dans la mémoire de l'Owner. Ne le traite pas comme un paramètre de
 confort : la version précédente de ce ticket n'était vérifiée qu'à travers des

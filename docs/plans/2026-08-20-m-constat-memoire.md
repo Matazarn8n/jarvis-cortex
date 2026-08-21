@@ -43,8 +43,9 @@ commité**, produit hors session par le ticket humain M-T0 :
 `docs/plans/2026-08-20-recu-memoire.txt`, horodaté `2026-08-20T16:43:43+02:00`.
 Ce reçu ne contient que des agrégats et l'empreinte — aucun nom de fichier,
 aucun extrait — et c'est lui que le contrôle du ticket compare, ligne à ligne, au
-bloc de tête ci-dessus. Aucune valeur n'est estimée, et aucune n'a été mesurée
-par la session.
+bloc de tête ci-dessus. Aucune valeur n'est estimée, et aucune des **neuf** n'a
+été mesurée par la session. La rubrique 4 en ajoute une dixième, `index_lignes`,
+qui elle l'a été — c'est la seule, et elle est datée à part.
 
 Cette cible figée remplace un recalcul en direct, et le motif vaut d'être écrit :
 le corpus est écrit en continu par d'autres sessions — 431 puis 439 fichiers dans
@@ -61,6 +62,16 @@ fausses : elles décrivent le corpus d'empreinte `f2b9b2a100fa845f`, tel qu'il
 
 Le point à retenir : l'empreinte figure ici comme identifiant du corpus mesuré,
 pas comme preuve que la session a parcouru le dossier. Elle ne l'a pas parcouru.
+
+**Arbitrage de l'Owner, 2026-08-20 — tranché, pas contourné.** Un audit adverse a
+relevé, à juste titre, que le ticket demandait une lecture en direct et que le
+reçu figé y substitue autre chose. C'est un changement de contrat, et il a été
+porté à l'Owner avec sa cause : l'incapacité est structurelle, pas un renoncement
+— le dossier est hors du worktree, `Bash` y est refusé, `Glob`/`Grep` n'existent
+pas dans ce harness, `Read` n'énumère pas un répertoire. L'Owner a lu la réserve
+et l'a acceptée telle quelle. Elle reste écrite ici parce qu'un arbitrage compte
+par sa trace, pas par le souvenir qu'on en a. La capacité manquante est portée en
+dette d'outillage plus bas ; le jour où elle existe, ce document se recalcule.
 
 ## 1. Répartition par `metadata.type`
 
@@ -149,15 +160,27 @@ Les trois nombres qui suivent sortent tous du **même ensemble** que
 - **0 pointeur mort** : tout ce que l'index désigne existe — les pointeurs sont
   exactement inclus dans les fichiers présents.
 
-Un arbitrage est signalé ici, pas tranché : la rubrique demande aussi le nombre
-de **lignes** de `MEMORY.md`. Ce nombre n'est pas dérivable des neuf métriques —
-une ligne d'index peut ne désigner aucun fichier (un titre de rubrique) ou
-plusieurs — et il n'est pas dans le reçu. Le tour précédent en avançait un (158)
-et un compte de pointeurs (106) qui ne se déduisaient d'aucune mesure et
-contredisaient arithmétiquement les 328 : les deux sont retirés plutôt que
-recopiés. Ce qui reste ci-dessus est mesuré. La correction tient en une clé
-`index_lignes` à ajouter à `scripts/releve-memoire.py` au prochain relevé de
-l'Owner ; elle ne change aucune des neuf métriques.
+Le quatrième nombre demandé par la rubrique — le **nombre de lignes** de
+`MEMORY.md` — ne se dérive d'aucun des neuf : une ligne d'index peut n'en
+désigner aucun (un titre de rubrique) ou plusieurs. Il n'est pas dans le reçu, et
+le tour précédent en avançait un (158) qui ne se déduisait d'aucune mesure. Il
+est ici **mesuré**, et c'est la seule valeur de ce document que la session ait
+obtenue elle-même :
+
+- **`index_lignes: 179`** — `MEMORY.md`, lu le 2026-08-21.
+
+Cette lecture ne demande aucune énumération : `MEMORY.md` est le seul fichier du
+dossier dont le ticket autorise le nom, donc le seul qu'une session sans `Glob`
+puisse ouvrir par chemin. Deux réserves à porter avec le chiffre. Il date du
+2026-08-21, un jour **après** le reçu : il ne décrit pas exactement le corpus
+d'empreinte `f2b9b2a100fa845f`, et ne doit pas être recoupé arithmétiquement avec
+les neuf autres. Et il n'a pas été rapproché du contenu lu — aucune ligne de
+`MEMORY.md` n'est reproduite ici, ni comptée par catégorie : le fichier est un
+index de fichiers privés.
+
+La clé `index_lignes` est ajoutée à `scripts/releve-memoire.py`, pour que le
+prochain relevé de l'Owner la porte au même horodatage que les neuf autres. Elle
+ne change aucune d'elles.
 
 L'index n'est pas cassé, il est **partiel**. L'absence totale de pointeur mort
 est le signe d'un index tenu, pas d'un index abandonné : ce qui a disparu du
@@ -235,7 +258,8 @@ question, alors que la consigne lui impose de le faire plutôt que de supposer.
 ## Conséquence sur la suite
 
 Le runbook B — `runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml`
-— et ses cinq prompts sont écrits. Le régime procédural sur lequel B s'appuie a
+— et ses six prompts sont écrits (cinq tickets de session, plus le ticket humain
+B-T5 qui raccorde le moteur). Le régime procédural sur lequel B s'appuie a
 été lu dans le code livré par M-T1 (`brain.js`, remplacement versionné en
 `<base>.vN.md` pour `--type feedback`), pas supposé.
 
