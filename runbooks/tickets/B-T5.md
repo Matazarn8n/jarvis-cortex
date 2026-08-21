@@ -57,6 +57,20 @@ Dans `ops/plan_runner.py`, appeler `injecter_regles(...)` **juste après**
 l'affectation de `ts["verdict_motif"]`, dans le chemin qui vient de recevoir le
 verdict d'un gate Codex.
 
+L'appel exact, et pas un autre — l'audit a4 du 2026-08-21 a montré qu'un ticket
+qui ne prescrit pas la forme laisse passer un appel décoratif que la sonde
+accepte :
+
+```python
+injecter_regles(verdict, report, ts, racine=None)
+```
+
+Trois positionnels, `racine` nommé. **Dans la fonction qui porte l'ancre**, pas
+ailleurs dans le fichier. Les trois positionnels sont les **variables vivantes**
+du chemin — jamais des littéraux : `injecter_regles("GO", "", 0)` compile, passe
+un contrôle naïf, et n'injecte rien du verdict réel. B-T6 vérifie ces trois
+points par l'AST.
+
 Repère l'ancre par son **nom**, `verdict_motif`, jamais par un numéro de ligne :
 les numéros dérivent à chaque commit du moteur, et une mémoire antérieure en
 portait un qui était déjà faux. Le contrôle de ce ticket cherche le nom, lui

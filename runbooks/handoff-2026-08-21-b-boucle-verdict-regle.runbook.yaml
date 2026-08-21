@@ -59,9 +59,11 @@
 # n'est plus de la négligence, c'est un faux délibéré, et le modèle de menace du
 # bloc s'arrête avant.
 #
-# PRÉREQUIS : le régime versionné vit dans le worktree du bloc M. Si `BRAIN_JS`
-# résolvait vers un jarvis-cortex qui ne le porte pas encore, la sonde B-T3
-# échouerait sur `.v1` absent — c'est le bon signal, pas un faux négatif.
+# PRÉREQUIS, DEVENU UN TICKET : le régime versionné vit sur la branche de plan M,
+# et le jarvis-cortex canonique ne le porte pas (`grep .v1` = 0 le 2026-08-21).
+# La sonde B-T3 échouerait donc sur `.v1` absent à CHAQUE tour — bon signal, mais
+# panne garantie tant que personne ne fusionne. C'est B-TM, ticket humain placé
+# avant B-T3, qui porte ce geste ; B-T3 en `depends_on`.
 #
 # DETTES MOTEUR (une ligne chacune, hors périmètre des tickets ci-dessous) :
 # dette: le moteur n'expose à aucun `check:` le moyen d'observer qu'un verdict a RÉELLEMENT déclenché une écriture de règle en production ; le `check:` de B-T6 va donc aussi loin qu'un contrôle peut aller — nœud d'appel prouvé par l'AST, modules importables depuis le dépôt gouverné, point d'entrée exercé en dry-run — et c'est l'exécution suivante d'un vrai gate qui vaudra preuve de bout en bout.
@@ -103,7 +105,8 @@ requires_access:
   # chemin en `--oracle` — un `BRAIN_JS` résolu ailleurs fait échouer la sonde au
   # lieu de verdir sur un oracle quelconque.
   - file: /home/nuveo/projects/jarvis-cortex/brain.js
-  # LE MOTEUR GOUVERNÉ, cible du seul ticket humain du bloc (B-T5). Il est lu,
+  # LE MOTEUR GOUVERNÉ, cible du ticket humain B-T5 (l'autre étant B-TM, qui
+  # fusionne M dans le jarvis-cortex canonique). Il est lu,
   # jamais écrit par une session : `governed_files()` protège `/home/nuveo/
   # hermes-os` et pas les copies en worktree, ce qui fait justement de ce chemin
   # le seul endroit où le raccordement soit constatable sans qu'une session
@@ -247,8 +250,41 @@ tickets:
       && echo "$sortie"
       && echo "B-T2 sonde=decision cas_ok=${cas}"
 
+  - id: B-TM
+    kind: human
+    title: Intégrer M-T1 dans le jarvis-cortex canonique, avant tout ticket qui lit brain.js
+    why: >-
+      B-T3 épingle `/home/nuveo/projects/jarvis-cortex/brain.js` comme oracle, et
+      ce fichier NE PORTE PAS le régime versionné de M-T1 : celui-ci vit sur
+      `plan/jarvis-cortex-m-memoire-regimes`, non fusionnée. Vérifié le
+      2026-08-21 — `grep` sur `.v1` dans le brain.js canonique rend zéro. Aucun
+      ticket de ce bloc n'intègre M, donc la sonde de B-T3 échouerait sur `.v1`
+      absent, à chaque tour, sans qu'aucune correction de B ne puisse y changer
+      quoi que ce soit. Le runbook s'en remettait à une note de PRÉREQUIS ; une
+      note n'intègre rien. Relevé HAUTE par l'audit a4 du 2026-08-21.
+    # Geste humain, hors session : la fusion touche un dépôt qui n'est pas
+    # `repo:`, et une session de plan n'a pas à fusionner dans un canonique.
+    #
+    #   cd /home/nuveo/projects/jarvis-cortex
+    #   git merge --no-ff plan/jarvis-cortex-m-memoire-regimes
+    #   node brain.js store "controle B-TM" --type feedback --name b-tm-controle
+    #   node brain.js store "controle B-TM v2" --type feedback --name b-tm-controle
+    #   ls memory/b-tm-controle*        # doit montrer le .v1 conservé
+    #
+    # La VÉRIFICATION qui compte n'est pas ici : le runner ne lance pas le
+    # `check:` d'un ticket `kind: human` (dette en tête de runbook). C'est la
+    # sonde `pont` de B-T3 qui refuse de verdir sur un oracle sans `.v1` — donc
+    # ce ticket ORDONNE le geste, et B-T3 le CONSTATE. Approuver B-TM sans avoir
+    # fusionné ne gagne rien : B-T3 tombe juste après.
+    model: claude-haiku-4-5
+    effort: low
+    max_turns: 5
+    timeout_minutes: 10
+    prompt_file: tickets/B-TM.md
+
   - id: B-T3
     kind: session
+    depends_on: [B-TM]
     title: L'écriture — pont vers brain.js, versionnement, index, idempotence
     why: >-
       C'est le seul ticket qui touche le disque, et une erreur s'y industrialise
@@ -451,7 +487,11 @@ tickets:
     #  4. `appel:apres_ancre` — un nœud `Call` sur `injecter_regles` existe et sa
     #     ligne est APRÈS celle de l'affectation. Par l'AST, jamais par
     #     sous-chaîne : un import, un commentaire ou une chaîne de caractères
-    #     portant ce nom ne sont pas des appels et ne passent pas ;
+    #     portant ce nom ne sont pas des appels et ne passent pas. Resserré par
+    #     l'audit a4 du 2026-08-21, qui a montré trois verts atteignables sans
+    #     boucle : l'appel doit être dans la MÊME fonction que l'ancre, porter la
+    #     signature `injecter_regles(verdict, report, ts, racine=None)`, et
+    #     recevoir des `ast.Name` — jamais des littéraux ;
     #  5. `invocation:dry_run` — le point d'entrée INSTALLÉ dans le dépôt
     #     gouverné est exercé en dry-run, en sous-processus, et sa sortie réelle
     #     porte un slug. Un module copié mais cassé à l'import tombe ici.

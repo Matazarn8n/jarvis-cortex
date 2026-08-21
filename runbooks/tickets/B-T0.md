@@ -403,6 +403,22 @@ absence laissait la boucle définitivement inerte :
    un `import injecter_regles`, un commentaire, une chaîne de caractères ou une
    ligne de docstring portant ce nom satisfaisaient un `in` et ne sont pas des
    appels. Imprime les deux `lineno` réellement trouvées.
+
+   Trois resserrages, chacun fermant un vert obtenable sans boucle réelle
+   (audit a4 du 2026-08-21) :
+
+   - **Même fonction porteuse.** Parcours les `ast.FunctionDef` /
+     `ast.AsyncFunctionDef` du module et exige que l'affectation de l'axe 3 et
+     ce `Call` soient dans le corps du **même** nœud. Sans cela, un appel logé
+     dans une fonction morte de l'autre bout du fichier passe, du seul fait
+     qu'il porte un plus grand `lineno`.
+   - **Signature exacte.** L'appel est
+     `injecter_regles(verdict, report, ts, racine=None)` — trois positionnels et
+     le nommé `racine` facultatif. Refuse tout autre arité.
+   - **Arguments vivants.** Les trois positionnels sont des `ast.Name`, jamais
+     des `ast.Constant` : un `injecter_regles("GO", "", 0)` est un appel
+     syntaxiquement valide qui n'injecte rien du verdict réel. Imprime les noms
+     constatés.
 5. `cas_ok=invocation:dry_run` — lance en sous-processus, `cwd=<moteur>`, le
    point d'entrée **installé là-bas** :
    `python ops/verdict_hook.py --verdict NO_GO --rapport - --dry-run`, rapport

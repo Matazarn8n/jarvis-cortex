@@ -109,6 +109,17 @@ manuscrite, au sens où quelqu'un a pensé à l'écrire au moment de réécrire 
 règle. Rien ne l'imposait, et rien ne la vérifie : le compte réel des règles
 réécrites est donc **au moins** 36, jamais moins.
 
+Borne haute mesurée, sur demande de l'audit. Un second relevé daté du
+2026-08-21 (`docs/plans/2026-08-21-recu-memoire.txt`, empreinte `a74967b25ae61ecf`,
+451 fichiers) compte les deux définitions côte à côte : `feedback_revises: 38`
+pour la trace attestée, `feedback_revises_large: 50` pour l'union
+trace-ou-seconde-date, sur 130 `feedback`. Soit **entre 29,2 % et 38,5 %**. Les
+deux chiffres restent séparés à dessein : une seconde date est un indice, pas
+une preuve — un compte rendu couvrant une période en porte plusieurs sans avoir
+jamais été réécrit (voir rubrique 3). Les fusionner importerait cette ambiguïté
+dans la seule métrique adossée à un geste volontaire ; les garder distincts
+encadre le vrai chiffre au lieu d'en publier un seul, indéfendable.
+
 Le mécanisme est toujours le même. La règle a été modifiée sur place, l'énoncé
 antérieur a disparu, et la seule mémoire de ce qu'il disait est la phrase que
 l'auteur a bien voulu laisser à côté. Presque une règle procédurale sur trois est

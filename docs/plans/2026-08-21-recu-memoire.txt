@@ -1,0 +1,16 @@
+# releve du corpus de memoire — 2026-08-21T16:28:54+02:00
+# agregats et empreinte SEULS : aucun nom de fichier, aucun extrait
+horodatage: 2026-08-21T16:28:54+02:00
+feedback: 130
+feedback_revises: 38
+feedback_revises_large: 50
+fichiers_non_indexes: 328
+fichiers_total: 451
+index_lignes: 181
+index_pointeurs_morts: 0
+project: 283
+project_multidate: 90
+reference: 31
+sans_type: 4
+user: 2
+empreinte: a74967b25ae61ecf

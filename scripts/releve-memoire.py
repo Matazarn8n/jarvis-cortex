@@ -24,33 +24,31 @@ import re
 import sys
 from datetime import datetime
 
-SORTIE = pathlib.Path("docs/plans/2026-08-20-recu-memoire.txt")
+# Le nom porte la date du jour : un reçu déjà commité est une photo opposable,
+# le réécrire effacerait la mesure qu'un constat cite. Chaque relevé date le sien.
+SORTIE = pathlib.Path(f"docs/plans/{datetime.now().date().isoformat()}-recu-memoire.txt")
 MEM = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
 
 # Ces deux motifs et la définition de l'empreinte DOIVENT rester identiques à
 # ceux du `check:` de M-TGEN : le reçu remplace un recalcul, il ne le redéfinit
 # pas. Toute divergence ici change silencieusement ce que le constat affirme.
 #
-# UN AUDIT A DEMANDÉ D'ÉLARGIR `REVISE` à « plusieurs dates distinctes », et
-# c'est refusé ici, pour deux raisons. (1) Le reçu du 2026-08-20 est figé et
-# commité ; le dossier qu'il mesure n'est plus atteignable depuis une session de
-# plan. Élargir le motif rendrait ce script incapable de reproduire le reçu qu'il
-# a produit, sans qu'aucun recalcul ne puisse arbitrer — on perdrait la seule
-# vérifiabilité du constat pour un chiffre qu'on ne pourrait pas obtenir. (2) La
-# multi-date est déjà mesurée, sur `project`, par `project_multidate` — et la
-# rubrique 3 du constat explique pourquoi elle est un INDICE et non une preuve de
-# révision (un compte rendu couvrant une période porte plusieurs dates sans avoir
-# jamais été réécrit). La verser dans `feedback_revises` importerait cette
-# ambiguïté dans la seule métrique qui repose sur une trace ATTESTÉE. La rubrique
-# 2 borne donc son chiffre par le bas — « au moins 36 » — ce qui est la forme
-# correcte d'un compte de traces volontaires.
+# UN AUDIT A DEMANDÉ TROIS FOIS D'ÉLARGIR `REVISE` à « plusieurs dates
+# distinctes ». Tranché le 2026-08-21 en MESURANT les deux hors session, au lieu
+# de re-refuser en prose — un refus en prose ne compte pas comme arbitrage, et
+# c'est ce qui faisait revenir l'objection à chaque tour.
 #
-# REDEMANDÉ au tour du 2026-08-21, refusé pour les mêmes raisons, plus une : la
-# session de ce tour n'a ni Bash ni accès au dossier de mémoire. Élargir le motif
-# ici publierait donc un chiffre que PERSONNE n'aurait recalculé. Si la mesure
-# élargie est voulue, le geste juste est de relancer ce script hors session,
-# comme au ticket M-T0, et de dater un second reçu — pas de retoucher un compte à
-# l'aveugle dans un document qui l'affirme.
+# `feedback_revises` garde le motif étroit : il compte une trace ATTESTÉE de
+# révision, le fichier DIT qu'il a été corrigé. `feedback_revises_large` compte
+# l'union motif-ou-deuxième-date, telle que l'audit la demande. Les deux partent
+# dans le reçu ; la rubrique 2 du constat cite les deux et dit lequel borne quoi.
+#
+# Pourquoi ne pas fusionner : une seconde date est un INDICE, pas une preuve —
+# un compte rendu couvrant une période porte plusieurs dates sans avoir jamais
+# été réécrit (même raison que `project_multidate`, rubrique 3). Fusionner
+# importerait cette ambiguïté dans la seule métrique adossée à une trace
+# volontaire. Les garder séparés encadre le vrai chiffre au lieu d'en publier un
+# seul, indéfendable dans un sens comme dans l'autre.
 REVISE = re.compile(r"mis[e]?\s+[àa]\s+jour|R[ÉE]VOQU|CORRECTION|corrig[ée]", re.I)
 DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
 
@@ -61,7 +59,7 @@ def releve() -> dict:
         # qui se ferait passer pour un corpus vide.
         raise SystemExit(f"ECHEC: dossier de memoire introuvable: {MEM}")
     m = {"user": 0, "feedback": 0, "project": 0, "reference": 0, "sans_type": 0,
-         "feedback_revises": 0, "project_multidate": 0}
+         "feedback_revises": 0, "feedback_revises_large": 0, "project_multidate": 0}
     for f in sorted(MEM.glob("*.md")):
         if f.name == "MEMORY.md":
             continue
@@ -85,6 +83,8 @@ def releve() -> dict:
         m[t] += 1
         if t == "feedback" and REVISE.search(txt):
             m["feedback_revises"] += 1
+        if t == "feedback" and (REVISE.search(txt) or len(set(DATE.findall(txt))) > 1):
+            m["feedback_revises_large"] += 1
         if t == "project" and len(set(DATE.findall(txt))) > 1:
             m["project_multidate"] += 1
     idx = MEM / "MEMORY.md"
