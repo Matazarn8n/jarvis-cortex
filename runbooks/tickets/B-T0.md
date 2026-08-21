@@ -1,10 +1,10 @@
 RÉPERTOIRE DE TRAVAIL : `/home/nuveo/hermes-os-plan-b`. Tout chemin relatif s'y
 résout, et tout fichier que tu produis doit y atterrir.
 
-# Ticket B-T0 — Le vérificateur : les quatre sondes de B, en un script
+# Ticket B-T0 — Le vérificateur : les cinq sondes de B, en un script
 
 **Modèle : `claude-opus-5` · effort : `high`.** Tu écris l'instrument qui juge
-les quatre tickets suivants. Une sonde permissive ne se voit pas : elle rend
+les cinq tickets suivants. Une sonde permissive ne se voit pas : elle rend
 `done` sur du code cassé, et le défaut ressort trois blocs plus loin.
 
 Tu écris ce vérificateur **avant** les modules qu'il juge. C'est délibéré : un
@@ -25,8 +25,8 @@ Ici tu n'as rien à ménager.
 
 ## Pourquoi un script et pas du YAML
 
-Un `check:` est un appel, pas un programme. Les quatre `check:` de ce runbook
-sont donc des lignes de la forme :
+Un `check:` est un appel, pas un programme. Les cinq `check:` de session de ce
+runbook sont donc des lignes de la forme :
 
 ```
 sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py <sonde> --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256 --module <artefact>) \
@@ -47,7 +47,7 @@ logique de contrôle a le droit de vivre.
 ## Interface
 
 ```
-sonde_b.py {contrat|decision|pont|entree|autotest} --facts <json> [--sceau <fichier>] [--racine <dir>] [--module <chemin>]
+sonde_b.py {contrat|decision|pont|entree|raccordement|autotest} --facts <json> [--sceau <fichier>] [--racine <dir>] [--module <chemin>] [--oracle <chemin>] [--moteur <dir>]
 ```
 
 - `--facts` porte la valeur de `$HERMES_TICKET_FACTS`. **Parse-la** (`json.loads`)
@@ -68,6 +68,10 @@ sonde_b.py {contrat|decision|pont|entree|autotest} --facts <json> [--sceau <fich
   à l'autre sans changer le module se voit tout de suite. C'est aussi ce qui
   rattache le compteur du `check:` à l'artefact du ticket. Absent, la sonde
   utilise son chemin attendu ; `contrat` et `autotest` l'ignorent.
+- `--moteur`, pour `raccordement` seul : la racine du dépôt **gouverné** à
+  observer, distincte de `--racine`. C'est un argument et non une constante pour
+  la même raison que `--oracle` : l'autotest doit pouvoir y pointer ses faux
+  moteurs. Le `check:` de B-T6 lui passe `/home/nuveo/hermes-os`.
 - **Sortie** : chaque sonde imprime des **grandeurs calculées** — jamais un « OK »
   constant, jamais un compte littéral. « 6/6 » codé en dur est un mensonge dès
   que la matrice en porte cinq. Sortie non nulle et message explicite en cas
@@ -370,6 +374,52 @@ fichiers du diff du ticket : cette non-régression borne le **contenu** de ces
 trois fichiers, elle n'est pas une whitelist du commit. La dette est déjà
 consignée en tête du runbook ; ne la maquille pas en garantie.
 
+## Sonde `raccordement` — juge B-T6, et c'est la seule qui sort de `repo:`
+
+Elle observe le dépôt **gouverné** que `--moteur` désigne — pas le worktree de B.
+C'est ce qui la rend infalsifiable : `governed_files()` y interdit l'écriture à
+toute session, donc rien de ce qu'elle constate là-bas n'a pu être fabriqué par
+le bloc. Elle n'écrit **rien** dans ce dépôt, et n'y importe rien en processus :
+tout ce qui exécute du code de là-bas passe par un sous-processus.
+
+Cinq axes, et deux d'entre eux existent parce qu'un audit a montré que leur
+absence laissait la boucle définitivement inerte :
+
+1. `cas_ok=moteur:parse` — `<moteur>/ops/plan_runner.py` s'analyse par
+   `ast.parse()`. Un fichier cassé s'arrête ici, avec sa `SyntaxError` en clair.
+2. `cas_ok=modules:presents` — `ops/verdict_regles.py`, `ops/brain_bridge.py` et
+   `ops/verdict_hook.py` existent **sous `<moteur>`** et s'y importent. B-T0 à
+   B-T4 les livrent dans le worktree, que le moteur ne lit pas ; sans cet axe,
+   un import paresseux tolérant à l'absence laisse le hook silencieusement mort
+   pour toujours. Importe-les en **sous-processus**
+   (`python -c "import ops.verdict_hook"`, `cwd=<moteur>`), pas dans le tien : un
+   module de gouvernance chargé dans le processus du contrôle y reste.
+3. `cas_ok=ancre:verdict_motif` — dans l'AST, une affectation dont une cible est
+   un `Subscript` d'indice littéral `verdict_motif`. Retiens sa `lineno`.
+4. `cas_ok=appel:apres_ancre` — dans l'AST, un nœud **`ast.Call`** dont la
+   fonction se nomme `injecter_regles` (`Name.id` ou `Attribute.attr`), dont la
+   `lineno` est **strictement supérieure** à celle de l'affectation de l'axe 3.
+   **Par l'AST, jamais par sous-chaîne** : c'est le défaut relevé par l'audit —
+   un `import injecter_regles`, un commentaire, une chaîne de caractères ou une
+   ligne de docstring portant ce nom satisfaisaient un `in` et ne sont pas des
+   appels. Imprime les deux `lineno` réellement trouvées.
+5. `cas_ok=invocation:dry_run` — lance en sous-processus, `cwd=<moteur>`, le
+   point d'entrée **installé là-bas** :
+   `python ops/verdict_hook.py --verdict NO_GO --rapport - --dry-run`, rapport
+   sur l'entrée standard. Exige le code **0** et un `feedback_` dans la sortie
+   réelle. Le dry-run ne mute rien : c'est la seule invocation qu'un contrôle
+   puisse se permettre sur la mémoire réelle, et elle suffit à distinguer un
+   module copié d'un module copié **et fonctionnel**.
+
+Ce qu'elle ne prouve **pas**, et ne prétends pas le contraire : qu'un verdict
+réel ait écrit une règle en production. Le moteur n'expose à aucun `check:` le
+moyen de l'observer — dette consignée en tête du runbook. Un appel posé dans une
+branche morte franchirait ces cinq axes. La preuve de bout en bout est
+l'exécution suivante d'un vrai gate.
+
+Imprime les grandeurs constatées — lignes du moteur, `lineno` de l'ancre et de
+l'appel, modules trouvés — jamais un verdict binaire.
+
 ## Contrat de SORTIE de la sonde — les `check:` en dépendent
 
 Chaque sous-commande écrit **sur stdout, et seulement en cas de succès** :
@@ -395,9 +445,10 @@ cibles :
 | `decision` | 6                 | un par verdict du domaine                        |
 | `pont`     | 13                | `oracle:epingle`, `.v1`, `.md`, `.v2` absent, index, `inchangee`, révision du `why`, index après révision (8 séquentiels) + les 5 axes concurrents |
 | `entree`   | 8                 | les 5 passes, les 2 CLI, la non-régression       |
-| `autotest` | 36                | 4 arbres valides + les 32 pièges énumérés plus bas |
+| `raccordement` | 5             | parse, modules installés, ancre AST, appel AST après l'ancre, dry-run |
+| `autotest` | 42                | 5 arbres valides + les 37 pièges énumérés plus bas |
 
-Ces cinq nombres sont ceux du YAML du runbook, et `tickets/B-T3.md` énumère les
+Ces six nombres sont ceux du YAML du runbook, et `tickets/B-T3.md` énumère les
 treize axes de `pont` un par un. Trois listes, un seul décompte : si tu en
 trouves une qui diverge, c'est un défaut à signaler, pas un choix à faire.
 
@@ -414,8 +465,8 @@ stdout les rendrait invisibles au moment où on en a besoin.
 
 **Et la porte de sortie, sans laquelle ce contrôle devient un blocage
 incorrigible.** La finalité de B est qu'un jour `injecter_regles` **apparaisse**
-dans `ops/plan_runner.py` — c'est la dette que l'Owner paiera à la main. Le jour
-où il la paie, une non-régression écrite naïvement ferait rougir la sonde sur son
+dans `ops/plan_runner.py` — c'est le geste de B-T5, que l'Owner pose à la main.
+Le jour où il le pose, une non-régression écrite naïvement ferait rougir la sonde sur son
 geste légitime, à chaque rejeu, ré-audit de chaîne ou maillon suivant qui
 réutilise cette sonde. Défaut déjà payé ici : le texte d'un runbook est lu comme
 une norme, et une norme absolue devient un blocage que personne ne peut lever.
@@ -439,10 +490,11 @@ Pour ce run : la sonde compare ces trois fichiers **octet à octet** à leur ver
 dans le `base_sha` fourni par `$HERMES_TICKET_FACTS`. Toute différence est un
 échec, quel que soit son contenu.
 
-La dette de raccordement ne disparaît pas pour autant : `injecter_regles` devra un
-jour être appelée depuis `ops/plan_runner.py:7327`, et c'est l'Owner qui posera
-cette ligne à la main. Elle est consignée en tête du runbook et dans son
-« Encore à Faire ». Ce qui change, c'est qu'elle cesse d'être auto-certifiable :
+Le raccordement ne disparaît pas pour autant, et ce n'est PAS une dette : c'est
+**B-T5**, un ticket humain du même runbook, où l'Owner installe les trois modules
+dans `/home/nuveo/hermes-os` puis y appelle `injecter_regles` depuis
+`ops/plan_runner.py` — et **B-T6**, un ticket de session, le constate ensuite par
+ta sonde `raccordement`. Ce qui change, c'est qu'il cesse d'être auto-certifiable :
 une exception future devra s'appuyer sur une preuve ANTÉRIEURE à la session — un
 sha épinglé avant son lancement — jamais sur un texte que la session peut
 produire. N'écris donc **aucune** route « avec marqueur, rend 0 » : sur cet axe,
@@ -490,14 +542,23 @@ minimum, et chacun doit être refusé :
   même sur `GO` ; un dont le chemin par défaut ne touche jamais le disque ;
   **une CLI qui imprime `echec…` mais sort quand même en 0** sur une racine
   impossible.
+- `raccordement` : un faux moteur **sans aucune** mention d'`injecter_regles` ;
+  **un où le nom n'apparaît qu'en `import` et en commentaire, sans aucun nœud
+  d'appel** — c'est le piège central, celui qu'un contrôle par sous-chaîne
+  laissait passer, et sans lui l'axe 4 ne vaudrait rien ; un où l'appel est
+  **avant** l'affectation de `ts["verdict_motif"]` ; un dépôt gouverné où l'un
+  des trois modules **manque** ; un où `ops/verdict_hook.py` est présent mais
+  **lève à l'import**, donc dont le dry-run sort non nul. Ces faux moteurs sont
+  des fichiers de quelques lignes écrits dans le temporaire, et
+  `--moteur <ce temporaire>` est justement ce qui les rend atteignables.
 
 Les faux modules sont de quelques lignes chacun, écrits dans le temporaire — ils
 ne sont pas commités ailleurs que dans le corps de `sonde_b.py`.
 
 **La sortie de l'autotest nomme les cas rejetés**, un par ligne au format
 `cas_ok=<nom>` du contrat de sortie ci-dessus — un arbre valide accepté et un
-piège refusé comptent chacun pour une ligne. Les trente-deux pièges énumérés
-ci-dessus plus les quatre arbres valides font le seuil de 36 ; en ajouter est
+piège refusé comptent chacun pour une ligne. Les trente-sept pièges énumérés
+ci-dessus plus les cinq arbres valides font le seuil de 42 ; en ajouter est
 bienvenu. Un autotest qui imprime « tout va bien » ne prouve rien ; celui qui
 nomme chaque piège refusé prouve que l'instrument mord.
 
@@ -533,13 +594,13 @@ python3 ops/checks/sonde_b.py autotest --facts '{}' | tee /dev/stderr | grep -c 
 
 `set -o pipefail` n'est pas décoratif : sans lui, le code de retour du pipeline
 est celui de `grep`, et un autotest qui **échoue** après avoir imprimé trente
-lignes afficherait quand même « 36 » et te laisserait croire que c'est passé. Le
+lignes afficherait quand même son compte et te laisserait croire que c'est passé. Le
 `&&` ne l'est pas davantage : sur deux commandes séparées, le statut de la
 séquence est celui de la dernière, et un `sha256sum -c` vert reverdirait un
 autotest rouge. C'est du Bash — lance donc ce bloc sous `bash`, pas sous `sh`.
 
 Colle les deux sorties dans ton message de fin. La première doit lister les cas
-cassés refusés et finir sur un compte **≥ 36** — en dessous, le `check:` de ce
+cassés refusés et finir sur un compte **≥ 42** — en dessous, le `check:` de ce
 ticket échouera ; la seconde doit dire `ops/checks/sonde_b.py: OK`, ce qui exige
 que le sceau soit au format standard décrit plus haut.
 

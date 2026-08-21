@@ -9,15 +9,25 @@
 # rien n'est perdu).
 #
 # CE QUE B NE FAIT PAS, ET IL FAUT LE LIRE AVANT LE RESTE : aucune SESSION de ce
-# bloc n'écrit la ligne qui referme la boucle. Le dernier fil — l'appel posé dans
+# bloc n'écrit la ligne qui referme la boucle. Le dernier fil — l'installation des
+# trois modules dans `/home/nuveo/hermes-os` puis l'appel posé dans
 # `ops/plan_runner.py` juste après l'affectation de `ts["verdict_motif"]` — n'est
 # pas un ticket de session, parce qu'une session de plan ne modifie jamais un
 # fichier de gouvernance. Il n'est pas non plus une dette muette : c'est B-T5, un
-# ticket `kind: human` que l'Owner exécute à la main sur `/home/nuveo/hermes-os`,
-# et dont le `check:` imprime les lignes réellement trouvées dans le moteur — pas
-# un marqueur, pas une déclaration. La boucle est donc close par le runbook, mais
-# par une main humaine, et le plan ne peut pas finir `done` sans que ce geste ait
-# été posé et constaté.
+# ticket `kind: human` que l'Owner exécute à la main sur `/home/nuveo/hermes-os`.
+#
+# ET B-T5 NE SE CONSTATE PAS LUI-MÊME. Un ticket `kind: human` est fermé par une
+# approbation, et le runner n'exécute PAS le `check:` d'un ticket approuvé : un
+# clic suffisait donc à finir le plan `done` sur une boucle restée ouverte —
+# exactement le défaut que B-T5 prétendait fermer, déplacé d'un cran. Le `check:`
+# de B-T5 reste écrit, parce qu'il est le mode d'emploi de la vérification et
+# qu'il tourne si l'Owner le lance, mais la PREUVE est ailleurs : c'est B-T6, un
+# ticket de SESSION dépendant de B-T5, dont le `check:` relit le dépôt gouverné
+# par l'AST — pas par sous-chaîne — et exerce le point d'entrée installé là-bas en
+# dry-run. Une session ne peut ni écrire dans `/home/nuveo/hermes-os`, ni fabriquer
+# un nœud d'appel dans un fichier qu'elle n'a pas le droit de toucher : le constat
+# est donc infalsifiable par le bloc, et le plan ne peut pas finir `done` sans que
+# le geste ait été posé ET observé.
 #
 # PÉRIMÈTRE — aucune SESSION de B ne touche un fichier de gouvernance du moteur.
 # Les trois fichiers `ops/plan_runner.py`, `ops/plan_doctor.py` et
@@ -25,22 +35,27 @@
 # `base_sha` : B livre un vérificateur, trois modules neufs et un point d'entrée
 # en ligne de commande. Seul B-T5, humain, touche le moteur — et il le touche
 # hors du worktree, sur le dépôt gouverné, où aucune session ne peut écrire.
+# B-T6 y revient, mais en LECTURE seule : il analyse, importe et exerce en
+# dry-run. C'est précisément parce qu'il ne peut rien y écrire que ce qu'il y
+# constate vaut preuve.
 #
 # LES CONTRÔLES SONT UN LIVRABLE, PAS DU YAML. B-T0 écrit `ops/checks/sonde_b.py`
-# et son sceau ; les quatre `check:` de session suivants sont un appel d'une
-# ligne. Le seul qui ne passe pas par la sonde est celui de B-T5 : il vise un
-# dépôt AUTRE que `repo:`, que la sonde n'a aucune raison de connaître, et tient
-# en dix lignes. C'est la règle des quinze lignes, tenue et non pas exemptée :
-# aucun `check:` de ce runbook ne porte de programme.
+# et son sceau ; les CINQ `check:` de session suivants sont un appel d'une ligne.
+# Le seul qui ne passe pas par la sonde est celui de B-T5 — le ticket humain, que
+# le runner n'exécute de toute façon pas : il tient en dix lignes et sert de mode
+# d'emploi. La sonde, elle, sait viser un dépôt autre que `repo:` : son
+# sous-commande `raccordement` prend `--moteur`, et c'est elle qui porte la preuve
+# en B-T6. C'est la règle des quinze lignes, tenue et non pas exemptée : aucun
+# `check:` de ce runbook ne porte de programme.
 #
-# ET CHACUN DES QUATRE REJOUE L'AUTOTEST AVANT SA PROPRE SONDE. Un runbook ne
+# ET CHACUN DES CINQ REJOUE L'AUTOTEST AVANT SA PROPRE SONDE. Un runbook ne
 # peut pas épingler le sha256 d'un script que l'un de ses tickets crée (dette
 # ci-dessous) : le sceau et la sonde naissent ensemble en B-T0, et une session
 # aval qui amputerait la sonde pour se faire accepter n'aurait qu'à refaire le
 # sceau. Le rejeu ferme ce trou par le comportement au lieu du condensat — les
-# 36 cas de l'autotest construisent des arbres cassés et EXIGENT leur refus, donc
+# 42 cas de l'autotest construisent des arbres cassés et EXIGENT leur refus, donc
 # une sonde adoucie tombe là, avant d'avoir jugé quoi que ce soit. Reste hors de
-# portée le cas d'une session qui fabriquerait 36 fausses lignes `cas_ok=` : ça
+# portée le cas d'une session qui fabriquerait 42 fausses lignes `cas_ok=` : ça
 # n'est plus de la négligence, c'est un faux délibéré, et le modèle de menace du
 # bloc s'arrête avant.
 #
@@ -49,7 +64,8 @@
 # échouerait sur `.v1` absent — c'est le bon signal, pas un faux négatif.
 #
 # DETTES MOTEUR (une ligne chacune, hors périmètre des tickets ci-dessous) :
-# dette: le moteur n'expose à aucun `check:` le moyen d'observer qu'un verdict a RÉELLEMENT déclenché une écriture de règle en production ; le `check:` de B-T5 se borne donc à constater la présence de l'appel dans `ops/plan_runner.py`, et c'est l'exécution suivante d'un gate qui vaudra preuve de bout en bout.
+# dette: le moteur n'expose à aucun `check:` le moyen d'observer qu'un verdict a RÉELLEMENT déclenché une écriture de règle en production ; le `check:` de B-T6 va donc aussi loin qu'un contrôle peut aller — nœud d'appel prouvé par l'AST, modules importables depuis le dépôt gouverné, point d'entrée exercé en dry-run — et c'est l'exécution suivante d'un vrai gate qui vaudra preuve de bout en bout.
+# dette: le runner n'exécute PAS le `check:` d'un ticket `kind: human` — l'approbation le ferme. Un bloc ne peut donc rien constater par un ticket humain seul ; B contourne en faisant suivre B-T5 d'un ticket de SESSION (B-T6) dont le `check:` observe le dépôt gouverné, et la vraie correction — une action d'approbation qui exécute son contrôle — est un changement du moteur, hors périmètre.
 # dette: un runbook ne peut pas épingler le sha256 d'un script que l'un de ses propres tickets crée — le condensat n'existe pas à l'écriture ; à défaut, le sceau `ops/checks/sonde_b.sha256` et le rejeu de l'autotest par chacun des quatre `check:` aval (ci-dessus) tiennent la sonde par son comportement, et l'épinglage littéral resterait à faire le jour où le moteur saurait produire la sonde dans un bloc antérieur.
 # dette: le runner ne borne pas les écritures d'un `check:` hors `repo:` — les sondes B-T3 et B-T4 écrivent dans un `tempfile.mkdtemp()` propre à l'exécution, hors de ce dépôt, effacé dans un `finally`.
 # dette: aucun `check:` ne peut lire la liste des fichiers du diff du ticket ; la non-régression de périmètre se borne donc au contenu des trois fichiers de gouvernance, pas à une whitelist du commit.
@@ -73,9 +89,10 @@ repo: /home/nuveo/hermes-os-plan-b
 description: >-
   Outiller la réinjection verdict → règle jusqu'à un point d'entrée appelable :
   contrat, décision pure, pont vers le régime procédural versionné de M-T1, CLI.
-  Aucune session ne touche un fichier de gouvernance ; le raccordement du moteur
-  est le ticket humain B-T5, que l'Owner pose à la main et dont le contrôle
-  imprime les lignes trouvées dans le moteur gouverné.
+  Aucune session ne touche un fichier de gouvernance ; l'installation des modules
+  et le raccordement sont le ticket humain B-T5, que l'Owner pose à la main, et
+  B-T6 — un ticket de session — les constate ensuite par l'AST du moteur gouverné
+  et une invocation en dry-run, parce qu'une approbation n'exécute aucun check.
 
 requires_access:
   - file: /home/nuveo/hermes-os-plan-b/.git
@@ -97,7 +114,7 @@ tickets:
 
   - id: B-T0
     kind: session
-    title: Le vérificateur — les quatre sondes de B, en un script, et son autotest
+    title: Le vérificateur — les cinq sondes de B, en un script, et son autotest
     why: >-
       Un contrôle empaqueté en one-liners YAML n'est ni relu, ni testé, ni
       corrigeable : c'est ce qui a fait passer, ailleurs, des sondes qui
@@ -108,7 +125,7 @@ tickets:
     effort: high
     codex_gate: true
     max_budget_usd: 3.00
-    # Le ticket le plus long du bloc : un script, ses 36 cas d'autotest, un
+    # Le ticket le plus long du bloc : un script, ses 42 cas d'autotest, un
     # sceau. Bornes explicites — les défauts du moteur (120 tours, 90 min)
     # laissent une session égarée brûler le budget avant de buter dessus.
     max_turns: 70
@@ -123,7 +140,7 @@ tickets:
     # vérificateur permissif — celui qui aurait laissé passer les défauts de
     # l'audit — échoue ici, avant d'avoir servi.
     # La QUANTITÉ mesurée est le nombre de lignes `cas_ok=` que l'autotest émet,
-    # une par piège réellement construit puis refusé (B-T0.md en énumère 36 au
+    # une par piège réellement construit puis refusé (B-T0.md en énumère 42 au
     # minimum) : un vérificateur amputé de ses cas cassés n'atteint pas le
     # seuil, là où un `test -s` sur le script l'aurait laissé passer. stderr
     # n'est PAS capturé — un échec doit rester lisible dans le journal du
@@ -137,7 +154,7 @@ tickets:
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 36
+      && test "$cas" -ge 42
       && echo "$sortie"
       && echo "B-T0 sonde=autotest cas_ok=${cas}"
 
@@ -181,7 +198,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 36
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py contrat
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
@@ -221,7 +238,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 36
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py decision
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/verdict_regles.py)
@@ -294,7 +311,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 36
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/brain_bridge.py
@@ -342,7 +359,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 36
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py entree
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/verdict_hook.py)
@@ -353,13 +370,14 @@ tickets:
 
   - id: B-T5
     kind: human
-    title: Raccorder le moteur — l'appel après `ts["verdict_motif"]`, posé à la main
+    title: Installer les modules et raccorder le moteur, à la main
     why: >-
-      Sans ce geste, B livre quatre modules et aucun verdict n'écrit jamais de
-      règle : le bloc s'appellerait « boucle » sans en être une. Il est HUMAIN
-      parce qu'une session de plan ne modifie pas un fichier de gouvernance — et
-      il est un TICKET, pas une dette, parce qu'une dette en commentaire laisse
-      le plan finir `done` sur une boucle ouverte, défaut déjà payé ici.
+      Sans ce geste, B livre quatre modules dans un worktree que le moteur ne lit
+      pas, et aucun verdict n'écrit jamais de règle : le bloc s'appellerait
+      « boucle » sans en être une. Il est HUMAIN parce qu'une session de plan ne
+      modifie pas un fichier de gouvernance — et il est un TICKET, pas une dette,
+      parce qu'une dette en commentaire laisse le plan finir `done` sur une
+      boucle ouverte, défaut déjà payé ici.
     codex_gate: true
     depends_on: [B-T4]
     # `model:` INERTE, et déclaré quand même. Un ticket `kind: human` n'ouvre
@@ -373,14 +391,20 @@ tickets:
     # Aucun `produces:` — ce ticket ne livre pas un artefact de `repo:`, il pose
     # une ligne dans un AUTRE dépôt. Le déclarer ferait chercher au moteur un
     # fichier qui n'apparaîtra jamais ici.
-    # Aucun `model:` ni `effort:` : il n'y a pas de session, donc pas de modèle.
-    # Le contrôle observe le dépôt GOUVERNÉ `/home/nuveo/hermes-os`, pas le
-    # worktree de B — `governed_files()` y interdit l'écriture à toute session,
-    # ce qui rend l'observation infalsifiable par le bloc lui-même. Il imprime
-    # les numéros de ligne réellement trouvés (sortie réelle, jamais un exit 0
-    # seul) et exige que l'appel tombe APRÈS l'ancre `verdict_motif`, jamais
-    # avant. Un appel posé mais inatteignable resterait invisible ici : c'est la
-    # borne de ce contrôle, et la dette en tête du runbook la nomme.
+    # CE `check:` N'EST PAS LA PREUVE DU BLOC, et il ne faut pas le lire comme
+    # telle : le runner ferme un ticket `kind: human` sur l'APPROBATION et
+    # n'exécute pas son `check:` (dette en tête du runbook). Il reste écrit parce
+    # qu'il est le mode d'emploi de la vérification — l'Owner peut le coller dans
+    # un terminal — et parce qu'un ticket sans `check:` n'apprend rien à qui le
+    # relit. La preuve exécutée, elle, est celle de B-T6.
+    # Il observe le dépôt GOUVERNÉ `/home/nuveo/hermes-os`, pas le worktree de B —
+    # `governed_files()` y interdit l'écriture à toute session, ce qui rend
+    # l'observation infalsifiable par le bloc lui-même. Il imprime les numéros de
+    # ligne réellement trouvés (sortie réelle, jamais un exit 0 seul) et exige que
+    # l'appel tombe APRÈS l'ancre `verdict_motif`, jamais avant. Sa borne est
+    # nommée : il travaille par sous-chaîne, donc un import ou un commentaire
+    # portant `injecter_regles` le satisferait. C'est B-T6 qui exige un vrai nœud
+    # d'appel, par l'AST.
     check: >-
       "$HERMES_CHECK_PYTHON" -c "import json, os, pathlib, sys;
       p = os.environ.get('HERMES_TICKET_FACTS');
@@ -392,3 +416,55 @@ tickets:
       print('moteur_lignes=%d ancres_verdict_motif=%s appels_injecter_regles=%s'
       % (len(src), ancres, appels));
       sys.exit(0 if appels and ancres and max(appels) > min(ancres) else 1)"
+
+  - id: B-T6
+    kind: session
+    title: Constater le raccordement — AST du moteur gouverné, et une invocation réelle
+    why: >-
+      Le runner ferme un ticket `kind: human` sur approbation SANS exécuter son
+      `check:` : sans ce ticket-ci, un clic sur B-T5 finissait le plan `done`
+      alors que rien n'avait bougé dans `/home/nuveo/hermes-os`. B-T6 rend le
+      geste de B-T5 observable par une exécution que personne n'approuve, et il
+      le fait sur un dépôt où aucune session ne peut écrire — donc où le bloc ne
+      peut pas se donner raison à lui-même.
+    # Lookup et rédaction courte : la session lit, constate, note. Toute la
+    # substance est dans le `check:`, que la session ne peut pas influencer.
+    model: claude-haiku-4-5
+    effort: low
+    codex_gate: true
+    depends_on: [B-T5]
+    max_budget_usd: 1.00
+    max_turns: 20
+    timeout_minutes: 20
+    prompt_file: tickets/B-T6.md
+    produces:
+      - docs/plans/2026-08-21-b-raccordement-constate.md
+    # La sonde `raccordement` vise `--moteur`, un dépôt AUTRE que `repo:`, et y
+    # exerce cinq axes que la session ne peut ni écrire ni fabriquer :
+    #  1. `moteur:parse` — `ops/plan_runner.py` s'analyse en AST ;
+    #  2. `modules:presents` — les trois modules de B sont importables DEPUIS le
+    #     dépôt gouverné. C'est le trou nommé par l'audit : B-T0..B-T4 livrent
+    #     dans le worktree, et un import paresseux tolérant à l'absence laissait
+    #     le hook définitivement inerte sans que rien ne rougisse ;
+    #  3. `ancre:verdict_motif` — l'affectation de `ts["verdict_motif"]` est un
+    #     nœud d'affectation réel, localisé par l'AST ;
+    #  4. `appel:apres_ancre` — un nœud `Call` sur `injecter_regles` existe et sa
+    #     ligne est APRÈS celle de l'affectation. Par l'AST, jamais par
+    #     sous-chaîne : un import, un commentaire ou une chaîne de caractères
+    #     portant ce nom ne sont pas des appels et ne passent pas ;
+    #  5. `invocation:dry_run` — le point d'entrée INSTALLÉ dans le dépôt
+    #     gouverné est exercé en dry-run, en sous-processus, et sa sortie réelle
+    #     porte un slug. Un module copié mais cassé à l'import tombe ici.
+    # Aucune écriture dans `/home/nuveo/hermes-os` : le dry-run ne mute rien, et
+    # `governed_files()` l'interdirait de toute façon à cette session.
+    check: >-
+      auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      --facts "$HERMES_TICKET_FACTS")
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py raccordement
+      --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
+      --moteur /home/nuveo/hermes-os)
+      && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
+      && test "$cas" -ge 5
+      && echo "$sortie"
+      && echo "B-T6 sonde=raccordement cas_ok=${cas}"

@@ -44,6 +44,13 @@ MEM = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
 # ambiguïté dans la seule métrique qui repose sur une trace ATTESTÉE. La rubrique
 # 2 borne donc son chiffre par le bas — « au moins 36 » — ce qui est la forme
 # correcte d'un compte de traces volontaires.
+#
+# REDEMANDÉ au tour du 2026-08-21, refusé pour les mêmes raisons, plus une : la
+# session de ce tour n'a ni Bash ni accès au dossier de mémoire. Élargir le motif
+# ici publierait donc un chiffre que PERSONNE n'aurait recalculé. Si la mesure
+# élargie est voulue, le geste juste est de relancer ce script hors session,
+# comme au ticket M-T0, et de dater un second reçu — pas de retoucher un compte à
+# l'aveugle dans un document qui l'affirme.
 REVISE = re.compile(r"mis[e]?\s+[àa]\s+jour|R[ÉE]VOQU|CORRECTION|corrig[ée]", re.I)
 DATE = re.compile(r"\b20\d\d-\d\d-\d\d\b")
 
@@ -58,7 +65,20 @@ def releve() -> dict:
     for f in sorted(MEM.glob("*.md")):
         if f.name == "MEMORY.md":
             continue
-        txt = f.read_text(encoding="utf-8", errors="ignore")
+        # Décodage STRICT. `errors="ignore"` avalait un octet invalide et
+        # rendait un texte amputé : les motifs ci-dessous cherchaient alors dans
+        # un contenu qui n'était pas celui du fichier, et le reçu publiait des
+        # agrégats plausibles mais faux. Une étape de données qui ne sait pas
+        # lire doit échouer, pas deviner.
+        try:
+            txt = f.read_text(encoding="utf-8")
+        except UnicodeDecodeError as e:
+            # Le nom du fichier ne part PAS dans le message : ce script imprime
+            # sur un terminal dont la sortie est collée dans des rapports. Le
+            # rang dans l'ordre trié suffit à le retrouver à la main.
+            rang = sorted(MEM.glob("*.md")).index(f)
+            raise SystemExit(f"ECHEC: fichier de memoire illisible en utf-8 "
+                             f"(rang {rang} dans l'ordre trie): {e}")
         mt = re.search(r"^\s*type:\s*\"?(user|feedback|project|reference)\"?\s*$",
                        txt[:1500], re.M)
         t = mt.group(1) if mt else "sans_type"
@@ -68,7 +88,16 @@ def releve() -> dict:
         if t == "project" and len(set(DATE.findall(txt))) > 1:
             m["project_multidate"] += 1
     idx = MEM / "MEMORY.md"
-    idx_txt = idx.read_text(encoding="utf-8") if idx.is_file() else ""
+    # Un index ABSENT n'est pas un index vide. La rubrique 4 du constat compte
+    # des lignes, des pointeurs morts et des fichiers non indexés : sans
+    # `MEMORY.md`, ces trois chiffres seraient 0, `fichiers_total` et rien de
+    # plus — un corpus « parfaitement non indexé » et un corpus dont l'index a
+    # disparu deviendraient indiscernables. Échouer ici est la seule lecture
+    # honnête.
+    if not idx.is_file():
+        raise SystemExit(f"ECHEC: index introuvable, la rubrique 4 n'est pas "
+                         f"mesurable: {idx}")
+    idx_txt = idx.read_text(encoding="utf-8")
     pointeurs = set(re.findall(r"\(([A-Za-z0-9_.,-]+\.md)\)", idx_txt))
     presents = {p.name for p in MEM.glob("*.md")} - {"MEMORY.md"}
     m["index_pointeurs_morts"] = len(pointeurs - presents - {"MEMORY.md"})

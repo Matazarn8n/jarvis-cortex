@@ -258,8 +258,12 @@ question, alors que la consigne lui impose de le faire plutôt que de supposer.
 ## Conséquence sur la suite
 
 Le runbook B — `runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml`
-— et ses six prompts sont écrits (cinq tickets de session, plus le ticket humain
-B-T5 qui raccorde le moteur). Le régime procédural sur lequel B s'appuie a
+— et ses sept prompts sont écrits : six tickets de session, plus le ticket humain
+B-T5, où l'Owner installe les modules dans le dépôt gouverné et y pose l'appel.
+Le sixième ticket de session, B-T6, existe parce que le runner ferme un ticket
+humain sur approbation **sans** exécuter son `check:` — c'est lui qui constate le
+geste de B-T5, par l'AST du moteur gouverné, dans une exécution que personne
+n'approuve. Le régime procédural sur lequel B s'appuie a
 été lu dans le code livré par M-T1 (`brain.js`, remplacement versionné en
 `<base>.vN.md` pour `--type feedback`), pas supposé.
 

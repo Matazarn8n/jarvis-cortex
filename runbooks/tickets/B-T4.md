@@ -30,8 +30,8 @@ trois fichiers de gouvernance doivent sortir de ton ticket **identiques octet
 pour octet** à ce qu'ils étaient à son `base_sha`. C'est le seul énoncé du
 contrat, et il n'y en a pas d'autre : ce qui est interdit est que **tu** les
 changes, pas que ces noms y figurent un jour. Un contrôle d'absence absolue
-dirait la seconde chose, et deviendrait un blocage le jour où l'Owner paiera la
-dette de raccordement — voir juste en dessous.
+dirait la seconde chose, et deviendrait un blocage le jour où l'Owner posera le
+raccordement de B-T5 — voir juste en dessous.
 
 Sache exactement ce que cela vaut, et ne compte pas sur plus. Un `check:` ne peut
 pas lire la liste des fichiers du diff de ton ticket — la capacité n'existe pas
@@ -207,8 +207,18 @@ Puis elle lance la CLI en sous-processus **deux fois** :
    exerce le chemin de mutation *à travers la CLI* : sans elle, un `main()` qui
    imprime `echec…` puis sort en 0 passait le contrôle sans que rien ne le dise.
 
-Enfin elle lit les trois fichiers de gouvernance et exige qu'aucun ne mentionne
-`injecter_regles`, `regles_depuis_verdict` ni `ecrire_regle`.
+Enfin elle lit les trois fichiers de gouvernance — `ops/plan_runner.py`,
+`ops/plan_doctor.py`, `ops/plan_factory.py` — et exige qu'ils soient
+**identiques octet pour octet** à leur version au `base_sha` que porte
+`$HERMES_TICKET_FACTS`. C'est le seul énoncé, et il n'en existe pas d'autre :
+elle **n'exige pas** l'absence des symboles `injecter_regles`,
+`regles_depuis_verdict` ou `ecrire_regle`. Ce serait incompatible avec la
+finalité de B, dont B-T5 fait justement apparaître `injecter_regles` dans
+`ops/plan_runner.py` ; une fois cette ligne commitée, elle est dans le `base_sha`
+des tickets suivants et la comparaison repart de là, verte d'elle-même. Une
+absence absolue, elle, rougirait pour toujours sur un geste légitime. Ce que la
+sonde te dit ici est « ce ticket ne les a pas changés », jamais « ces symboles
+n'y figurent pas ».
 
 Le cas 2 est un test de mutation : un chemin qui écrit toujours échoue. Le cas 3
 aussi : un `try/except: pass` échoue. Le cas 4 en est un troisième, et c'est le

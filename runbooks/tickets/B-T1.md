@@ -26,9 +26,11 @@ d'une décision ne peut pas atteindre le seuil.
 `ops/plan_runner.py` fait passer chaque ticket par un gate Codex. Le gate rend un
 verdict et un rapport de findings. Quand un défaut est réel, la règle qui devrait
 en découler est écrite **à la main, après coup, si quelqu'un y pense** — et le
-plus souvent personne n'y pense. B outille cette réinjection de bout en bout —
-jusqu'au point d'entrée CLI de B-T4 ; le dernier fil, l'appel posé dans le
-moteur, reste une dette que l'Owner paie à la main (voir plus bas).
+plus souvent personne n'y pense. B outille cette réinjection de bout en bout :
+les sessions vont jusqu'au point d'entrée CLI de B-T4, puis **B-T5** — un ticket
+`kind: human`, obligatoire, pas une dette — installe les modules dans le dépôt
+gouverné et y pose l'appel, et **B-T6** le constate. Écris le contrat en le
+sachant : la chaîne que tu documentes doit être celle-là.
 
 Le magasin de règles est `brain.js` (dépôt jarvis-cortex), commande
 `node brain.js store "<fait>" --type feedback --name <slug> --why "<pourquoi>"`.
@@ -50,10 +52,13 @@ remplacé. Rien n'est perdu, mais rien n'est fusionné non plus.
   `ts["verdict_motif"] = motif_verdict` (vers la ligne 7327) et avant le
   branchement sur `verdict` est le bon : à cet endroit le verdict est stable et
   recalibré, le rapport est complet, et `save_state` n'a pas encore été appelé.
-  Aucun ticket de B ne pose cet appel : une session de plan **ne modifie jamais**
-  un fichier de gouvernance du moteur. Le contrat consigne donc ce raccordement
-  en **dette**, nommément, avec le nom de la fonction à appeler et sa signature ;
-  B s'arrête au point d'entrée CLI livré par B-T4, que l'Owner branche ensuite.
+  Aucune SESSION de B ne pose cet appel : une session de plan **ne modifie
+  jamais** un fichier de gouvernance du moteur. Le contrat décrit donc ce
+  raccordement comme l'**étape obligatoire B-T5** — nommément, avec le nom de la
+  fonction à appeler et sa signature — et non comme une dette : c'est un ticket
+  `kind: human` du même runbook, suivi de **B-T6** qui le constate par l'AST du
+  dépôt gouverné. N'écris nulle part que B « s'arrête » à B-T4 : les sessions
+  s'y arrêtent, le bloc non.
 - Le module ne shelle **jamais** vers `node` aujourd'hui : `_run_bounded()`
   (l. 2882) est la primitive `Popen` unique. Aucune constante ne désigne
   `brain.js` ni le magasin de mémoire — tout est à créer.
@@ -249,6 +254,12 @@ Le `check:` de ton ticket est un appel d'une ligne à la sonde `contrat` de
 `verdict_motif`, `GO_AVEC_RESERVES`, `NO_VERDICT`, `REVIEWER_DOWN`, `brain.js`,
 `sha256`, `idempotence`, `MEMORY.md` et `dette`, et l'absence de la formule
 interdite. Sur la matrice : les règles de forme ci-dessus, toutes.
+
+L'ancre `dette` ne désigne **plus** le raccordement, qui est devenu le ticket
+B-T5 : les dettes qui restent à consigner sont celles du moteur, en tête du
+runbook — `brain.js` indexe sans verrou, aucun `check:` ne lit la liste des
+fichiers du diff, et aucun ne peut observer qu'un verdict a réellement écrit une
+règle en production. Nomme celles qui touchent ton contrat, pas les autres.
 
 Ces ancres restent un plancher faible — elles se satisfont d'un document qui les
 mentionne sans rien trancher. **C'est le bloc `decisions` qui porte la substance,
