@@ -1,0 +1,515 @@
+# Bloc B — la boucle « verdict de gate → règle de mémoire ».
+#
+# Aujourd'hui un gate Codex rend un verdict, un défaut est constaté, et la règle
+# qui en découle est écrite À LA MAIN, plus tard, si quelqu'un y pense. B OUTILLE
+# la réinjection : il livre la chaîne complète — contrat, décision, pont, point
+# d'entrée appelable — qui écrit une règle via `brain.js store --type feedback`,
+# donc au régime procédural versionné posé en M-T1 (brain.js:197-206 — un
+# `feedback` réécrit copie l'ancien en `<base>.vN.md` avant d'être remplacé ;
+# rien n'est perdu).
+#
+# CE QUE B NE FAIT PAS, ET IL FAUT LE LIRE AVANT LE RESTE : aucune SESSION de ce
+# bloc n'écrit la ligne qui referme la boucle. Le dernier fil — l'installation des
+# trois modules dans `/home/nuveo/hermes-os` puis l'appel posé dans
+# `ops/plan_runner.py` juste après l'affectation de `ts["verdict_motif"]` — n'est
+# pas un ticket de session, parce qu'une session de plan ne modifie jamais un
+# fichier de gouvernance. Il n'est pas non plus une dette muette : c'est B-T5, un
+# ticket `kind: human` que l'Owner exécute à la main sur `/home/nuveo/hermes-os`.
+#
+# ET B-T5 NE SE CONSTATE PAS LUI-MÊME. Un ticket `kind: human` est fermé par une
+# approbation, et le runner n'exécute PAS le `check:` d'un ticket approuvé : un
+# clic suffisait donc à finir le plan `done` sur une boucle restée ouverte —
+# exactement le défaut que B-T5 prétendait fermer, déplacé d'un cran. Le `check:`
+# de B-T5 reste écrit, parce qu'il est le mode d'emploi de la vérification et
+# qu'il tourne si l'Owner le lance, mais la PREUVE est ailleurs : c'est B-T6, un
+# ticket de SESSION dépendant de B-T5, dont le `check:` relit le dépôt gouverné
+# par l'AST — pas par sous-chaîne — et exerce le point d'entrée installé là-bas en
+# dry-run. Une session ne peut ni écrire dans `/home/nuveo/hermes-os`, ni fabriquer
+# un nœud d'appel dans un fichier qu'elle n'a pas le droit de toucher : le constat
+# est donc infalsifiable par le bloc, et le plan ne peut pas finir `done` sans que
+# le geste ait été posé ET observé.
+#
+# PÉRIMÈTRE — aucune SESSION de B ne touche un fichier de gouvernance du moteur.
+# Les trois fichiers `ops/plan_runner.py`, `ops/plan_doctor.py` et
+# `ops/plan_factory.py` sortent de B-T0 à B-T4 identiques octet pour octet à leur
+# `base_sha` : B livre un vérificateur, trois modules neufs et un point d'entrée
+# en ligne de commande. Seul B-T5, humain, touche le moteur — et il le touche
+# hors du worktree, sur le dépôt gouverné, où aucune session ne peut écrire.
+# B-T6 y revient, mais en LECTURE seule : il analyse, importe et exerce en
+# dry-run. C'est précisément parce qu'il ne peut rien y écrire que ce qu'il y
+# constate vaut preuve.
+#
+# LES CONTRÔLES SONT UN LIVRABLE, PAS DU YAML. B-T0 écrit `ops/checks/sonde_b.py`
+# et son sceau ; les CINQ `check:` de session suivants sont un appel d'une ligne.
+# Le seul qui ne passe pas par la sonde est celui de B-T5 — le ticket humain, que
+# le runner n'exécute de toute façon pas : il tient en dix lignes et sert de mode
+# d'emploi. La sonde, elle, sait viser un dépôt autre que `repo:` : son
+# sous-commande `raccordement` prend `--moteur`, et c'est elle qui porte la preuve
+# en B-T6. C'est la règle des quinze lignes, tenue et non pas exemptée : aucun
+# `check:` de ce runbook ne porte de programme.
+#
+# ET CHACUN DES CINQ REJOUE L'AUTOTEST AVANT SA PROPRE SONDE. Un runbook ne
+# peut pas épingler le sha256 d'un script que l'un de ses tickets crée (dette
+# ci-dessous) : le sceau et la sonde naissent ensemble en B-T0, et une session
+# aval qui amputerait la sonde pour se faire accepter n'aurait qu'à refaire le
+# sceau. Le rejeu ferme ce trou par le comportement au lieu du condensat — les
+# 42 cas de l'autotest construisent des arbres cassés et EXIGENT leur refus, donc
+# une sonde adoucie tombe là, avant d'avoir jugé quoi que ce soit. Reste hors de
+# portée le cas d'une session qui fabriquerait 42 fausses lignes `cas_ok=` : ça
+# n'est plus de la négligence, c'est un faux délibéré, et le modèle de menace du
+# bloc s'arrête avant.
+#
+# PRÉREQUIS, DEVENU UN TICKET : le régime versionné vit sur la branche de plan M,
+# et le jarvis-cortex canonique ne le porte pas (`grep .v1` = 0 le 2026-08-21).
+# La sonde B-T3 échouerait donc sur `.v1` absent à CHAQUE tour — bon signal, mais
+# panne garantie tant que personne ne fusionne. C'est B-TM, ticket humain placé
+# avant B-T3, qui porte ce geste ; B-T3 en `depends_on`.
+#
+# DETTES MOTEUR (une ligne chacune, hors périmètre des tickets ci-dessous) :
+# dette: le moteur n'expose à aucun `check:` le moyen d'observer qu'un verdict a RÉELLEMENT déclenché une écriture de règle en production ; le `check:` de B-T6 va donc aussi loin qu'un contrôle peut aller — nœud d'appel prouvé par l'AST, modules importables depuis le dépôt gouverné, point d'entrée exercé en dry-run — et c'est l'exécution suivante d'un vrai gate qui vaudra preuve de bout en bout.
+# dette: le runner n'exécute PAS le `check:` d'un ticket `kind: human` — l'approbation le ferme. Un bloc ne peut donc rien constater par un ticket humain seul ; B contourne en faisant suivre B-T5 d'un ticket de SESSION (B-T6) dont le `check:` observe le dépôt gouverné, et la vraie correction — une action d'approbation qui exécute son contrôle — est un changement du moteur, hors périmètre.
+# dette: un runbook ne peut pas épingler le sha256 d'un script que l'un de ses propres tickets crée — le condensat n'existe pas à l'écriture ; à défaut, le sceau `ops/checks/sonde_b.sha256` et le rejeu de l'autotest par chacun des quatre `check:` aval (ci-dessus) tiennent la sonde par son comportement, et l'épinglage littéral resterait à faire le jour où le moteur saurait produire la sonde dans un bloc antérieur.
+# dette: le runner ne borne pas les écritures d'un `check:` hors `repo:` — les sondes B-T3 et B-T4 écrivent dans un `tempfile.mkdtemp()` propre à l'exécution, hors de ce dépôt, effacé dans un `finally`.
+# dette: aucun `check:` ne peut lire la liste des fichiers du diff du ticket ; la non-régression de périmètre se borne donc au contenu des trois fichiers de gouvernance, pas à une whitelist du commit.
+# dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas, et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
+# dette: `brain.js` ne prend aucun verrou pour indexer — un écrivain qui l'appelle directement et dont l'ajout tombe entre la dernière vérification de `os.stat()` du pont et son `os.replace()` perd sa ligne ; fermer cette fenêtre exige un changement de `brain.js`, hors du dépôt de B, et B-T3 se borne donc à ne jamais retirer une ligne qui n'est pas un doublon de son propre slug.
+# dette: rien ne distingue un ticket `kind: human` d'un ticket de session aux yeux des contrôles amont — B-T5 porte donc un `model:` inerte qu'aucune exécution ne lira, faute de pouvoir déclarer « ce ticket n'a pas de modèle ».
+# dette: `AskUserQuestion` échoue en session de plan (`readonly database`) — un ticket ne peut pas poser la question que la consigne lui impose de poser.
+# dette: le sha256 de `brain.js` n'est pas épinglé, seulement son chemin (`requires_access` ci-dessus, `--oracle` du check B-T3) : le fichier vit hors du dépôt de B et M-T1 le modifie légitimement, un condensat littéral serait périmé avant le premier run — la sonde imprime donc celui qu'elle a réellement chargé, et prouve le régime versionné par comportement au lieu de faire confiance au fichier.
+# dette: la non-régression de périmètre est une comparaison octet à octet au `base_sha`, sans aucune exception ni marqueur — elle dit « ce ticket ne les a pas changés », jamais « ces symboles n'y figurent pas ». Le raccordement humain de B-T5 ne la fait donc PAS rougir : une fois commité, il est dans le `base_sha` des exécutions suivantes. Ce qui reste hors de portée est plus étroit : un `check:` ne peut pas lire la liste des fichiers du diff, donc la borne porte sur le contenu de ces trois fichiers, pas sur le commit.
+#
+# ABSENCE DE `chain:` — DÉLIBÉRÉE, PAS UN OUBLI. B est le dernier maillon du
+# programme : la seule suite identifiée par le constat du bloc M (rubrique 5,
+# point 4 — la couverture de l'index) exige une décision de l'Owner que ce
+# runbook n'a pas à préempter, et la dette ci-dessus interdit à une session de
+# plan de la lui demander. Un bloc `chain:` absent est licite et déclenche le
+# gate humain de fin de bloc : c'est ce gate qui portera la question.
+
+phase: "B"
+project: b-boucle-verdict-regle-2026-08-21
+repo: /home/nuveo/hermes-os-plan-b
+description: >-
+  Outiller la réinjection verdict → règle jusqu'à un point d'entrée appelable :
+  contrat, décision pure, pont vers le régime procédural versionné de M-T1, CLI.
+  Aucune session ne touche un fichier de gouvernance ; l'installation des modules
+  et le raccordement sont le ticket humain B-T5, que l'Owner pose à la main, et
+  B-T6 — un ticket de session — les constate ensuite par l'AST du moteur gouverné
+  et une invocation en dry-run, parce qu'une approbation n'exécute aucun check.
+
+requires_access:
+  - file: /home/nuveo/hermes-os-plan-b/.git
+  - file: /home/nuveo/hermes-os-plan-b/ops/plan_runner.py
+  # L'ORACLE DE B-T3, ÉPINGLÉ PAR SON CHEMIN. `brain.js` vit hors de ce dépôt et
+  # reste inscriptible : tout le régime versionné que B préserve dépend de lui.
+  # Le pré-vol exige donc sa présence, et le `check:` de B-T3 lui repasse ce même
+  # chemin en `--oracle` — un `BRAIN_JS` résolu ailleurs fait échouer la sonde au
+  # lieu de verdir sur un oracle quelconque.
+  - file: /home/nuveo/projects/jarvis-cortex/brain.js
+  # LE MOTEUR GOUVERNÉ, cible du ticket humain B-T5 (l'autre étant B-TM, qui
+  # fusionne M dans le jarvis-cortex canonique). Il est lu,
+  # jamais écrit par une session : `governed_files()` protège `/home/nuveo/
+  # hermes-os` et pas les copies en worktree, ce qui fait justement de ce chemin
+  # le seul endroit où le raccordement soit constatable sans qu'une session
+  # puisse le fabriquer.
+  - file: /home/nuveo/hermes-os/ops/plan_runner.py
+
+tickets:
+
+  - id: B-T0
+    kind: session
+    title: Le vérificateur — les cinq sondes de B, en un script, et son autotest
+    why: >-
+      Un contrôle empaqueté en one-liners YAML n'est ni relu, ni testé, ni
+      corrigeable : c'est ce qui a fait passer, ailleurs, des sondes qui
+      acceptaient une matrice malformée et des modules à moitié cassés. Le
+      vérificateur devient donc un livrable relu par un gate, écrit AVANT les
+      modules qu'il juge — il ne peut pas être taillé pour les faire passer.
+    model: claude-opus-5
+    effort: high
+    codex_gate: true
+    max_budget_usd: 3.00
+    # Le ticket le plus long du bloc : un script, ses 42 cas d'autotest, un
+    # sceau. Bornes explicites — les défauts du moteur (120 tours, 90 min)
+    # laissent une session égarée brûler le budget avant de buter dessus.
+    max_turns: 70
+    timeout_minutes: 60
+    prompt_file: tickets/B-T0.md
+    produces:
+      - ops/checks/sonde_b.py
+      - ops/checks/sonde_b.sha256
+    # Le check de ce ticket est l'autotest du vérificateur lui-même : chaque
+    # sonde est confrontée à un arbre valide ET à une série d'arbres cassés
+    # plausibles, et doit accepter le premier et refuser chacun des seconds. Un
+    # vérificateur permissif — celui qui aurait laissé passer les défauts de
+    # l'audit — échoue ici, avant d'avoir servi.
+    # La QUANTITÉ mesurée est le nombre de lignes `cas_ok=` que l'autotest émet,
+    # une par piège réellement construit puis refusé (B-T0.md en énumère 42 au
+    # minimum) : un vérificateur amputé de ses cas cassés n'atteint pas le
+    # seuil, là où un `test -s` sur le script l'aurait laissé passer. stderr
+    # n'est PAS capturé — un échec doit rester lisible dans le journal du
+    # runner.
+    # Le SECOND livrable est vérifié en premier : `sha256sum -c` sur le sceau,
+    # au format standard. Un sceau faux rendrait les quatre `check:` suivants
+    # impossibles (chacun passe `--sceau`), et B-T0 pouvait finir `done` sans
+    # que rien ne l'ait relu. Sa sortie (`…sonde_b.py: OK`) est observable.
+    check: >-
+      sha256sum -c ops/checks/sonde_b.sha256
+      && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      --facts "$HERMES_TICKET_FACTS")
+      && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
+      && test "$cas" -ge 42
+      && echo "$sortie"
+      && echo "B-T0 sonde=autotest cas_ok=${cas}"
+
+  - id: B-T1
+    kind: session
+    title: Contrat d'injection — quel verdict écrit quelle règle, et laquelle jamais
+    why: >-
+      Sans contrat écrit, chacun des trois tickets suivants réinvente le
+      déclencheur et la dérivation du slug — et une boucle qui écrit vite avec
+      trois conventions divergentes fabrique des doublons à la cadence des gates.
+    model: claude-opus-5
+    effort: high
+    codex_gate: true
+    max_budget_usd: 3.00
+    # Deux documents, aucun code : la lecture du moteur domine le temps.
+    max_turns: 45
+    timeout_minutes: 45
+    prompt_file: tickets/B-T1.md
+    produces:
+      - docs/plans/2026-08-21-b-contrat-injection.md
+      - docs/plans/2026-08-21-b-contrat-injection.matrice.json
+    # Le contrat rédigé fixe la doctrine ; la matrice JSON la rend exécutable et
+    # devient le jeu d'épreuves de B-T2. La sonde `contrat` refuse une matrice
+    # dégénérée ET une matrice malformée : exactement les six verdicts du
+    # domaine, uniques, aucun cas en trop, clés exactes sur chaque cas,
+    # `cles`/`attendus` de longueur `regles` (donc vides sur un cas à zéro), au
+    # moins un cas productif, zéro règle sur les deux pannes de reviewer.
+    # LES SEPT DÉCISIONS SONT DANS LA MATRICE, PAS SEULEMENT DANS LA PROSE.
+    # L'audit a montré qu'un document ne portant que les ancres, flanqué d'une
+    # matrice formellement valide mais arbitraire, passait sans avoir tranché
+    # quoi que ce soit — et B-T2 aurait exécuté ce faux contrat fidèlement. Le
+    # bloc `decisions` porte donc les sept décisions en champs machine-lisibles,
+    # et la sonde vérifie leurs invariants ET leur cohérence avec les six cas :
+    # un verdict de panne armé, un cas productif dont le verdict n'est pas armé,
+    # une égalité d'idempotence sans `why`, un index à deux lignes par règle sont
+    # refusés par le contrôle, pas laissés au gate. Les comptes imprimés sont
+    # calculés, jamais littéraux : la quantité mesurée est le nombre de
+    # `cas_ok=` — un par cas de matrice, un par décision, plus l'axe du
+    # document. Une matrice amputée d'un verdict ou d'une décision n'atteint pas
+    # le seuil.
+    check: >-
+      auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      --facts "$HERMES_TICKET_FACTS")
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py contrat
+      --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256)
+      && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
+      && test "$cas" -ge 14
+      && echo "$sortie"
+      && echo "B-T1 sonde=contrat cas_ok=${cas}"
+
+  - id: B-T2
+    kind: session
+    title: La décision — `regles_depuis_verdict()`, pure et déterministe
+    why: >-
+      Isoler la décision dans une fonction pure et sans effet de bord est la
+      seule façon de l'exercer sur les six verdicts du domaine : les branches où
+      la boucle ne doit RIEN écrire ne se testent pas autrement.
+    model: claude-sonnet-5
+    effort: medium
+    codex_gate: true
+    max_budget_usd: 2.50
+    # Une fonction pure, sans I/O : le plus court des cinq.
+    max_turns: 40
+    timeout_minutes: 35
+    prompt_file: tickets/B-T2.md
+    produces:
+      - ops/verdict_regles.py
+    # Module NEUF — aucun fichier de gouvernance n'est touché ici.
+    # La sonde `decision` appelle la fonction sur les SIX verdicts et vérifie
+    # chaque règle rendue en entier : clés exactes, `type` valant `feedback`,
+    # `fait` et `why` non vides et portant le contenu que la matrice annonce en
+    # `attendus`, slug égal au `sha256` de la clé. Une règle sans `fait` ni
+    # `why` — qui passait le compte et cassait plus tard au pont — échoue ici.
+    # Les cas attendus à zéro sont le test de mutation : un stub qui produit
+    # toujours échoue.
+    # `--module` nomme l'artefact jugé : la sonde le charge sous `--racine` et
+    # refuse un chemin autre que celui qu'elle attend. La quantité mesurée est
+    # le nombre de `cas_ok=`, un par verdict du domaine réellement exercé — un
+    # module qui n'en couvre que la moitié n'atteint pas le seuil.
+    check: >-
+      auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      --facts "$HERMES_TICKET_FACTS")
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py decision
+      --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
+      --module ops/verdict_regles.py)
+      && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
+      && test "$cas" -ge 6
+      && echo "$sortie"
+      && echo "B-T2 sonde=decision cas_ok=${cas}"
+
+  - id: B-TM
+    kind: human
+    title: Intégrer M-T1 dans le jarvis-cortex canonique, avant tout ticket qui lit brain.js
+    why: >-
+      B-T3 épingle `/home/nuveo/projects/jarvis-cortex/brain.js` comme oracle, et
+      ce fichier NE PORTE PAS le régime versionné de M-T1 : celui-ci vit sur
+      `plan/jarvis-cortex-m-memoire-regimes`, non fusionnée. Vérifié le
+      2026-08-21 — `grep` sur `.v1` dans le brain.js canonique rend zéro. Aucun
+      ticket de ce bloc n'intègre M, donc la sonde de B-T3 échouerait sur `.v1`
+      absent, à chaque tour, sans qu'aucune correction de B ne puisse y changer
+      quoi que ce soit. Le runbook s'en remettait à une note de PRÉREQUIS ; une
+      note n'intègre rien. Relevé HAUTE par l'audit a4 du 2026-08-21.
+    # Geste humain, hors session : la fusion touche un dépôt qui n'est pas
+    # `repo:`, et une session de plan n'a pas à fusionner dans un canonique.
+    #
+    #   cd /home/nuveo/projects/jarvis-cortex
+    #   git merge --no-ff plan/jarvis-cortex-m-memoire-regimes
+    #   node brain.js store "controle B-TM" --type feedback --name b-tm-controle
+    #   node brain.js store "controle B-TM v2" --type feedback --name b-tm-controle
+    #   ls memory/b-tm-controle*        # doit montrer le .v1 conservé
+    #
+    # La VÉRIFICATION qui compte n'est pas ici : le runner ne lance pas le
+    # `check:` d'un ticket `kind: human` (dette en tête de runbook). C'est la
+    # sonde `pont` de B-T3 qui refuse de verdir sur un oracle sans `.v1` — donc
+    # ce ticket ORDONNE le geste, et B-T3 le CONSTATE. Approuver B-TM sans avoir
+    # fusionné ne gagne rien : B-T3 tombe juste après.
+    model: claude-haiku-4-5
+    effort: low
+    max_turns: 5
+    timeout_minutes: 10
+    prompt_file: tickets/B-TM.md
+
+  - id: B-T3
+    kind: session
+    depends_on: [B-TM]
+    title: L'écriture — pont vers brain.js, versionnement, index, idempotence
+    why: >-
+      C'est le seul ticket qui touche le disque, et une erreur s'y industrialise
+      à la cadence des gates : sans idempotence portée ici, un gate rejoué empile
+      une version et une ligne d'index par tentative.
+    model: claude-opus-5
+    effort: high
+    codex_gate: true
+    max_budget_usd: 2.50
+    # Le seul ticket qui touche le disque et lance `node` : les allers-retours
+    # d'essai coûtent des tours, la borne reste au-dessus sans être ouverte.
+    max_turns: 55
+    timeout_minutes: 50
+    prompt_file: tickets/B-T3.md
+    produces:
+      - ops/brain_bridge.py
+    # Module NEUF — aucun fichier de gouvernance n'est touché ici.
+    # La sonde `pont` travaille dans un bac à sable PROPRE À L'EXÉCUTION
+    # (`racine=`, un `tempfile.mkdtemp()`) : aucun chemin fixe, donc aucun
+    # `MEMORY.md` partagé ni glob de nettoyage qui pourrait emporter les preuves
+    # d'une autre exécution — le `finally` retire ce dossier-là, rien d'autre.
+    # `racine` est tenable sans toucher à `brain.js` : son magasin se choisit par
+    # le `config/workspace.json` posé À CÔTÉ de lui (brain.js:18-20). Le pont
+    # copie donc l'oracle octet à octet dans un sous-dossier QU'IL CRÉE,
+    # `<racine>/.brain-runtime/`, et n'écrit jamais à la racine elle-même : celle
+    # de la CLI de B-T4 est fournie par un humain, et une racine mal visée sur un
+    # dossier habité y écraserait `brain.js` et `config/workspace.json`. Racine
+    # déjà porteuse d'un `brain.js` ou d'un `config/` -> le pont lève.
+    # `--sandbox`, lui, ne convient PAS — sa cible est un chemin fixe, c'est la
+    # course qu'on ferme.
+    # Quatre exigences, un seul passage :
+    #  1. réécriture avec un fait DIFFÉRENT -> `.v1` garde l'ancien (régime M-T1) ;
+    #  2. écriture -> UNE ligne d'index (rubrique 4 du constat : 328 fichiers sur
+    #     438 ne sont dans aucun index, B ne doit pas grossir ce tas) ;
+    #  3. gate REJOUÉ à l'identique -> ni `.v2`, ni seconde ligne d'index ;
+    #  4. réécriture où SEUL le `why` change -> `.v2` apparaît. L'égalité porte
+    #     sur tout le contenu persistant, pas sur le seul `fait` : une règle dont
+    #     la justification est corrigée est une RÉVISION, et la déclarer
+    #     `inchangee` la perdrait sans bruit — le défaut exact que M-T1 ferme.
+    # ET LE CAS CONCURRENT, qui manquait. `brain.js` indexe en append-only
+    # (brain.js:208-220) : tenir UNE ligne par règle malgré les révisions oblige
+    # le pont à relire et réécrire `MEMORY.md`. Deux gates réels partagent la
+    # mémoire de l'Owner, donc ce fichier : sans verrou par racine ni
+    # remplacement atomique, deux écrivains simultanés perdent la ligne l'un de
+    # l'autre pendant qu'un test séquentiel reste vert. Le bac à sable reste
+    # propre à l'exécution — c'est la sonde qui y lance elle-même DEUX écrivains
+    # concurrents sur une racine partagée, sur deux slugs distincts, et exige
+    # les deux règles et leurs deux lignes d'index.
+    # MAIS DEUX FILS LANCÉS UNE FOIS NE PROUVENT PAS LE VERROU — l'ordonnanceur
+    # peut les sérialiser, et un pont sans verrou passe alors. Deux axes de plus,
+    # indépendants de l'ordonnancement : la sonde tente elle-même
+    # `flock(<racine>/.memory.lock, LOCK_NB)` pendant qu'une écriture est en vol
+    # et exige un refus ; puis, le verrou constaté tenu, elle joue l'écrivain
+    # DIRECT que le verrou ne lie pas — un `brain.js` lancé à la main — en
+    # ajoutant sans verrou une ligne d'index qui doit survivre. C'est ce qui
+    # oblige le pont à ne retirer que les doublons de SON slug au lieu de
+    # réécrire l'index depuis un instantané périmé.
+    # Treize axes, donc treize `cas_ok=` attendus : c'est la quantité que le
+    # check compte, sur l'artefact que `--module` nomme.
+    check: >-
+      auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      --facts "$HERMES_TICKET_FACTS")
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont
+      --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
+      --module ops/brain_bridge.py
+      --oracle /home/nuveo/projects/jarvis-cortex/brain.js)
+      && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
+      && test "$cas" -ge 13
+      && echo "$sortie"
+      && echo "B-T3 sonde=pont cas_ok=${cas}"
+
+  - id: B-T4
+    kind: session
+    title: Le point d'entrée — `injecter_regles()`, sa CLI, et l'échec qui se voit
+    why: >-
+      Une session de plan ne touche pas aux fichiers de gouvernance : la boucle
+      s'arrête donc à un point d'entrée autonome, appelable et observable, que le
+      mainteneur du moteur raccorde ensuite — sans quoi B n'aurait aucun livrable
+      exerçable de bout en bout.
+    model: claude-sonnet-5
+    effort: medium
+    codex_gate: true
+    max_budget_usd: 2.00
+    # Un module et sa CLI, sur des briques déjà livrées et déjà éprouvées.
+    max_turns: 45
+    timeout_minutes: 40
+    prompt_file: tickets/B-T4.md
+    produces:
+      - ops/verdict_hook.py
+    # Module NEUF, avec une CLI. La sonde `entree` exerce les DEUX chemins :
+    #  · écrivain injecté — NO_GO -> 1 entrée `ecrite`, GO -> 0, écrivain qui
+    #    lève -> aucune exception mais un `etat` commençant par `echec` ;
+    #  · chemin PAR DÉFAUT (`ecrire=None`) contre un bac à sable propre à
+    #    l'exécution : l'import paresseux du pont et la mutation réelle sont
+    #    exercés, et la preuve est le FICHIER apparu sur le disque, pas l'état
+    #    rendu ; puis le même chemin par défaut contre une racine impossible,
+    #    qui doit rendre un `echec` observable sans lever.
+    # Enfin la CLI en sous-processus, sur ses DEUX chemins, dont on lit la
+    # sortie réelle : `--dry-run` -> code 0 et un slug ; puis SANS `--dry-run`,
+    # contre une racine impossible -> code NON NUL et une ligne `echec` visible.
+    # C'est la mutation réelle qui est exercée là : sans elle, un chemin
+    # d'écriture qui avale sa panne, imprime `echec…` et sort en 0 passait le
+    # contrôle. Le code non nul est celui de la CLI, PAS du hook moteur, qui
+    # reste non bloquant. Enfin la non-régression de périmètre sur les trois
+    # fichiers de gouvernance.
+    # Huit axes, donc huit `cas_ok=` : les cinq passes, les deux CLI, le périmètre.
+    check: >-
+      auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      --facts "$HERMES_TICKET_FACTS")
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py entree
+      --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
+      --module ops/verdict_hook.py)
+      && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
+      && test "$cas" -ge 8
+      && echo "$sortie"
+      && echo "B-T4 sonde=entree cas_ok=${cas}"
+
+  - id: B-T5
+    kind: human
+    title: Installer les modules et raccorder le moteur, à la main
+    why: >-
+      Sans ce geste, B livre quatre modules dans un worktree que le moteur ne lit
+      pas, et aucun verdict n'écrit jamais de règle : le bloc s'appellerait
+      « boucle » sans en être une. Il est HUMAIN parce qu'une session de plan ne
+      modifie pas un fichier de gouvernance — et il est un TICKET, pas une dette,
+      parce qu'une dette en commentaire laisse le plan finir `done` sur une
+      boucle ouverte, défaut déjà payé ici.
+    codex_gate: true
+    depends_on: [B-T4]
+    # `model:` INERTE, et déclaré quand même. Un ticket `kind: human` n'ouvre
+    # aucune session, donc ce champ ne sert à rien ici — mais le contrôle du
+    # bloc M l'exige sur CHAQUE ticket, sans regarder le `kind:`. Le laisser
+    # absent rendait le runbook rouge (« B-T5: model absent ») alors que
+    # l'omission était le geste juste. Valeur la plus petite du parc, pour que
+    # personne ne lise ici une intention d'exécution.
+    model: claude-haiku-4-5
+    prompt_file: tickets/B-T5.md
+    # Aucun `produces:` — ce ticket ne livre pas un artefact de `repo:`, il pose
+    # une ligne dans un AUTRE dépôt. Le déclarer ferait chercher au moteur un
+    # fichier qui n'apparaîtra jamais ici.
+    # CE `check:` N'EST PAS LA PREUVE DU BLOC, et il ne faut pas le lire comme
+    # telle : le runner ferme un ticket `kind: human` sur l'APPROBATION et
+    # n'exécute pas son `check:` (dette en tête du runbook). Il reste écrit parce
+    # qu'il est le mode d'emploi de la vérification — l'Owner peut le coller dans
+    # un terminal — et parce qu'un ticket sans `check:` n'apprend rien à qui le
+    # relit. La preuve exécutée, elle, est celle de B-T6.
+    # Il observe le dépôt GOUVERNÉ `/home/nuveo/hermes-os`, pas le worktree de B —
+    # `governed_files()` y interdit l'écriture à toute session, ce qui rend
+    # l'observation infalsifiable par le bloc lui-même. Il imprime les numéros de
+    # ligne réellement trouvés (sortie réelle, jamais un exit 0 seul) et exige que
+    # l'appel tombe APRÈS l'ancre `verdict_motif`, jamais avant. Sa borne est
+    # nommée : il travaille par sous-chaîne, donc un import ou un commentaire
+    # portant `injecter_regles` le satisferait. C'est B-T6 qui exige un vrai nœud
+    # d'appel, par l'AST.
+    check: >-
+      "$HERMES_CHECK_PYTHON" -c "import json, os, pathlib, sys;
+      p = os.environ.get('HERMES_TICKET_FACTS');
+      faits = json.loads(pathlib.Path(p).read_text(encoding='utf-8')) if p else {};
+      src = pathlib.Path('/home/nuveo/hermes-os/ops/plan_runner.py').read_text(encoding='utf-8').splitlines();
+      appels = [i for i, l in enumerate(src, 1) if 'injecter_regles' in l];
+      ancres = [i for i, l in enumerate(src, 1) if 'verdict_motif' in l];
+      print('base_sha=%s ticket=%s' % (faits.get('base_sha'), faits.get('ticket_id')));
+      print('moteur_lignes=%d ancres_verdict_motif=%s appels_injecter_regles=%s'
+      % (len(src), ancres, appels));
+      sys.exit(0 if appels and ancres and max(appels) > min(ancres) else 1)"
+
+  - id: B-T6
+    kind: session
+    title: Constater le raccordement — AST du moteur gouverné, et une invocation réelle
+    why: >-
+      Le runner ferme un ticket `kind: human` sur approbation SANS exécuter son
+      `check:` : sans ce ticket-ci, un clic sur B-T5 finissait le plan `done`
+      alors que rien n'avait bougé dans `/home/nuveo/hermes-os`. B-T6 rend le
+      geste de B-T5 observable par une exécution que personne n'approuve, et il
+      le fait sur un dépôt où aucune session ne peut écrire — donc où le bloc ne
+      peut pas se donner raison à lui-même.
+    # Lookup et rédaction courte : la session lit, constate, note. Toute la
+    # substance est dans le `check:`, que la session ne peut pas influencer.
+    model: claude-haiku-4-5
+    effort: low
+    codex_gate: true
+    depends_on: [B-T5]
+    max_budget_usd: 1.00
+    max_turns: 20
+    timeout_minutes: 20
+    prompt_file: tickets/B-T6.md
+    produces:
+      - docs/plans/2026-08-21-b-raccordement-constate.md
+    # La sonde `raccordement` vise `--moteur`, un dépôt AUTRE que `repo:`, et y
+    # exerce cinq axes que la session ne peut ni écrire ni fabriquer :
+    #  1. `moteur:parse` — `ops/plan_runner.py` s'analyse en AST ;
+    #  2. `modules:presents` — les trois modules de B sont importables DEPUIS le
+    #     dépôt gouverné. C'est le trou nommé par l'audit : B-T0..B-T4 livrent
+    #     dans le worktree, et un import paresseux tolérant à l'absence laissait
+    #     le hook définitivement inerte sans que rien ne rougisse ;
+    #  3. `ancre:verdict_motif` — l'affectation de `ts["verdict_motif"]` est un
+    #     nœud d'affectation réel, localisé par l'AST. Le RECEVEUR compte : le
+    #     moteur porte deux `cs["verdict_motif"]` (état de chaîne) pour un seul
+    #     `ts["verdict_motif"]` (état de ticket), et c'est ce dernier qu'il faut
+    #     — accroché à `cs`, le hook laisse les verdicts de ticket débranchés ;
+    #  4. `appel:apres_ancre` — un nœud `Call` sur `injecter_regles` existe et sa
+    #     ligne est APRÈS celle de l'affectation. Par l'AST, jamais par
+    #     sous-chaîne : un import, un commentaire ou une chaîne de caractères
+    #     portant ce nom ne sont pas des appels et ne passent pas. Resserré par
+    #     l'audit a4 du 2026-08-21, qui a montré trois verts atteignables sans
+    #     boucle : l'appel doit être dans la MÊME fonction que l'ancre, porter la
+    #     signature `injecter_regles(verdict, report, ts, racine=None)`, et
+    #     recevoir des `ast.Name` dont les `.id` valent EXACTEMENT `verdict`,
+    #     `report`, `ts` — ni littéraux, ni variables quelconques, ce dernier cas
+    #     ayant été relevé par l'audit a5 ;
+    #  5. `invocation:dry_run` — le point d'entrée INSTALLÉ dans le dépôt
+    #     gouverné est exercé en dry-run, en sous-processus, et sa sortie réelle
+    #     porte un slug. Un module copié mais cassé à l'import tombe ici.
+    # Aucune écriture dans `/home/nuveo/hermes-os` : le dry-run ne mute rien, et
+    # `governed_files()` l'interdirait de toute façon à cette session.
+    check: >-
+      auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
+      --facts "$HERMES_TICKET_FACTS")
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py raccordement
+      --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
+      --moteur /home/nuveo/hermes-os)
+      && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
+      && test "$cas" -ge 5
+      && echo "$sortie"
+      && echo "B-T6 sonde=raccordement cas_ok=${cas}"
