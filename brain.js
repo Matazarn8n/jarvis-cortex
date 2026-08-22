@@ -159,6 +159,43 @@ function recall(query, opts) {
   return { hits, bytes, ms: +(performance.now() - t0).toFixed(2), found };
 }
 
+// Verrou de magasin — `wx` sur un fichier, la seule primitive atomique que la
+// bibliothèque standard offre en synchrone. Sert au régime `feedback`, dont le
+// versionnement doit être indivisible. Un verrou abandonné par un processus tué
+// se périme : sans ça, un crash figerait le magasin pour toujours, ce qui est
+// pire que la course qu'il ferme.
+const STORE_LOCK_STALE_MS = 60000;
+const STORE_LOCK_TIMEOUT_MS = 10000;
+
+function withStoreLock(dir, fn) {
+  const lock = path.join(dir, '.store.lock');
+  const t0 = Date.now();
+  let fd = null;
+  for (;;) {
+    try {
+      fd = fs.openSync(lock, 'wx');
+      break;
+    } catch (e) {
+      if (e.code !== 'EEXIST') throw e;
+      let age = Infinity;
+      try { age = Date.now() - fs.statSync(lock).mtimeMs; } catch (_) { age = Infinity; }
+      if (age > STORE_LOCK_STALE_MS) { try { fs.unlinkSync(lock); } catch (_) {} continue; }
+      if (Date.now() - t0 > STORE_LOCK_TIMEOUT_MS) {
+        throw new Error(`store: verrou ${lock} tenu depuis ${Math.round(age)} ms — un autre écrivain n'a pas rendu la main.`);
+      }
+      // Attente SYNCHRONE sans dépendance : `store` est un chemin synchrone de
+      // bout en bout, un `await` ici changerait sa signature.
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
+    }
+  }
+  try {
+    return fn();
+  } finally {
+    try { fs.closeSync(fd); } catch (_) {}
+    try { fs.unlinkSync(lock); } catch (_) {}
+  }
+}
+
 // ---------- store ----------
 function store(fact, opts) {
   opts = opts || {};
@@ -194,17 +231,38 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
   //  - feedback (procédural)        : remplacement versionné — l'ancien
   //    contenu part dans <base>.vN.md avant d'être remplacé, jamais perdu.
   // Un type inconnu garde l'écrasement inconditionnel d'origine.
-  if (fs.existsSync(file)) {
-    if (type === 'project' && !opts.force) {
+  // Réserves HAUTE 3d906ce7d7f9 et 6e708b04ecfa (audit 2026-08-21, arbitrées
+  // FIX le 2026-08-22). Les deux régimes non triviaux tenaient leur promesse par
+  // un `existsSync` suivi d'une écriture : entre les deux, un autre processus
+  // passe. `project` perdait le fait qu'il jure de ne jamais perdre, et
+  // `feedback` pouvait archiver deux fois le MÊME contenu sous deux `.vN`
+  // différents, puis laisser une des deux écritures disparaître sans archive.
+  if (type === 'project' && !opts.force) {
+    // Création EXCLUSIVE : c'est le noyau qui tranche, pas nous. `wx` échoue en
+    // EEXIST si le fichier apparaît entre-temps, ce qu'aucun test préalable ne
+    // peut garantir. `--force` retombe sur l'écrasement demandé explicitement.
+    try {
+      fs.writeFileSync(file, body, { flag: 'wx' });
+    } catch (e) {
+      if (e.code !== 'EEXIST') throw e;
       throw new Error(`store refuse d'écraser "${path.basename(file)}" (type project = append-only, le fait existant serait perdu) — relancez avec --force pour l'autoriser explicitement.`);
     }
-    if (type === 'feedback') {
-      let n = 1;
-      while (fs.existsSync(file.replace(/\.md$/, `.v${n}.md`))) n++;
-      fs.copyFileSync(file, file.replace(/\.md$/, `.v${n}.md`));
-    }
+  } else if (type === 'feedback') {
+    // Le choix du `.vN`, la copie et le remplacement forment UN geste : les
+    // séparer laissait deux écrivains choisir le même numéro, ou archiver le
+    // même original deux fois avant que l'un des deux corps ne soit écrasé sans
+    // jamais avoir été archivé. Verrou exclusif de fichier, du même dossier.
+    withStoreLock(dir, () => {
+      if (fs.existsSync(file)) {
+        let n = 1;
+        while (fs.existsSync(file.replace(/\.md$/, `.v${n}.md`))) n++;
+        fs.copyFileSync(file, file.replace(/\.md$/, `.v${n}.md`));
+      }
+      fs.writeFileSync(file, body);
+    });
+  } else {
+    fs.writeFileSync(file, body);
   }
-  fs.writeFileSync(file, body);
   // one index line - append-only, no reads needed beyond the index itself
   const index = path.join(dir, MEM_INDEX);
   const title = name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
