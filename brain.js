@@ -12,6 +12,41 @@
 */
 'use strict';
 const fs = require('fs');
+
+//: Délai d'attente du verrou d'écriture, en millisecondes. Réglable pour les
+//: tests seulement — un humain n'a aucune raison de le toucher.
+const LOCK_TIMEOUT_MS = Number(process.env.BRAIN_LOCK_TIMEOUT_MS || 5000);
+
+/**
+ * Sérialise `fn()` sur `file` par un fichier `<file>.lock` créé en `wx`.
+ *
+ * ponytail: trois appels stdlib. `proper-lockfile` ferait la même chose avec
+ * une dépendance, un `package.json` et un cycle de mise à jour ; Node n'expose
+ * pas `flock`, mais `O_EXCL` sur un fichier local est exactement la primitive
+ * dont on a besoin ici.
+ *
+ * Verrou tenu au-delà du délai : on REFUSE, on ne reprend pas. Un verrou
+ * périmé se reprend en le supprimant à la main, geste rare et visible ; le
+ * reprendre tout seul rouvrirait la course qu'on vient de fermer, et cette
+ * fonction garde un fait que personne ne peut relire.
+ */
+function withFileLock(file, fn) {
+  const lock = file + '.lock';
+  const limite = Date.now() + LOCK_TIMEOUT_MS;
+  let fd;
+  for (;;) {
+    try { fd = fs.openSync(lock, 'wx'); break; }
+    catch (err) {
+      if (err.code !== 'EEXIST') throw err;
+      if (Date.now() >= limite) {
+        throw new Error(`store: ${path.basename(lock)} est tenu depuis plus de ${LOCK_TIMEOUT_MS} ms — écriture REFUSÉE plutôt que concurrente. Si aucun autre \`brain store\` ne tourne, supprimez ce fichier à la main.`);
+      }
+      // Seul sommeil synchrone de Node : `fn` et ses appelants sont synchrones.
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
+    }
+  }
+  try { return fn(); } finally { fs.closeSync(fd); fs.unlinkSync(lock); }
+}
 const path = require('path');
 const { performance } = require('perf_hooks');
 
@@ -194,17 +229,36 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
   //  - feedback (procédural)        : remplacement versionné — l'ancien
   //    contenu part dans <base>.vN.md avant d'être remplacé, jamais perdu.
   // Un type inconnu garde l'écrasement inconditionnel d'origine.
-  if (fs.existsSync(file)) {
-    if (type === 'project' && !opts.force) {
+  if (type === 'project' && !opts.force) {
+    // Réserve HAUTE 3d906ce7d7f9. C'était un check-then-write : `existsSync`
+    // puis `writeFileSync`, deux syscalls entre lesquelles un second process
+    // constate la même absence — et le second écrase le fait du premier en
+    // silence, ce que le régime append-only existe précisément pour empêcher.
+    // `wx` fait le contrôle et l'écriture EN UNE syscall : le noyau tranche.
+    try {
+      fs.writeFileSync(file, body, { flag: 'wx' });
+    } catch (err) {
+      if (err.code !== 'EEXIST') throw err;
       throw new Error(`store refuse d'écraser "${path.basename(file)}" (type project = append-only, le fait existant serait perdu) — relancez avec --force pour l'autoriser explicitement.`);
     }
-    if (type === 'feedback') {
-      let n = 1;
-      while (fs.existsSync(file.replace(/\.md$/, `.v${n}.md`))) n++;
-      fs.copyFileSync(file, file.replace(/\.md$/, `.v${n}.md`));
-    }
+  } else if (type === 'feedback') {
+    // Réserve HAUTE 6e708b04ecfa. Le versionnage choisissait `n`, copiait, puis
+    // remplaçait — trois temps, aucun verrou. Deux écritures concurrentes
+    // élisent le même `.vN`, archivent toutes deux l'ANCIENNE valeur, puis la
+    // dernière écrase la nouvelle valeur de l'autre : un fait perdu sans trace,
+    // alors que « jamais perdu » est le contrat du régime. Les trois temps ne
+    // se rendent pas atomiques séparément — c'est la SÉQUENCE qui doit l'être.
+    withFileLock(file, () => {
+      if (fs.existsSync(file)) {
+        let n = 1;
+        while (fs.existsSync(file.replace(/\.md$/, `.v${n}.md`))) n++;
+        fs.copyFileSync(file, file.replace(/\.md$/, `.v${n}.md`));
+      }
+      fs.writeFileSync(file, body);
+    });
+  } else {
+    fs.writeFileSync(file, body);      // user/reference : upsert, inchangé
   }
-  fs.writeFileSync(file, body);
   // one index line - append-only, no reads needed beyond the index itself
   const index = path.join(dir, MEM_INDEX);
   const title = name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
