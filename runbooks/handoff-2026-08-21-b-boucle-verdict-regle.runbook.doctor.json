@@ -1,0 +1,76 @@
+{
+  "notified_fingerprint": "mergerefus:17 réserve(s) CRITIQUE/HAUTE non arbitrée(s) — inscrire leur empreinte dans 2026-08-14-arbitrage-objections-codex.md (et",
+  "notified_at": "2026-08-22T18:02:28.546636+00:00",
+  "merge_refused_at": "2026-08-22T20:11:14.836878+00:00",
+  "merge_refused": "17 réserve(s) CRITIQUE/HAUTE non arbitrée(s) — inscrire leur empreinte dans 2026-08-14-arbitrage-objections-codex.md (et la commiter) : 0f884065f04d, 2b2753af7eea, 402bd41d19cf, 46e86ff9190d, 6cb9f0e5d368",
+  "merge_pending_arbitration": [
+    {
+      "empreinte": "0f884065f04d",
+      "reserve": "HAUTE | ops/checks/sonde_b.py:219 | Le critère de GO interdit n’est recherché que sur les lignes contenant littéralement `GO` ; un Markdown `## GO` suivi de `- zéro défaut CRITIQUE` passe. Ce faux négatif a été reproduit. | Analyser la section GO entière ou une fenêtre normalisée incluant les sauts de ligne, puis ajouter ce piège multiligne à l’autotest."
+    },
+    {
+      "empreinte": "2b2753af7eea",
+      "reserve": "HAUTE | ops/verdict_regles.py:70 | Les findings CRITIQUE/HAUTE déjà neutralisés par arbitrage produisent quand même une règle, contrairement au §4.2 ; cela réinjecte des désaccords clos dans la mémoire | Faire fournir les findings préclassés à la fonction, ou faire arbitrer puis adapter le contrat, la sonde et les appelants sans introduire de lecture de fichier dans ce module pur"
+    },
+    {
+      "empreinte": "402bd41d19cf",
+      "reserve": "HAUTE | ops/checks/sonde_b.py:1138 | Toute définition ou affectation locale nommée `injecter_regles` est réputée résolue, et un import depuis n’importe quel module est accepté. Le runner peut donc appeler un stub sans rapport avec `ops.verdict_hook`, tandis que le dry-run séparé reste vert. | Exiger une liaison vérifiable vers `ops.verdict_hook.injecter_regles`, alias compris, et ajouter des pièges « stub local » et « mauvais module »."
+    },
+    {
+      "empreinte": "46e86ff9190d",
+      "reserve": "HAUTE | ops/checks/sonde_b.py:315 | La dérivation de clé reste autodéclarative : `cle_champs=[\"x\"]`, une normalisation quelconque et des clés arbitraires désactivent tous les contrôles conditionnels ; `cle_exclus` n’est jamais appliqué. | Imposer les champs et exclusions attendus, puis recalculer exactement chaque clé canonique au lieu d’en vérifier quelques sous-chaînes."
+    },
+    {
+      "empreinte": "6cb9f0e5d368",
+      "reserve": "HAUTE | ops/brain_bridge.py:421 | La postcondition vérifie seulement que le fichier et son pointeur existaient, pas que l’écriture demandée a réellement modifié le contenu. Un exécutable `HERMES_NODE` qui rend 0 sans agir, face à un ancien fichier déjà indexé, produit un faux succès `ecrite`. | Passer `regle` à `_postcondition` et exiger que les champs persistés `fait`, `why` et `type` correspondent après l’appel ; vérifier également la création d’une version lors d’une révision."
+    },
+    {
+      "empreinte": "6f066c41090a",
+      "reserve": "HAUTE | ops/checks/sonde_b.py:238 | `verdicts_armes` et `severites_retenues` ne sont contrôlés que comme sous-ensembles du domaine. Une matrice peut n’armer que `NO_GO`, retenir seulement `CRITIQUE`, mettre les autres cas à zéro et passer. | Exiger exactement les ensembles doctrinaux attendus, sans doublons, et ajouter des pièges d’omission."
+    },
+    {
+      "empreinte": "a1589dabd478",
+      "reserve": "HAUTE | ops/checks/sonde_b.py:1097 | L’analyse d’atteignabilité accepte encore des appels morts : une lambda jamais invoquée et un appel placé après `if True: return` sont tous deux considérés atteignables, ce qui a été reproduit. | Exclure les portées différées et employer un parcours de contrôle conservateur ; ajouter ces deux arbres pièges."
+    },
+    {
+      "empreinte": "a1db92bee899",
+      "reserve": "HAUTE | ops/verdict_hook.py:40 | Le chargement de l’écrivain par défaut est hors du `try` : un `ImportError` remonte et peut faire tomber le ticket, contrairement au contrat « ne jamais lever ». | Intercepter l’échec d’import, journaliser un état `echec:` pour chaque règle dérivée, puis retourner normalement."
+    },
+    {
+      "empreinte": "a9844e8f0185",
+      "reserve": "HAUTE | ops/checks/sonde_b.py:380 | `fait` et `why` sont chacun cherchés dans la ligne complète du finding. Une matrice qui les inverse passe, puis permet à `decision` de valider un module qui inverse lui aussi ces champs. | Comparer chaque attendu au champ positionnel correspondant du rapport, avec structure et nombre de champs validés."
+    },
+    {
+      "empreinte": "afbbe0090a99",
+      "reserve": "HAUTE | docs/plans/2026-08-21-b-contrat-injection.matrice.json:72 | Le cas `NO_VERDICT` contient des findings `CRITIQUE` et `HAUTE`, alors que le contrat réel du gate impose `NO_GO` dès qu’un tel finding existe. La matrice décrit donc une sortie reviewer impossible et valide une branche non représentative. | Remplacer le rapport par un véritable cas `UNVERIFIABLE: ...` sans finding grave, puis aligner le §4.1 sur ce cas."
+    },
+    {
+      "empreinte": "b6f44fa13425",
+      "reserve": "HAUTE | ops/verdict_hook.py:63 | `--verdict` accepte toute chaîne : `NO_G0` produit réellement `regles=0 echecs=0` avec un code 0, soit un faux succès sans effet. | Déclarer les six verdicts contractuels dans `choices=` afin qu’`argparse` rejette toute valeur inconnue avec un code non nul."
+    },
+    {
+      "empreinte": "bb24f67b980a",
+      "reserve": "HAUTE | docs/plans/2026-08-21-b-contrat-injection.md:269 | Le `why` exige `verdict_motif`, l’identifiant du ticket et la date, tout en imposant que B‑T2 le produise via `regles_depuis_verdict(verdict, report)` ; ces données ne sont pas fournies à B‑T2, et le `ts` passé ensuite au hook ne contient pas l’identifiant du ticket. Le contrat aval est donc inexécutable tel qu’écrit. | Définir explicitement où la provenance est ajoutée et acheminer le contexte nécessaire, par exemple via un argument optionnel de contexte rempli par B‑T4/B‑T5, ou réduire le contenu obligatoire aux données réellement disponibles."
+    },
+    {
+      "empreinte": "e2c81f3171db",
+      "reserve": "HAUTE | ops/verdict_regles.py:79 | `why` omet `verdict_motif`, l’identifiant du ticket et la date du gate, pourtant obligatoires au §4.5 ; la règle perd sa traçabilité et les changements de provenance ne créent aucune révision | Faire trancher l’incompatibilité entre la signature à deux arguments et le contrat, puis transmettre explicitement ces données et tester le contenu complet de `why`"
+    },
+    {
+      "empreinte": "e47f6ae5842e",
+      "reserve": "HAUTE | ops/brain_bridge.py:238 | Le confinement par `racine` est incomplet : les liens symboliques de `.brain-runtime/config/workspace.json`, `memory/MEMORY.md` et `memory/<nom>.md` ne sont pas contrôlés. `write_text`, `writeFileSync` et `appendFileSync` peuvent donc écraser ou modifier un fichier hors de la racine. | Sous verrou et avant toute écriture, contrôler ces chemins avec `lstat()` et refuser tout lien symbolique."
+    },
+    {
+      "empreinte": "e64e1998d674",
+      "reserve": "HAUTE | ops/checks/sonde_b.py:743 | `pont` vérifie le chemin et l’empreinte de `BRAIN_JS`, mais ne prouve jamais que `ecrire_regle` l’appelle ; même le faux pont déclaré valide dans l’autotest réimplémente tout en Python et ignore l’oracle. | Observer une invocation réelle de l’oracle épinglé et faire échouer un nouveau piège qui expose `BRAIN_JS` sans l’utiliser."
+    },
+    {
+      "empreinte": "e9e046809458",
+      "reserve": "HAUTE | ops/checks/sonde_b.py:812 | `entree` n’exerce comme verdict productif que `NO_GO`; `GO`, `GO_AVEC_RESERVES` et `NO_VERDICT` peuvent être silencieusement ignorés par `injecter_regles` tout en laissant toutes les sondes vertes. | Parcourir les six cas de la matrice et vérifier, pour chacun, appels, slugs, journal et absence de mutation attendus."
+    },
+    {
+      "empreinte": "faa825cc3c14",
+      "reserve": "HAUTE | ops/brain_bridge.py:389 | Une valeur `why` commençant par `--` est interprétée comme un drapeau par le parseur de `brain.js`, qui persiste alors `true` au lieu du texte demandé. Le pont annonce pourtant `ecrite`, puis chaque rejeu crée une nouvelle version puisque le `why` reste différent. | Refuser ces valeurs avant l’appel ou utiliser une voie d’invocation qui transmet `why` sans passer par ce parseur de drapeaux."
+    }
+  ]
+}

@@ -1,0 +1,808 @@
+{
+  "tickets": {
+    "B-T0": {
+      "status": "done",
+      "history": [
+        {
+          "at": "2026-08-21T15:30:43.413874+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-opus-5",
+          "base_sha": "d6116f6fe9b98ca526eebac2fa801f359fcea7b7"
+        },
+        {
+          "at": "2026-08-21T15:45:28.705798+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 2.4364145999999995,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T15:45:28.713043+00:00",
+          "event": "governance_violation",
+          "files": [
+            "/home/nuveo/hermes-os/ops/plan_runner.py"
+          ]
+        },
+        {
+          "at": "2026-08-21T15:45:34.525903+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-21T15:50:42.920168+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE mais 5 HAUTE — UN tour correctif, pas quatre",
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T0-a1-20260821T155042.md"
+        },
+        {
+          "at": "2026-08-21T15:50:42.922185+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-opus-5",
+          "base_sha": "d6116f6fe9b98ca526eebac2fa801f359fcea7b7"
+        },
+        {
+          "at": "2026-08-21T16:03:37.561845+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 2.5389024,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T16:03:44.009165+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-21T16:10:21.968853+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 8 HAUTE et 0 mineure(s) consignées après 1 tour(s) correctif(s)",
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T0-a2-20260821T161021.md"
+        },
+        {
+          "at": "2026-08-21T16:10:21.968872+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 2,
+          "codex_correction_rounds": 1,
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T0-a2-20260821T161021.md"
+        }
+      ],
+      "attempts": 2,
+      "base_sha": "d6116f6fe9b98ca526eebac2fa801f359fcea7b7",
+      "last_session": {
+        "exit": 0,
+        "is_error": false,
+        "session_id": "eb5e3f3c-e181-475e-a674-10cc5e96afc2",
+        "subtype": "success",
+        "total_cost_usd": 2.5389024,
+        "num_turns": 34,
+        "writes_declared": true,
+        "written_files": [
+          "/home/nuveo/hermes-os-plan-b/ops/checks/sonde_b.py"
+        ],
+        "opaque_writes": true
+      },
+      "written_files": [
+        "/home/nuveo/hermes-os-plan-b/ops/checks/sonde_b.py"
+      ],
+      "writes_opaque": true,
+      "governance_violation": [
+        "/home/nuveo/hermes-os/ops/plan_runner.py"
+      ],
+      "check_output": "ne_dans_verdicts_armes\ncas_ok=piege:contrat:cas_productif_non_arme\ncas_ok=piege:contrat:egalite_champs_sans_why\ncas_ok=piege:contrat:lignes_index_par_regle_2\ncas_ok=piege:contrat:rapport_surnumeraire\ncas_ok=piege:contrat:attendus_desordonnes\ncas_ok=piege:contrat:cle_sans_le_fait\ncas_ok=valide:decision\ncas_ok=piege:decision:regles_sans_fait\ncas_ok=piege:decision:type_non_feedback\ncas_ok=piege:decision:slug_hors_sha256\ncas_ok=piege:decision:stub_toujours_productif\ncas_ok=valide:pont\ncas_ok=piege:pont:pas_de_v1\ncas_ok=piege:pont:v2_empile_au_rejeu\ncas_ok=piege:pont:index_par_appel\ncas_ok=piege:pont:egalite_sur_le_fait_seul\ncas_ok=piege:pont:sans_verrou_perd_une_ligne\ncas_ok=piege:pont:n_ouvre_jamais_memory_lock\ncas_ok=piege:pont:index_depuis_un_instantane\ncas_ok=piege:pont:verrou_relache_avant_replace\ncas_ok=valide:entree\ncas_ok=piege:entree:leve_au_lieu_de_journaliser\ncas_ok=piege:entree:ecrit_meme_sur_go\ncas_ok=piege:entree:chemin_par_defaut_sans_disque\ncas_ok=piege:entree:cli_echec_mais_code_zero\ncas_ok=piege:entree:gouvernance_modifiee\ncas_ok=piege:entree:ecrit_sur_go_sans_journaliser\ncas_ok=piege:entree:abandon_a_la_premiere_erreur\ncas_ok=piege:entree:cli_dry_run_marqueur_constant\ncas_ok=piege:entree:module_qui_contrefait_cas_ok\ncas_ok=valide:raccordement\ncas_ok=piege:raccordement:sans_mention\ncas_ok=piege:raccordement:import_et_commentaire\ncas_ok=piege:raccordement:appel_avant_l_ancre\ncas_ok=piege:raccordement:module_manquant\ncas_ok=piege:raccordement:hook_leve_a_l_import\ncas_ok=piege:raccordement:dry_run_non_nul\ncas_ok=piege:raccordement:runner_non_analysable\ncas_ok=piege:raccordement:arguments_non_vivants\ncas_ok=piege:raccordement:appel_hors_fonction_porteuse\ncas_ok=piege:raccordement:ancre_sur_cs\ncas_ok=piege:raccordement:appel_non_lie\ncas_ok=piege:raccordement:appel_apres_return\ncas_ok=piege:raccordement:appel_sous_if_false\ncas_ok=piege:raccordement:dry_run_marqueur_constant\narbres=59 valides_acceptes=5 pieges_refuses=54 sondes=5\nB-T0 sonde=autotest cas_ok=59",
+      "codex_reports": [
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T0-a1-20260821T155042.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T0-a2-20260821T161021.md"
+      ],
+      "codex_verdict": "GO_AVEC_RESERVES",
+      "verdict_motif": "0 CRITIQUE, 8 HAUTE et 0 mineure(s) consignées après 1 tour(s) correctif(s)",
+      "evidence": "[GO_AVEC_RESERVES accepté au tour 2/4, réserves traitées en session — rapport /home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T0-a2-20260821T161021.md] ne_dans_verdicts_armes\ncas_ok=piege:contrat:cas_productif_non_arme\ncas_ok=piege:contrat:egalite_champs_sans_why\ncas_ok=piege:contrat:lignes_index_par_regle_2\ncas_ok=piege:contrat:rapport_surnumeraire\ncas_ok=piege:contrat:attendus_desordonnes\ncas_ok=piege:contrat:cle_sans_le_fait\ncas_ok=valide:decision\ncas_ok=piege:decision:regles_sans_fait\ncas_ok=piege:decision:type_non_feedback\ncas_ok=piege:decision:slug_hors_sha256\ncas_ok=piege:decision:stub_toujours_productif\ncas_ok=valide:pont\ncas_ok=piege:pont:pas_de_v1\ncas_ok=piege:pont:v2_empile_au_rejeu\ncas_ok=piege:pont:index_par_appel\ncas_ok=piege:pont:egalite_sur_le_fait_seul\ncas_ok=piege:pont:sans_verrou_perd_une_ligne\ncas_ok=piege:pont:n_ouvre_jamais_memory_lock\ncas_ok=piege:pont:index_depuis_un_instantane\ncas_ok=piege:pont:verrou_relache_avant_replace\ncas_ok=valide:entree\ncas_ok=piege:entree:leve_au_lieu_de_journaliser\ncas_ok=piege:entree:ecrit_meme_sur_go\ncas_ok=piege:entree:chemin_par_defaut_sans_disque\ncas_ok=piege:entree:cli_echec_mais_code_zero\ncas_ok=piege:entree:gouvernance_modifiee\ncas_ok=piege:entree:ecrit_sur_go_sans_journaliser\ncas_ok=piege:entree:abandon_a_la_premiere_erreur\ncas_ok=piege:entree:cli_dry_run_marqueur_constant\ncas_ok=piege:entree:module_qui_contrefait_cas_ok\ncas_ok=valide:raccordement\ncas_ok=piege:raccordement:sans_mention\ncas_ok=piege:raccordement:import_et_commentaire\ncas_ok=piege:raccordement:appel_avant_l_ancre\ncas_ok=piege:raccordement:module_manquant\ncas_ok=piege:raccordement:hook_leve_a_l_import\ncas_ok=piege:raccordement:dry_run_non_nul\ncas_ok=piege:raccordement:runner_non_analysable\ncas_ok=pie"
+    },
+    "B-T1": {
+      "status": "done",
+      "history": [
+        {
+          "at": "2026-08-21T16:10:52.008643+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-opus-5",
+          "base_sha": "ce75a1f5e03e37d58ae84eefe1dc5c6e73e31431"
+        },
+        {
+          "at": "2026-08-21T16:18:13.774251+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 1.5108018000000003,
+          "is_error": false,
+          "written": 2,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T16:18:19.610310+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-21T16:22:13.296109+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE mais 5 HAUTE — UN tour correctif, pas quatre",
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T1-a1-20260821T162213.md"
+        },
+        {
+          "at": "2026-08-21T16:22:13.298212+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-opus-5",
+          "base_sha": "ce75a1f5e03e37d58ae84eefe1dc5c6e73e31431"
+        },
+        {
+          "at": "2026-08-21T16:28:48.314485+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 1.7887771,
+          "is_error": false,
+          "written": 2,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T16:28:48.319746+00:00",
+          "event": "governance_violation",
+          "files": [
+            "/home/nuveo/hermes-os/ops/plan_runner.py"
+          ]
+        },
+        {
+          "at": "2026-08-21T16:28:54.534543+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-21T16:34:03.073214+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 2 HAUTE et 2 mineure(s) consignées après 1 tour(s) correctif(s)",
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T1-a2-20260821T163403.md"
+        },
+        {
+          "at": "2026-08-21T16:34:03.073242+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 2,
+          "codex_correction_rounds": 1,
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T1-a2-20260821T163403.md"
+        }
+      ],
+      "attempts": 2,
+      "base_sha": "ce75a1f5e03e37d58ae84eefe1dc5c6e73e31431",
+      "last_session": {
+        "exit": 0,
+        "is_error": false,
+        "session_id": "0d9b2d0f-b6a7-4d79-bfe0-f4ccfd225f52",
+        "subtype": "success",
+        "total_cost_usd": 1.7887771,
+        "num_turns": 37,
+        "writes_declared": true,
+        "written_files": [
+          "/home/nuveo/hermes-os-plan-b/docs/plans/2026-08-21-b-contrat-injection.matrice.json",
+          "/home/nuveo/hermes-os-plan-b/docs/plans/2026-08-21-b-contrat-injection.md"
+        ],
+        "opaque_writes": true
+      },
+      "written_files": [
+        "/home/nuveo/hermes-os-plan-b/docs/plans/2026-08-21-b-contrat-injection.matrice.json",
+        "/home/nuveo/hermes-os-plan-b/docs/plans/2026-08-21-b-contrat-injection.md"
+      ],
+      "writes_opaque": true,
+      "check_output": "cas_ok=document:ancres\ncas_ok=decision:schema\ncas_ok=decision:verdicts_armes\ncas_ok=decision:severites_retenues\ncas_ok=decision:cle\ncas_ok=decision:egalite_champs\ncas_ok=decision:contenu\ncas_ok=decision:lignes_index_par_regle\ncas_ok=decision:jamais\ncas_ok=cas:GO\ncas_ok=cas:GO_AVEC_RESERVES\ncas_ok=cas:NO_GO\ncas_ok=cas:NO_VERDICT\ncas_ok=cas:NO_REVIEWER\ncas_ok=cas:REVIEWER_DOWN\ncas=6 verdicts_productifs=GO_AVEC_RESERVES,NO_GO regles_attendues=3 lignes_document=432 derivation=feedback__+_sha256(cle_encodée_en_utf-8).hexdigest()[:12]_—_cle_=_\"<fichier>|<fait>\",_le_fichier_privé_de_son_numéro_de_ligne_et_le_fait_pris_tel_que_le_reviewer_l'écrit,_tous_deux_normalisés_(casse_basse,_espaces_réduits)_avant_hachage verdicts_armes=GO,GO_AVEC_RESERVES,NO_GO severites_retenues=CRITIQUE,HAUTE\nB-T1 sonde=contrat cas_ok=15",
+      "codex_reports": [
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T1-a1-20260821T162213.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T1-a2-20260821T163403.md"
+      ],
+      "codex_verdict": "GO_AVEC_RESERVES",
+      "verdict_motif": "0 CRITIQUE, 2 HAUTE et 2 mineure(s) consignées après 1 tour(s) correctif(s)",
+      "governance_violation": [
+        "/home/nuveo/hermes-os/ops/plan_runner.py"
+      ],
+      "evidence": "[GO_AVEC_RESERVES accepté au tour 2/4, réserves traitées en session — rapport /home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T1-a2-20260821T163403.md] cas_ok=document:ancres\ncas_ok=decision:schema\ncas_ok=decision:verdicts_armes\ncas_ok=decision:severites_retenues\ncas_ok=decision:cle\ncas_ok=decision:egalite_champs\ncas_ok=decision:contenu\ncas_ok=decision:lignes_index_par_regle\ncas_ok=decision:jamais\ncas_ok=cas:GO\ncas_ok=cas:GO_AVEC_RESERVES\ncas_ok=cas:NO_GO\ncas_ok=cas:NO_VERDICT\ncas_ok=cas:NO_REVIEWER\ncas_ok=cas:REVIEWER_DOWN\ncas=6 verdicts_productifs=GO_AVEC_RESERVES,NO_GO regles_attendues=3 lignes_document=432 derivation=feedback__+_sha256(cle_encodée_en_utf-8).hexdigest()[:12]_—_cle_=_\"<fichier>|<fait>\",_le_fichier_privé_de_son_numéro_de_ligne_et_le_fait_pris_tel_que_le_reviewer_l'écrit,_tous_deux_normalisés_(casse_basse,_espaces_réduits)_avant_hachage verdicts_armes=GO,GO_AVEC_RESERVES,NO_GO severites_retenues=CRITIQUE,HAUTE\nB-T1 sonde=contrat cas_ok=15"
+    },
+    "B-T2": {
+      "status": "done",
+      "history": [
+        {
+          "at": "2026-08-21T16:34:33.133115+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-sonnet-5",
+          "base_sha": "01a62b71eb8f807f5562abe6e8b7ab56cd8f7124"
+        },
+        {
+          "at": "2026-08-21T16:36:21.787495+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 0.7557701999999998,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T16:36:29.545079+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-21T16:39:51.061941+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE mais 3 HAUTE — UN tour correctif, pas quatre",
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T2-a1-20260821T163951.md"
+        },
+        {
+          "at": "2026-08-21T16:39:51.063831+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-sonnet-5",
+          "base_sha": "01a62b71eb8f807f5562abe6e8b7ab56cd8f7124"
+        },
+        {
+          "at": "2026-08-21T16:45:42.014325+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 1.8423938000000002,
+          "is_error": true,
+          "written": 0,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T16:45:42.014356+00:00",
+          "event": "session_error",
+          "exit": 1,
+          "subtype": "error_max_turns",
+          "num_turns": 41,
+          "timeout": false,
+          "lease_busy": false,
+          "stderr_tail": "rmes-os/ops/sdk_session.py\", line 643, in <module>\n    raise SystemExit(main())\n                     ^^^^^^\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 639, in main\n    return asyncio.run(run(args))\n           ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/runners.py\", line 194, in run\n    return runner.run(main)\n           ^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/runners.py\", line 118, in run\n    return self._loop.run_until_complete(task)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/base_events.py\", line 687, in run_until_complete\n    return future.result()\n           ^^^^^^^^^^^^^^^\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 475, in run\n    return await _boucle(args, options, ledger, human_wait, terminer, _perimetre)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 550, in _boucle\n    message = await asyncio.wait_for(asyncio.shield(en_cours), TICK)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/tasks.py\", line 520, in wait_for\n    return await fut\n  "
+        },
+        {
+          "at": "2026-08-21T16:45:50.292372+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-21T16:47:23.665753+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 2 HAUTE et 0 mineure(s) consignées après 1 tour(s) correctif(s)",
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T2-a2-20260821T164723.md"
+        },
+        {
+          "at": "2026-08-21T16:47:23.665780+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 2,
+          "codex_correction_rounds": 1,
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T2-a2-20260821T164723.md"
+        }
+      ],
+      "attempts": 2,
+      "base_sha": "01a62b71eb8f807f5562abe6e8b7ab56cd8f7124",
+      "last_session": {
+        "exit": 1,
+        "is_error": true,
+        "session_id": "bd391cd3-8b7c-4b33-9f12-164a37d7db26",
+        "subtype": "error_max_turns",
+        "total_cost_usd": 1.8423938000000002,
+        "num_turns": 41,
+        "stderr_tail": "rmes-os/ops/sdk_session.py\", line 643, in <module>\n    raise SystemExit(main())\n                     ^^^^^^\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 639, in main\n    return asyncio.run(run(args))\n           ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/runners.py\", line 194, in run\n    return runner.run(main)\n           ^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/runners.py\", line 118, in run\n    return self._loop.run_until_complete(task)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/base_events.py\", line 687, in run_until_complete\n    return future.result()\n           ^^^^^^^^^^^^^^^\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 475, in run\n    return await _boucle(args, options, ledger, human_wait, terminer, _perimetre)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 550, in _boucle\n    message = await asyncio.wait_for(asyncio.shield(en_cours), TICK)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/tasks.py\", line 520, in wait_for\n    return await fut\n           ^^^^^^^^^\n  File \"/home/nuveo/hermes-os/.venv/lib/python3.12/site-packages/claude_agent_sdk/query.py\", line 123, in query\n    async for message in client.process_query(\n  File \"/home/nuveo/hermes-os/.venv/lib/python3.12/site-packages/claude_agent_sdk/_internal/client.py\", line 74, in process_query\n    async for msg in inner:\n  File \"/home/nuveo/hermes-os/.venv/lib/python3.12/site-packages/claude_agent_sdk/_internal/client.py\", line 223, in _process_query_inner\n    async for data in query.receive_messages():\n  File \"/home/nuveo/hermes-os/.venv/lib/python3.12/site-packages/claude_agent_sdk/_internal/query.py\", line 852, in receive_messages\n    raise Exception(message.get(\"error\", \"Unknown error\"))\nException: Claude Code returned an error result: Reached maximum number of turns (40)\n"
+      },
+      "written_files": [
+        "/home/nuveo/hermes-os-plan-b/ops/verdict_regles.py"
+      ],
+      "writes_opaque": true,
+      "check_output": "cas_ok=verdict:GO\ncas_ok=verdict:GO_AVEC_RESERVES\ncas_ok=verdict:NO_GO\ncas_ok=verdict:NO_VERDICT\ncas_ok=verdict:NO_REVIEWER\ncas_ok=verdict:REVIEWER_DOWN\ncas=6 regles_obtenues=3 regles_attendues=3 detail=GO:0/0,GO_AVEC_RESERVES:1/1,NO_GO:2/2,NO_VERDICT:0/0,NO_REVIEWER:0/0,REVIEWER_DOWN:0/0\nB-T2 sonde=decision cas_ok=6",
+      "codex_reports": [
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T2-a1-20260821T163951.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T2-a2-20260821T164723.md"
+      ],
+      "codex_verdict": "GO_AVEC_RESERVES",
+      "verdict_motif": "0 CRITIQUE, 2 HAUTE et 0 mineure(s) consignées après 1 tour(s) correctif(s)",
+      "evidence": "[GO_AVEC_RESERVES accepté au tour 2/4, réserves traitées en session — rapport /home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T2-a2-20260821T164723.md] cas_ok=verdict:GO\ncas_ok=verdict:GO_AVEC_RESERVES\ncas_ok=verdict:NO_GO\ncas_ok=verdict:NO_VERDICT\ncas_ok=verdict:NO_REVIEWER\ncas_ok=verdict:REVIEWER_DOWN\ncas=6 regles_obtenues=3 regles_attendues=3 detail=GO:0/0,GO_AVEC_RESERVES:1/1,NO_GO:2/2,NO_VERDICT:0/0,NO_REVIEWER:0/0,REVIEWER_DOWN:0/0\nB-T2 sonde=decision cas_ok=6"
+    },
+    "B-TM": {
+      "status": "done",
+      "history": [
+        {
+          "at": "2026-08-21T16:47:53.878328+00:00",
+          "event": "gate_requested",
+          "gate_id": "gate-bb1c4e28ba6e"
+        },
+        {
+          "at": "2026-08-21T17:10:09.371215+00:00",
+          "event": "gate_approved",
+          "decided_by": "kiosk",
+          "governed": {
+            "ops/plan_runner.py": "bb75e7789a0fd4a38c32ba41fd9bac50de3bd6f34c22e82598b7d0dc6dd386b0",
+            "ops/plan_doctor.py": "40e33c43178e1c658efd5d10a0095b260eb9d8675fca3b73eeb3abbe176e0f38",
+            "ops/plan_factory.py": "b14c6895f098c03b0a916f714d7d316438cbf97644d7124721132afaed970cec",
+            "ops/sdk_session.py": "a35e72dd962c746b5e64e98b4abc6d4e3d0f13bab05830c0c86bbcdcb3fcb0d6",
+            "hermes_core/ponytail.py": "addb23de69e729208d5a991448acb2c2fefd34bdc9b2340071d3ab0074ef2bd7",
+            "scripts/applique_patch_ancres.py": "308869432c3a33c2bdec452d15f6b57190b98386a138e65edffaddc4629e7619",
+            "ops/gate_arbiter.py": "911e977909755af0810b3f160f67287dcb4db0f7c1d750f4b011ce01bb5da73c",
+            "ops/bac_scelle.py": "94f02cb71e808b8d9de3baa9f7e9d19fc5d19eae95d863eb04ff0b4941eb7ac6",
+            "hermes_core/agentic_os/gates.py": "8a3bbf7dacdd9670a2956e97263a2b58d7191674093fdfca073374dd854bf735",
+            "runbooks/arbitrages.yaml": "d240342a7a5443949756764229b3aa233e8c4c1d92b2e9661c2ea581b070171d",
+            "runbooks/codex-waivers.md": "5f69c43f3cb014357a2a3b0bdb63a23652dc58c6443c3547aac582095e3e4475",
+            ".env": "absent"
+          }
+        }
+      ],
+      "gate_id": "gate-bb1c4e28ba6e",
+      "evidence": "gate gate-bb1c4e28ba6e approved by kiosk",
+      "governed_at_approval": {
+        "ops/plan_runner.py": "bb75e7789a0fd4a38c32ba41fd9bac50de3bd6f34c22e82598b7d0dc6dd386b0",
+        "ops/plan_doctor.py": "40e33c43178e1c658efd5d10a0095b260eb9d8675fca3b73eeb3abbe176e0f38",
+        "ops/plan_factory.py": "b14c6895f098c03b0a916f714d7d316438cbf97644d7124721132afaed970cec",
+        "ops/sdk_session.py": "a35e72dd962c746b5e64e98b4abc6d4e3d0f13bab05830c0c86bbcdcb3fcb0d6",
+        "hermes_core/ponytail.py": "addb23de69e729208d5a991448acb2c2fefd34bdc9b2340071d3ab0074ef2bd7",
+        "scripts/applique_patch_ancres.py": "308869432c3a33c2bdec452d15f6b57190b98386a138e65edffaddc4629e7619",
+        "ops/gate_arbiter.py": "911e977909755af0810b3f160f67287dcb4db0f7c1d750f4b011ce01bb5da73c",
+        "ops/bac_scelle.py": "94f02cb71e808b8d9de3baa9f7e9d19fc5d19eae95d863eb04ff0b4941eb7ac6",
+        "hermes_core/agentic_os/gates.py": "8a3bbf7dacdd9670a2956e97263a2b58d7191674093fdfca073374dd854bf735",
+        "runbooks/arbitrages.yaml": "d240342a7a5443949756764229b3aa233e8c4c1d92b2e9661c2ea581b070171d",
+        "runbooks/codex-waivers.md": "5f69c43f3cb014357a2a3b0bdb63a23652dc58c6443c3547aac582095e3e4475",
+        ".env": "absent"
+      }
+    },
+    "B-T3": {
+      "status": "done",
+      "history": [
+        {
+          "at": "2026-08-21T17:10:39.400311+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-opus-5",
+          "base_sha": "6e15e4bfe3a778dd3e37312f3a6016b1cdf52ada"
+        },
+        {
+          "at": "2026-08-21T17:17:03.093778+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 1.5179562999999996,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T17:17:09.273182+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-21T17:21:10.609321+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE mais 4 HAUTE — UN tour correctif, pas quatre",
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T3-a1-20260821T172110.md"
+        },
+        {
+          "at": "2026-08-21T17:21:10.611315+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-opus-5",
+          "base_sha": "6e15e4bfe3a778dd3e37312f3a6016b1cdf52ada"
+        },
+        {
+          "at": "2026-08-21T17:26:17.605444+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 1.2775500999999998,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T17:26:17.608396+00:00",
+          "event": "governance_violation",
+          "files": [
+            "/home/nuveo/hermes-os/.env"
+          ]
+        },
+        {
+          "at": "2026-08-21T17:26:24.265028+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-21T17:29:40.129789+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 3 HAUTE et 0 mineure(s) consignées après 1 tour(s) correctif(s)",
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T3-a2-20260821T172940.md"
+        },
+        {
+          "at": "2026-08-21T17:29:40.129821+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 2,
+          "codex_correction_rounds": 1,
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T3-a2-20260821T172940.md"
+        }
+      ],
+      "attempts": 2,
+      "base_sha": "6e15e4bfe3a778dd3e37312f3a6016b1cdf52ada",
+      "last_session": {
+        "exit": 0,
+        "is_error": false,
+        "session_id": "61c6accd-298e-4c48-b734-44e9099d4bcd",
+        "subtype": "success",
+        "total_cost_usd": 1.2775500999999998,
+        "num_turns": 30,
+        "writes_declared": true,
+        "written_files": [
+          "/home/nuveo/hermes-os-plan-b/ops/brain_bridge.py"
+        ],
+        "opaque_writes": true
+      },
+      "written_files": [
+        "/home/nuveo/hermes-os-plan-b/ops/brain_bridge.py"
+      ],
+      "writes_opaque": true,
+      "check_output": "cas_ok=oracle:epingle\ncas_ok=v1:versionne_premier\ncas_ok=md:contenu_courant\ncas_ok=v2:absent_au_rejeu\ncas_ok=index:une_ligne\ncas_ok=etat:inchangee\ncas_ok=revision:why_versionne\ncas_ok=index:une_ligne_apres_revision\ncas_ok=concurrence:deux_fichiers\ncas_ok=concurrence:index_une_ligne_par_slug\ncas_ok=verrou:pris\ncas_ok=concurrence:ecrivain_direct_preserve\ncas_ok=verrou:tenu_jusqu_au_replace\nbrain_js=/home/nuveo/projects/jarvis-cortex/brain.js brain_js_sha256=e400107c586c53d94f987922a995caad137753223a545c7aaa9ccb5f59e54bce appels_sequentiels=4 fichiers_du_slug=3 refus_de_verrou=2816 axe_relachement_exerce=1 index_trouves=1\nB-T3 sonde=pont cas_ok=13",
+      "codex_reports": [
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T3-a1-20260821T172110.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T3-a2-20260821T172940.md"
+      ],
+      "codex_verdict": "GO_AVEC_RESERVES",
+      "verdict_motif": "0 CRITIQUE, 3 HAUTE et 0 mineure(s) consignées après 1 tour(s) correctif(s)",
+      "governance_violation": [
+        "/home/nuveo/hermes-os/.env"
+      ],
+      "evidence": "[GO_AVEC_RESERVES accepté au tour 2/4, réserves traitées en session — rapport /home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T3-a2-20260821T172940.md] cas_ok=oracle:epingle\ncas_ok=v1:versionne_premier\ncas_ok=md:contenu_courant\ncas_ok=v2:absent_au_rejeu\ncas_ok=index:une_ligne\ncas_ok=etat:inchangee\ncas_ok=revision:why_versionne\ncas_ok=index:une_ligne_apres_revision\ncas_ok=concurrence:deux_fichiers\ncas_ok=concurrence:index_une_ligne_par_slug\ncas_ok=verrou:pris\ncas_ok=concurrence:ecrivain_direct_preserve\ncas_ok=verrou:tenu_jusqu_au_replace\nbrain_js=/home/nuveo/projects/jarvis-cortex/brain.js brain_js_sha256=e400107c586c53d94f987922a995caad137753223a545c7aaa9ccb5f59e54bce appels_sequentiels=4 fichiers_du_slug=3 refus_de_verrou=2816 axe_relachement_exerce=1 index_trouves=1\nB-T3 sonde=pont cas_ok=13"
+    },
+    "B-T4": {
+      "status": "done",
+      "history": [
+        {
+          "at": "2026-08-21T17:30:10.157425+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-sonnet-5",
+          "base_sha": "4be2969ef85d0790569e8f9c38752097911a9912"
+        },
+        {
+          "at": "2026-08-21T17:33:02.895834+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 1.1809372,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T17:33:09.035700+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='d\": \"5f69c43f3cb014357a2a3b0bdb63a23652dc58c6443c3547aac582095e3e4475\", \".env\": \"absent\"}, \"gate_id\": \"gate-bb1c4e28ba6e\"}, \"B-T3\": {\"status\": \"done\", \"base_sha\": \"6e15e4bfe3a778dd3e37312f3a6016b1cdf52ada\"}, \"B-T4\": {\"status\": \"running\", \"base_sha\": \"4be2969ef85d0790569e8f9c38752097911a9912\"}}} --sceau ops/checks/sonde_b.sha256 --module ops/verdict_hook.py\\nsonde entree: ECHEC — facts: `base_sha` absent — la non-regression de perimetre ne peut pas etre evaluee (cles vues"
+        },
+        {
+          "at": "2026-08-21T17:33:09.035732+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-sonnet-5",
+          "base_sha": "4be2969ef85d0790569e8f9c38752097911a9912"
+        },
+        {
+          "at": "2026-08-21T17:38:44.578489+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 1.8690327,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T17:38:52.540594+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-21T17:41:17.029299+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 2 HAUTE et 0 mineure(s) consignées après 0 tour(s) correctif(s)",
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T4-a2-20260821T174117.md"
+        },
+        {
+          "at": "2026-08-21T17:41:17.029319+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 2,
+          "codex_correction_rounds": 0,
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T4-a2-20260821T174117.md"
+        }
+      ],
+      "attempts": 2,
+      "base_sha": "4be2969ef85d0790569e8f9c38752097911a9912",
+      "last_session": {
+        "exit": 0,
+        "is_error": false,
+        "session_id": "1f807ab9-a744-4e86-b4b3-a1d42a17ba4e",
+        "subtype": "success",
+        "total_cost_usd": 1.8690327,
+        "num_turns": 45,
+        "writes_declared": true,
+        "written_files": [
+          "/home/nuveo/hermes-os-plan-b/ops/checks/sonde_b.py"
+        ],
+        "opaque_writes": true
+      },
+      "written_files": [
+        "/home/nuveo/hermes-os-plan-b/ops/checks/sonde_b.py",
+        "/home/nuveo/hermes-os-plan-b/ops/verdict_hook.py"
+      ],
+      "writes_opaque": true,
+      "check_output": "cas_ok=passe:ecrivain_injecte\ncas_ok=passe:go_sans_finding\ncas_ok=passe:ecrivain_qui_leve\ncas_ok=passe:chemin_par_defaut\ncas_ok=passe:racine_impossible\ncas_ok=cli:dry_run\ncas_ok=cli:racine_impossible\ncas_ok=nonregression:gouvernance\npasses=8 regles_attendues=2 fichiers_poses=feedback_f5c1e0ab91a5.md,feedback_81eba2170396.md gouvernance_comparee=3 base_sha=4be2969ef85d\nB-T4 sonde=entree cas_ok=8",
+      "codex_reports": [
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T4-a2-20260821T174117.md"
+      ],
+      "codex_verdict": "GO_AVEC_RESERVES",
+      "verdict_motif": "0 CRITIQUE, 2 HAUTE et 0 mineure(s) consignées après 0 tour(s) correctif(s)",
+      "evidence": "[GO_AVEC_RESERVES accepté au tour 2/4, réserves traitées en session — rapport /home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T4-a2-20260821T174117.md] cas_ok=passe:ecrivain_injecte\ncas_ok=passe:go_sans_finding\ncas_ok=passe:ecrivain_qui_leve\ncas_ok=passe:chemin_par_defaut\ncas_ok=passe:racine_impossible\ncas_ok=cli:dry_run\ncas_ok=cli:racine_impossible\ncas_ok=nonregression:gouvernance\npasses=8 regles_attendues=2 fichiers_poses=feedback_f5c1e0ab91a5.md,feedback_81eba2170396.md gouvernance_comparee=3 base_sha=4be2969ef85d\nB-T4 sonde=entree cas_ok=8"
+    },
+    "B-T5": {
+      "status": "done",
+      "history": [
+        {
+          "at": "2026-08-21T17:41:47.264513+00:00",
+          "event": "gate_requested",
+          "gate_id": "gate-62c04bccfcad"
+        },
+        {
+          "at": "2026-08-22T17:46:27.417578+00:00",
+          "event": "gate_approved",
+          "decided_by": "api:unknown",
+          "governed": {
+            "ops/plan_runner.py": "bb75e7789a0fd4a38c32ba41fd9bac50de3bd6f34c22e82598b7d0dc6dd386b0",
+            "ops/plan_doctor.py": "40e33c43178e1c658efd5d10a0095b260eb9d8675fca3b73eeb3abbe176e0f38",
+            "ops/plan_factory.py": "b14c6895f098c03b0a916f714d7d316438cbf97644d7124721132afaed970cec",
+            "ops/sdk_session.py": "a35e72dd962c746b5e64e98b4abc6d4e3d0f13bab05830c0c86bbcdcb3fcb0d6",
+            "hermes_core/ponytail.py": "addb23de69e729208d5a991448acb2c2fefd34bdc9b2340071d3ab0074ef2bd7",
+            "scripts/applique_patch_ancres.py": "308869432c3a33c2bdec452d15f6b57190b98386a138e65edffaddc4629e7619",
+            "ops/gate_arbiter.py": "911e977909755af0810b3f160f67287dcb4db0f7c1d750f4b011ce01bb5da73c",
+            "ops/bac_scelle.py": "94f02cb71e808b8d9de3baa9f7e9d19fc5d19eae95d863eb04ff0b4941eb7ac6",
+            "hermes_core/agentic_os/gates.py": "8a3bbf7dacdd9670a2956e97263a2b58d7191674093fdfca073374dd854bf735",
+            "runbooks/arbitrages.yaml": "d240342a7a5443949756764229b3aa233e8c4c1d92b2e9661c2ea581b070171d",
+            "runbooks/codex-waivers.md": "5f69c43f3cb014357a2a3b0bdb63a23652dc58c6443c3547aac582095e3e4475",
+            ".env": "absent"
+          }
+        }
+      ],
+      "gate_id": "gate-62c04bccfcad",
+      "evidence": "gate gate-62c04bccfcad approved by api:unknown",
+      "governed_at_approval": {
+        "ops/plan_runner.py": "bb75e7789a0fd4a38c32ba41fd9bac50de3bd6f34c22e82598b7d0dc6dd386b0",
+        "ops/plan_doctor.py": "40e33c43178e1c658efd5d10a0095b260eb9d8675fca3b73eeb3abbe176e0f38",
+        "ops/plan_factory.py": "b14c6895f098c03b0a916f714d7d316438cbf97644d7124721132afaed970cec",
+        "ops/sdk_session.py": "a35e72dd962c746b5e64e98b4abc6d4e3d0f13bab05830c0c86bbcdcb3fcb0d6",
+        "hermes_core/ponytail.py": "addb23de69e729208d5a991448acb2c2fefd34bdc9b2340071d3ab0074ef2bd7",
+        "scripts/applique_patch_ancres.py": "308869432c3a33c2bdec452d15f6b57190b98386a138e65edffaddc4629e7619",
+        "ops/gate_arbiter.py": "911e977909755af0810b3f160f67287dcb4db0f7c1d750f4b011ce01bb5da73c",
+        "ops/bac_scelle.py": "94f02cb71e808b8d9de3baa9f7e9d19fc5d19eae95d863eb04ff0b4941eb7ac6",
+        "hermes_core/agentic_os/gates.py": "8a3bbf7dacdd9670a2956e97263a2b58d7191674093fdfca073374dd854bf735",
+        "runbooks/arbitrages.yaml": "d240342a7a5443949756764229b3aa233e8c4c1d92b2e9661c2ea581b070171d",
+        "runbooks/codex-waivers.md": "5f69c43f3cb014357a2a3b0bdb63a23652dc58c6443c3547aac582095e3e4475",
+        ".env": "absent"
+      }
+    },
+    "B-T6": {
+      "status": "done",
+      "history": [
+        {
+          "at": "2026-08-22T17:46:57.478154+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-haiku-4-5",
+          "base_sha": "99eaed7b11741ebe85dbaaa0ba171654a26b356b"
+        },
+        {
+          "at": "2026-08-22T17:47:23.576656+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 0.0627969,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-22T17:47:32.236448+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-22T17:49:01.772643+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "GO_AVEC_RESERVES",
+          "motif": "",
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T6-a1-20260822T174901.md"
+        },
+        {
+          "at": "2026-08-22T17:49:01.778128+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-haiku-4-5",
+          "base_sha": "99eaed7b11741ebe85dbaaa0ba171654a26b356b"
+        },
+        {
+          "at": "2026-08-22T17:49:43.018457+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 0.10433039999999999,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-22T17:49:50.138727+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-22T17:51:09.544975+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO",
+          "rendu": "GO",
+          "motif": "",
+          "report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T6-a2-20260822T175109.md"
+        }
+      ],
+      "attempts": 2,
+      "base_sha": "99eaed7b11741ebe85dbaaa0ba171654a26b356b",
+      "last_session": {
+        "exit": 0,
+        "is_error": false,
+        "session_id": "c58b64c7-a7ab-4d2f-9360-975df0d71381",
+        "subtype": "success",
+        "total_cost_usd": 0.10433039999999999,
+        "num_turns": 9,
+        "writes_declared": true,
+        "written_files": [
+          "/home/nuveo/hermes-os-plan-b/docs/plans/2026-08-21-b-raccordement-constate.md"
+        ],
+        "opaque_writes": true
+      },
+      "written_files": [
+        "/home/nuveo/hermes-os-plan-b/docs/plans/2026-08-21-b-raccordement-constate.md"
+      ],
+      "writes_opaque": true,
+      "check_output": "cas_ok=moteur:parse\ncas_ok=modules:presents\ncas_ok=ancre:verdict_motif\ncas_ok=appel:apres_ancre\ncas_ok=invocation:dry_run\nmoteur=/home/nuveo/hermes-os lignes_moteur=9163 ancres_ts=1 ancre_lineno=7981 appel_lineno=8013 fonction_porteuse=process_session_ticket appel_args=verdict,report,ts slugs_dry_run=feedback_81eba2170396,feedback_f5c1e0ab91a5 modules=ops.verdict_regles,ops.brain_bridge,ops.verdict_hook\nB-T6 sonde=raccordement cas_ok=5",
+      "codex_reports": [
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T6-a1-20260822T174901.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T6-a2-20260822T175109.md"
+      ],
+      "codex_verdict": "GO",
+      "verdict_motif": "",
+      "evidence": "cas_ok=moteur:parse\ncas_ok=modules:presents\ncas_ok=ancre:verdict_motif\ncas_ok=appel:apres_ancre\ncas_ok=invocation:dry_run\nmoteur=/home/nuveo/hermes-os lignes_moteur=9163 ancres_ts=1 ancre_lineno=7981 appel_lineno=8013 fonction_porteuse=process_session_ticket appel_args=verdict,report,ts slugs_dry_run=feedback_81eba2170396,feedback_f5c1e0ab91a5 modules=ops.verdict_regles,ops.brain_bridge,ops.verdict_hook\nB-T6 sonde=raccordement cas_ok=5"
+    }
+  },
+  "day": "2026-08-22",
+  "sessions_today": 2,
+  "runbook_sha": "fc70a715ce111076c38798faa763c7594cad905728899597d363807f5110edb0",
+  "chain_inherited": true,
+  "chain_inherited_depth": 1,
+  "chain_inherited_final_gate": "human",
+  "chain_visited": [
+    "/home/nuveo/projects/jarvis-cortex/runbooks/handoff-2026-08-20-m-memoire-regimes.runbook.yaml",
+    "/home/nuveo/jarvis-cortex-plan-m/runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml"
+  ],
+  "preflight": {
+    "history": [
+      {
+        "at": "2026-08-21T15:30:43.387347+00:00",
+        "event": "branch_fresh",
+        "ref": "main",
+        "provenance": "manifest.integration_branch"
+      }
+    ]
+  },
+  "work_branch": "plan/b-boucle-verdict-regle-2026-08-21",
+  "work_branch_base": "d6116f6fe9b98ca526eebac2fa801f359fcea7b7",
+  "block_commit": {
+    "history": [
+      {
+        "at": "2026-08-21T15:45:34.532282+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T16:03:44.016006+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T16:18:19.616486+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T16:28:54.539740+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T16:36:29.561158+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T16:45:50.352150+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/b-boucle-verdict-regle-2026-08-21",
+        "files": 2,
+        "sha": "6e15e4bfe3a7",
+        "paths": [
+          "ops/verdict_regles.py",
+          "tests/test_verdict_regles.py"
+        ]
+      },
+      {
+        "at": "2026-08-21T17:17:09.278678+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T17:26:24.271866+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T17:38:52.555011+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-22T17:47:32.265184+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-22T17:49:50.144631+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-22T17:51:39.598178+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-22T17:54:46.278689+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      }
+    ]
+  },
+  "merge_report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/merge-plan_b-boucle-verdict-regle-2026-08-21-20260822T175139.md",
+  "merge_report_sha": "f0a5ff4faf06ae315434a8b3fa98976e081d69f0",
+  "chain_state": {
+    "status": "chain_end_acknowledged",
+    "history": [
+      {
+        "at": "2026-08-22T17:51:39.731726+00:00",
+        "event": "chain_end_gate_requested",
+        "gate_id": "gate-4cade199f1b2"
+      },
+      {
+        "at": "2026-08-22T17:54:46.666486+00:00",
+        "event": "chain_end_acknowledged",
+        "decided_by": "api:unknown"
+      },
+      {
+        "at": "2026-08-22T17:54:48.847274+00:00",
+        "event": "work_branch_pushed",
+        "branch": "plan/b-boucle-verdict-regle-2026-08-21"
+      }
+    ],
+    "end_gate_id": "gate-4cade199f1b2"
+  }
+}
