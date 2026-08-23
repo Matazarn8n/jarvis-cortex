@@ -443,7 +443,12 @@ absence laissait la boucle définitivement inerte :
 Ce qu'elle ne prouve **pas**, et ne prétends pas le contraire : qu'un verdict
 réel ait écrit une règle en production. Le moteur n'expose à aucun `check:` le
 moyen de l'observer — dette consignée en tête du runbook. Un appel posé dans une
-branche morte franchirait ces cinq axes. La preuve de bout en bout est
+branche **dont la condition n'est pas constante** — un `if <runtime>:` faux en
+production — franchirait ces cinq axes. Une portée différée (lambda, fonction
+jamais invoquée) ou un chemin inconditionnellement terminal (`return`, `raise`,
+`if True:` qui se termine) ne les franchit **plus** : `_appels_atteignables` les
+écarte, et l'autotest porte les pièges `appel_dans_lambda`, `appel_apres_return`,
+`appel_sous_if_false` et `appel_apres_if_true`. La preuve de bout en bout reste
 l'exécution suivante d'un vrai gate.
 
 Imprime les grandeurs constatées — lignes du moteur, `lineno` de l'ancre et de
@@ -475,7 +480,7 @@ cibles :
 | `pont`     | 13                | `oracle:epingle`, `.v1`, `.md`, `.v2` absent, index, `inchangee`, révision du `why`, index après révision (8 séquentiels) + les 5 axes concurrents |
 | `entree`   | 8                 | les 5 passes, les 2 CLI, la non-régression       |
 | `raccordement` | 5             | parse, modules installés, ancre AST, appel AST après l'ancre, dry-run |
-| `autotest` | 42                | 5 arbres valides + les 37 pièges énumérés plus bas |
+| `autotest` | 77                | 5 arbres valides + 72 pièges — les 37 énumérés plus bas en sont le noyau |
 
 Ces six nombres sont ceux du YAML du runbook, et `tickets/B-T3.md` énumère les
 treize axes de `pont` un par un. Trois listes, un seul décompte : si tu en
@@ -587,8 +592,10 @@ ne sont pas commités ailleurs que dans le corps de `sonde_b.py`.
 **La sortie de l'autotest nomme les cas rejetés**, un par ligne au format
 `cas_ok=<nom>` du contrat de sortie ci-dessus — un arbre valide accepté et un
 piège refusé comptent chacun pour une ligne. Les trente-sept pièges énumérés
-ci-dessus plus les cinq arbres valides font le seuil de 42 ; en ajouter est
-bienvenu. Un autotest qui imprime « tout va bien » ne prouve rien ; celui qui
+ci-dessus sont le NOYAU, pas la liste close : l'autotest en refuse 72
+aujourd'hui, plus les cinq arbres valides, soit **77** — et c'est ce nombre réel
+qui fait le seuil du `check:`, jamais un chiffre rond hérité d'une révision
+antérieure. En ajouter est bienvenu ; en retirer doit faire rougir le contrôle. Un autotest qui imprime « tout va bien » ne prouve rien ; celui qui
 nomme chaque piège refusé prouve que l'instrument mord.
 
 Si un cas cassé **passe**, l'autotest échoue en le nommant. C'est le résultat
@@ -629,7 +636,7 @@ séquence est celui de la dernière, et un `sha256sum -c` vert reverdirait un
 autotest rouge. C'est du Bash — lance donc ce bloc sous `bash`, pas sous `sh`.
 
 Colle les deux sorties dans ton message de fin. La première doit lister les cas
-cassés refusés et finir sur un compte **≥ 42** — en dessous, le `check:` de ce
+cassés refusés et finir sur un compte **≥ 77** — en dessous, le `check:` de ce
 ticket échouera ; la seconde doit dire `ops/checks/sonde_b.py: OK`, ce qui exige
 que le sceau soit au format standard décrit plus haut.
 

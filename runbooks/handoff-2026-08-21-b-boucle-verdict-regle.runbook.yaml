@@ -157,7 +157,7 @@ tickets:
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 42
+      && test "$cas" -ge 77
       && echo "$sortie"
       && echo "B-T0 sonde=autotest cas_ok=${cas}"
 
@@ -201,7 +201,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 77
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py contrat
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
@@ -241,7 +241,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 77
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py decision
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/verdict_regles.py)
@@ -347,7 +347,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 77
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/brain_bridge.py
@@ -395,7 +395,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 77
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py entree
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/verdict_hook.py)
@@ -505,7 +505,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 77
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py raccordement
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --moteur /home/nuveo/hermes-os)
