@@ -13,7 +13,7 @@ Tu n'écris **pas** le point d'entrée qui relie les deux : c'est B-T4. Un seul
 livrable ici, `ops/brain_bridge.py`.
 
 Le `check:` appelle la sonde avec `--module ops/brain_bridge.py` et **compte**
-les lignes `cas_ok=` qu'elle imprime : il en exige **treize**, et cette liste
+les lignes `cas_ok=` qu'elle imprime : il en exige **quatorze**, et cette liste
 fait foi — c'est la même dans `tickets/B-T0.md`, dans le YAML du runbook et
 ici :
 
@@ -29,9 +29,16 @@ ici :
 10. et leurs **deux** lignes d'index, une par slug ;
 11. le verrou `<racine>/.memory.lock` est réellement pris (refus observé) ;
 12. une ligne ajoutée par un écrivain **direct** pendant le cycle survit ;
-13. le verrou n'est rendu qu'**après** le `os.replace()` de l'index.
+13. le verrou n'est rendu qu'**après** le `os.replace()` de l'index ; cet axe
+    est une preuve OBLIGATOIRE — la sonde retente jusqu'à l'observer et échoue
+    si elle n'y parvient pas, au lieu de le laisser manquer au compte ;
+14. l'oracle épinglé est réellement **invoqué**, avec les arguments d'écriture
+    (`store`, `--type feedback`, `--name`) — l'exposer sans rien lui demander
+    ne compte pas.
 
 Un axe non exercé ne compte pas : la sonde ne l'imprime pas, et le seuil manque.
+Tant que le 13 était facultatif, son absence était compensée dans le compte par
+le 14 et le seuil restait franchi ; les deux sont maintenant exigés.
 
 ## Le livrable — `ops/brain_bridge.py`
 
