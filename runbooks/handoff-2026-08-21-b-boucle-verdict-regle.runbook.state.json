@@ -687,7 +687,7 @@
   },
   "day": "2026-08-22",
   "sessions_today": 2,
-  "runbook_sha": "1d310b027dae8a2ba7edfce4fced8ccc6c6e3e7c0ffeefb26797f95233e226a2",
+  "runbook_sha": "6d34d2a86202cbd0a3e9abce10b2344ce411a4e5f256c1bcf91988a4102e05d4",
   "chain_inherited": true,
   "chain_inherited_depth": 1,
   "chain_inherited_final_gate": "human",

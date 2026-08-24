@@ -1,6 +1,6 @@
 {
-  "notified_fingerprint": "quota_hold:quota hebdomadaire à 66 % (palier 60 %) ",
-  "notified_at": "2026-08-24T12:28:59.796112+00:00",
+  "notified_fingerprint": "quota_hold:quota hebdomadaire à 69 % (palier 60 %) ",
+  "notified_at": "2026-08-24T14:49:32.050638+00:00",
   "merge_refused_at": "2026-08-22T22:58:00.501845+00:00",
   "merge_refused": "17 réserve(s) CRITIQUE/HAUTE non arbitrée(s) — inscrire leur empreinte dans 2026-08-14-arbitrage-objections-codex.md (et la commiter) : 0f884065f04d, 2b2753af7eea, 402bd41d19cf, 46e86ff9190d, 6cb9f0e5d368",
   "merge_pending_arbitration": [
