@@ -779,11 +779,16 @@
         "at": "2026-08-22T17:54:46.278689+00:00",
         "event": "block_commit_noop",
         "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-24T17:13:48.562902+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
       }
     ]
   },
-  "merge_report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/merge-plan_b-boucle-verdict-regle-2026-08-21-20260822T175139.md",
-  "merge_report_sha": "f0a5ff4faf06ae315434a8b3fa98976e081d69f0",
+  "merge_report": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/merge-plan_b-boucle-verdict-regle-2026-08-21-20260824T171349.md",
+  "merge_report_sha": "50ad5c6836818c9b0312a72068cf1580eb6b6b03",
   "chain_state": {
     "status": "chain_end_acknowledged",
     "history": [
