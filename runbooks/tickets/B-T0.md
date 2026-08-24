@@ -478,9 +478,9 @@ cibles :
 | `contrat`  | 14                | les 6 cas de matrice + les 7 décisions + l'axe du document |
 | `decision` | 6                 | un par verdict du domaine                        |
 | `pont`     | 14                | `oracle:epingle`, `.v1`, `.md`, `.v2` absent, index, `inchangee`, révision du `why`, index après révision (8 séquentiels) + les 5 axes concurrents + `oracle:invoque` |
-| `entree`   | 8                 | les 5 passes, les 2 CLI, la non-régression       |
+| `entree`   | 14                | les 6 cas de matrice, les 6 passes, les 2 CLI, la non-régression |
 | `raccordement` | 5             | parse, modules installés, ancre AST, appel AST après l'ancre, dry-run |
-| `autotest` | 83                | 5 arbres valides + 78 pièges — les 37 énumérés plus bas en sont le noyau |
+| `autotest` | 84                | 5 arbres valides + 79 pièges — les 37 énumérés plus bas en sont le noyau |
 
 Ces six nombres sont ceux du YAML du runbook, et `tickets/B-T3.md` énumère les
 quatorze axes de `pont` un par un. Trois listes, un seul décompte : si tu en
@@ -592,8 +592,8 @@ ne sont pas commités ailleurs que dans le corps de `sonde_b.py`.
 **La sortie de l'autotest nomme les cas rejetés**, un par ligne au format
 `cas_ok=<nom>` du contrat de sortie ci-dessus — un arbre valide accepté et un
 piège refusé comptent chacun pour une ligne. Les trente-sept pièges énumérés
-ci-dessus sont le NOYAU, pas la liste close : l'autotest en refuse 78
-aujourd'hui, plus les cinq arbres valides, soit **83** — et c'est ce nombre réel
+ci-dessus sont le NOYAU, pas la liste close : l'autotest en refuse 79
+aujourd'hui, plus les cinq arbres valides, soit **84** — et c'est ce nombre réel
 qui fait le seuil du `check:`, jamais un chiffre rond hérité d'une révision
 antérieure. En ajouter est bienvenu ; en retirer doit faire rougir le contrôle. Un autotest qui imprime « tout va bien » ne prouve rien ; celui qui
 nomme chaque piège refusé prouve que l'instrument mord.
@@ -636,7 +636,7 @@ séquence est celui de la dernière, et un `sha256sum -c` vert reverdirait un
 autotest rouge. C'est du Bash — lance donc ce bloc sous `bash`, pas sous `sh`.
 
 Colle les deux sorties dans ton message de fin. La première doit lister les cas
-cassés refusés et finir sur un compte **≥ 83** — en dessous, le `check:` de ce
+cassés refusés et finir sur un compte **≥ 84** — en dessous, le `check:` de ce
 ticket échouera ; la seconde doit dire `ops/checks/sonde_b.py: OK`, ce qui exige
 que le sceau soit au format standard décrit plus haut.
 

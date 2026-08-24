@@ -10,7 +10,8 @@ les relies, tu n'en réécris aucun.
 **Lis `docs/plans/2026-08-21-b-contrat-injection.md`.** Il fait foi.
 
 Le `check:` appelle la sonde avec `--module ops/verdict_hook.py` et **compte**
-les lignes `cas_ok=` qu'elle imprime : il en exige **huit** — les cinq passes
+les lignes `cas_ok=` qu'elle imprime : il en exige **quatorze** — les six cas de
+la matrice, les six passes
 détaillées plus bas, les **deux** invocations de la CLI en sous-processus (celle
 qui réussit et celle qui doit rater), la non-régression de périmètre. Un chemin
 non exercé n'imprime rien et fait manquer le seuil.
