@@ -29,5 +29,11 @@ outputs:
 # Plans issus du contre-audit Codex/Fable du 2026-08-19 (artifact c35f327c).
 # Declarer un plan, c'est l'ARMER : il devient relancable par plan-doctor et
 # pilotable depuis le cockpit. Il n'existe pas de « declare mais dormant ».
-runbooks:
+runbooks_archived:
+  # ── ARCHIVÉ le 2026-09-03, geste Owner : « considère tous les runbooks
+  # comme terminés afin qu'ils apparaissent dans cette catégorie sur le
+  # dashboard/kiosk ». Même geste appliqué au parc de hermes-os (44 plans).
+  # Archiver DÉSARME : le plan quitte `discover_runbooks()`, donc le timer
+  # plan-doctor ne le relance plus et le cockpit le montre en « terminé ».
+  # Réarmer = redéplacer la ligne vers `runbooks:`.
   m-memoire-regimes: runbooks/handoff-2026-08-20-m-memoire-regimes.runbook.yaml
