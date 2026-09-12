@@ -18,15 +18,27 @@ export function WorkspaceGraph({ onClose, onCtrlWheel }: { onClose: () => void; 
     const projectNodes = projects.map((project) => ({
       id: `project:${project.id}`, label: project.name, detail: project.description || project.path || "Projet", kind: "project" as const,
     }));
-    const documentNodes = projects.flatMap((project) => (project.documents ?? []).map((document) => ({
-      id: `document:${project.id}:${document}`, label: document.split("/").pop() || document, detail: document, kind: "document" as const,
-    })));
     const memory = (mindGraph?.nodes ?? []).slice(0, 24).map((node) => ({
       id: `memory:${node.id}`, label: node.label, detail: node.file || "Nœud de mémoire", kind: "memory" as const,
     }));
     const operationalCapacity = 48 - memory.length;
-    const visibleProjects = projectNodes.slice(0, operationalCapacity);
-    return [...visibleProjects, ...documentNodes.slice(0, operationalCapacity - visibleProjects.length), ...memory];
+    const visibleProjects = projectNodes.slice(0, Math.ceil(operationalCapacity / 2));
+    const visibleIds = new Set(visibleProjects.map((project) => project.id.slice("project:".length)));
+    const documentQueues = projects.filter((project) => visibleIds.has(project.id)).map((project) =>
+      (project.documents ?? []).map((document) => ({
+        id: `document:${project.id}:${document}`, label: document.split("/").pop() || document, detail: document, kind: "document" as const,
+      })),
+    );
+    const visibleDocuments: CortexNode[] = [];
+    for (let round = 0; visibleDocuments.length < operationalCapacity - visibleProjects.length; round++) {
+      let added = false;
+      for (const documents of documentQueues) if (documents[round] && visibleDocuments.length < operationalCapacity - visibleProjects.length) {
+        visibleDocuments.push(documents[round]);
+        added = true;
+      }
+      if (!added) break;
+    }
+    return [...visibleProjects, ...visibleDocuments, ...memory];
   }, [mindGraph, projects]);
 
   const points = useMemo<Point[]>(() => nodes.map((node, index) => {
@@ -61,8 +73,6 @@ export function WorkspaceGraph({ onClose, onCtrlWheel }: { onClose: () => void; 
     if (!canvas) return;
     const context = canvas.getContext("2d");
     if (!context) return;
-    let frame = 0;
-    let animation = 0;
     const draw = () => {
       const rect = canvas.getBoundingClientRect();
       const scale = window.devicePixelRatio || 1;
@@ -101,15 +111,14 @@ export function WorkspaceGraph({ onClose, onCtrlWheel }: { onClose: () => void; 
         context.stroke();
       }
       const glow = context.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.min(w, h) * .18);
-      glow.addColorStop(0, `rgba(255,107,26,${.24 + Math.sin(frame / 35) * .04})`);
+      glow.addColorStop(0, "rgba(255,107,26,.24)");
       glow.addColorStop(1, "rgba(255,107,26,0)");
       context.fillStyle = glow;
       context.beginPath(); context.arc(w / 2, h / 2, Math.min(w, h) * .18, 0, TAU); context.fill();
-      frame += 1;
-      animation = requestAnimationFrame(draw);
     };
-    animation = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(animation);
+    draw();
+    window.addEventListener("resize", draw);
+    return () => window.removeEventListener("resize", draw);
   }, [links, points]);
 
   useEffect(() => {
