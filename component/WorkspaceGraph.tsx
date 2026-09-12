@@ -15,17 +15,18 @@ export function WorkspaceGraph({ onClose, onCtrlWheel }: { onClose: () => void; 
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const nodes = useMemo<CortexNode[]>(() => {
-    const operational: CortexNode[] = [];
-    for (const project of projects) {
-      operational.push({ id: `project:${project.id}`, label: project.name, detail: project.description || project.path || "Projet", kind: "project" });
-      for (const document of project.documents ?? []) {
-        operational.push({ id: `document:${project.id}:${document}`, label: document.split("/").pop() || document, detail: document, kind: "document" });
-      }
-    }
+    const projectNodes = projects.map((project) => ({
+      id: `project:${project.id}`, label: project.name, detail: project.description || project.path || "Projet", kind: "project" as const,
+    }));
+    const documentNodes = projects.flatMap((project) => (project.documents ?? []).map((document) => ({
+      id: `document:${project.id}:${document}`, label: document.split("/").pop() || document, detail: document, kind: "document" as const,
+    })));
     const memory = (mindGraph?.nodes ?? []).slice(0, 24).map((node) => ({
       id: `memory:${node.id}`, label: node.label, detail: node.file || "Nœud de mémoire", kind: "memory" as const,
     }));
-    return [...operational.slice(0, 48 - memory.length), ...memory];
+    const operationalCapacity = 48 - memory.length;
+    const visibleProjects = projectNodes.slice(0, operationalCapacity);
+    return [...visibleProjects, ...documentNodes.slice(0, operationalCapacity - visibleProjects.length), ...memory];
   }, [mindGraph, projects]);
 
   const points = useMemo<Point[]>(() => nodes.map((node, index) => {
@@ -35,6 +36,20 @@ export function WorkspaceGraph({ onClose, onCtrlWheel }: { onClose: () => void; 
     const radius = Math.min(42, 14 + ring * 9);
     return { ...node, x: 50 + Math.cos(angle) * radius, y: 50 + Math.sin(angle) * radius };
   }), [nodes]);
+
+  const links = useMemo(() => {
+    const visible = new Set(points.map((point) => point.id));
+    const result: Array<[string, string]> = [];
+    for (const edge of mindGraph?.edges ?? []) {
+      const link: [string, string] = [`memory:${edge.source}`, `memory:${edge.target}`];
+      if (visible.has(link[0]) && visible.has(link[1])) result.push(link);
+    }
+    for (const project of projects) for (const document of project.documents ?? []) {
+      const link: [string, string] = [`project:${project.id}`, `document:${project.id}:${document}`];
+      if (visible.has(link[0]) && visible.has(link[1])) result.push(link);
+    }
+    return result;
+  }, [mindGraph, points, projects]);
 
   useEffect(() => {
     if (!selectedId && nodes[0]) setSelectedId(nodes[0].id);
@@ -73,10 +88,16 @@ export function WorkspaceGraph({ onClose, onCtrlWheel }: { onClose: () => void; 
         context.stroke();
       }
       context.strokeStyle = "rgba(255,107,26,.22)";
-      for (const point of points) {
+      const byId = new Map(points.map((point) => [point.id, point]));
+      for (const [sourceId, targetId] of links) {
+        const source = byId.get(sourceId);
+        const target = byId.get(targetId);
+        if (!source || !target) continue;
+        const sx = source.x / 100 * w, sy = source.y / 100 * h;
+        const tx = target.x / 100 * w, ty = target.y / 100 * h;
         context.beginPath();
-        context.moveTo(w / 2, h / 2);
-        context.quadraticCurveTo(w / 2 + (point.y - 50) * 1.5, h / 2 - (point.x - 50) * 1.5, point.x / 100 * w, point.y / 100 * h);
+        context.moveTo(sx, sy);
+        context.quadraticCurveTo((sx + tx) / 2 + (ty - sy) * .08, (sy + ty) / 2 - (tx - sx) * .08, tx, ty);
         context.stroke();
       }
       const glow = context.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.min(w, h) * .18);
@@ -89,7 +110,7 @@ export function WorkspaceGraph({ onClose, onCtrlWheel }: { onClose: () => void; 
     };
     animation = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(animation);
-  }, [points]);
+  }, [links, points]);
 
   useEffect(() => {
     const dialog = dialogRef.current;

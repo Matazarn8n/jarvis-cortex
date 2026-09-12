@@ -20,6 +20,8 @@ test("le composant consomme la coquille et expose des nœuds accessibles", () =>
   assert.match(component, /passive: false/);
   assert.match(component, /Math\.min\(42/);
   assert.match(component, /48 - memory\.length/);
+  assert.match(component, /mindGraph\?\.edges/);
+  assert.match(component, /projectNodes\.slice/);
   assert.match(component, /aria-label="Nœuds du Cortex"/);
   assert.match(component, /onClick=\{\(\) => setSelectedId/);
 });
