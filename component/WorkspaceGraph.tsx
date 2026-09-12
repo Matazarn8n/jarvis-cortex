@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type WheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useDashboardStore } from "@/store/dashboard";
 import "./WorkspaceGraph.css";
 
@@ -9,36 +9,30 @@ const TAU = Math.PI * 2;
 
 export function WorkspaceGraph({ onClose, onCtrlWheel }: { onClose: () => void; onCtrlWheel?: (deltaY: number, at: number) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const projects = useDashboardStore((state) => state.projects);
   const mindGraph = useDashboardStore((state) => state.mindGraph);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const nodes = useMemo<CortexNode[]>(() => {
-    const seen = new Set<string>();
-    const result: CortexNode[] = [];
-    const add = (node: CortexNode) => {
-      if (!seen.has(node.id)) {
-        seen.add(node.id);
-        result.push(node);
-      }
-    };
+    const operational: CortexNode[] = [];
     for (const project of projects) {
-      add({ id: `project:${project.id}`, label: project.name, detail: project.description || project.path || "Projet", kind: "project" });
+      operational.push({ id: `project:${project.id}`, label: project.name, detail: project.description || project.path || "Projet", kind: "project" });
       for (const document of project.documents ?? []) {
-        add({ id: `document:${project.id}:${document}`, label: document.split("/").pop() || document, detail: document, kind: "document" });
+        operational.push({ id: `document:${project.id}:${document}`, label: document.split("/").pop() || document, detail: document, kind: "document" });
       }
     }
-    for (const node of mindGraph?.nodes ?? []) {
-      add({ id: `memory:${node.id}`, label: node.label, detail: node.file || "Nœud de mémoire", kind: "memory" });
-    }
-    return result.slice(0, 48);
+    const memory = (mindGraph?.nodes ?? []).slice(0, 24).map((node) => ({
+      id: `memory:${node.id}`, label: node.label, detail: node.file || "Nœud de mémoire", kind: "memory" as const,
+    }));
+    return [...operational.slice(0, 48 - memory.length), ...memory];
   }, [mindGraph, projects]);
 
   const points = useMemo<Point[]>(() => nodes.map((node, index) => {
     const ring = 1 + Math.floor(index / 12);
     const slot = index % 12;
     const angle = -Math.PI / 2 + slot / Math.min(12, Math.max(nodes.length, 1)) * TAU + ring * 0.18;
-    const radius = 18 + ring * 12;
+    const radius = Math.min(42, 14 + ring * 9);
     return { ...node, x: 50 + Math.cos(angle) * radius, y: 50 + Math.sin(angle) * radius };
   }), [nodes]);
 
@@ -97,16 +91,27 @@ export function WorkspaceGraph({ onClose, onCtrlWheel }: { onClose: () => void; 
     return () => cancelAnimationFrame(animation);
   }, [points]);
 
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (!dialog.open) dialog.showModal();
+    const wheel = (event: globalThis.WheelEvent) => {
+      if (!event.ctrlKey || !onCtrlWheel) return;
+      event.preventDefault();
+      event.stopPropagation();
+      onCtrlWheel(event.deltaY, performance.timeOrigin + event.timeStamp);
+    };
+    dialog.addEventListener("wheel", wheel, { passive: false });
+    return () => {
+      dialog.removeEventListener("wheel", wheel);
+      if (dialog.open) dialog.close();
+    };
+  }, [onCtrlWheel]);
+
   const selected = nodes.find((node) => node.id === selectedId) ?? null;
-  const wheel = (event: WheelEvent) => {
-    if (!event.ctrlKey || !onCtrlWheel) return;
-    event.preventDefault();
-    event.stopPropagation();
-    onCtrlWheel(event.deltaY, performance.timeOrigin + event.timeStamp);
-  };
 
   return (
-    <section className="cortex-overlay" role="dialog" aria-label="Cortex" onWheel={wheel}>
+    <dialog ref={dialogRef} className="cortex-overlay" aria-label="Cortex" onCancel={(event) => { event.preventDefault(); onClose(); }}>
       <canvas ref={canvasRef} className="cortex-canvas" aria-hidden="true" />
       <header className="cortex-hud">
         <div><strong>ALFRED · CORTEX</strong><small>{nodes.length} nœuds · vault actif</small></div>
@@ -127,6 +132,6 @@ export function WorkspaceGraph({ onClose, onCtrlWheel }: { onClose: () => void; 
         ))}
       </div>
       {selected ? <aside className="cortex-detail" aria-live="polite"><small>{selected.kind}</small><strong>{selected.label}</strong><p>{selected.detail}</p></aside> : <p className="cortex-empty">Le vault ne contient encore aucun nœud.</p>}
-    </section>
+    </dialog>
   );
 }
