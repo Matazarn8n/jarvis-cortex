@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useDashboardStore } from "@/store/dashboard";
 import "./WorkspaceGraph.css";
 
@@ -121,7 +121,7 @@ export function WorkspaceGraph({ onClose, onCtrlWheel }: { onClose: () => void; 
     return () => window.removeEventListener("resize", draw);
   }, [links, points]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
     if (!dialog.open) dialog.showModal();

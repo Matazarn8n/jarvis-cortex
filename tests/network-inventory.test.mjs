@@ -16,6 +16,7 @@ test("le composant consomme la coquille et expose des nœuds accessibles", () =>
   assert.match(component, /state\.mindGraph/);
   assert.match(component, /<canvas/);
   assert.match(component, /<dialog/);
+  assert.match(component, /useLayoutEffect/);
   assert.match(component, /showModal/);
   assert.match(component, /passive: false/);
   assert.match(component, /Math\.min\(42/);
