@@ -311,6 +311,8 @@ export function WorkspaceGraph({
   onCtrlWheel?: (deltaY: number, at: number) => void;
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
   const closeRef = useRef<HTMLButtonElement>(null);
   const [error, setError] = useState<string | null>(null);
   const source = useMemo(() => createSource(setError), []);
@@ -337,11 +339,16 @@ export function WorkspaceGraph({
       if (!event.ctrlKey || !onCtrlWheel) return;
       onCtrlWheel(event.deltaY, performance.timeOrigin + event.timeStamp);
     };
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCloseRef.current();
+    };
+    window.addEventListener("keydown", keydown);
     root.addEventListener("wheel", wheel, { passive: true });
     return () => {
       root.removeEventListener("wheel", wheel);
       legacy.BrainCore.destroy();
       previousFocus?.focus();
+      window.removeEventListener("keydown", keydown);
     };
   }, [onCtrlWheel, source]);
 

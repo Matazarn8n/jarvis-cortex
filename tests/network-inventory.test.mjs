@@ -65,6 +65,8 @@ test("montage composant: actifs historiques complets, aucun browsing context", (
   );
   assert.match(component, /const escapeHtml =/);
   assert.match(component, /onKeyDown=\{handleKeyDown\}/);
+  assert.match(component, /window\.addEventListener\("keydown", keydown\)/);
+  assert.match(component, /window\.removeEventListener\("keydown", keydown\)/);
   assert.doesNotMatch(joined, /\.slice\(0,\s*(24|48)\)|operationalCapacity/);
 });
 
