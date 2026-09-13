@@ -77,4 +77,12 @@ test("les nœuds viennent tous du vault authentifié et leurs ids sont dédupliq
   assert.match(component, /const ids = new Set<string>\(\)/);
   assert.match(component, /nodes:\s*nodes\s*\.filter/);
   assert.match(component, /onError\(null\)/);
+  assert.match(component, /const projectName = project\.name/);
+  assert.match(component, /const documentName = basename\(document\.ref\)/);
+  assert.doesNotMatch(component, /label:\s*escapeHtml/);
+  assert.doesNotMatch(component, /const projectName = escapeHtml/);
+  assert.match(joined, /function esc\(value\)/);
+  assert.match(joined, /class="r-name">\$\{esc\(x\.name\)\}/);
+  assert.match(joined, /class="card-title">\$\{esc\(title\)\}/);
+  assert.match(joined, /class="nlab">\$\{esc\(e\.n\.label\)\}/);
 });

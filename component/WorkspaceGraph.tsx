@@ -173,7 +173,7 @@ function createSource(onError: (message: string | null) => void): CortexSource {
       `# Vault\n\n${projects.length} projet(s) visible(s) pour ce compte.`,
     );
     for (const { project, documents } of records) {
-      const projectName = escapeHtml(project.name);
+      const projectName = project.name;
       const projectId = `project:${project.id}`;
       nodes.push({
         id: projectId,
@@ -188,17 +188,17 @@ function createSource(onError: (message: string | null) => void): CortexSource {
         size: documents.reduce((sum, document) => sum + document.bytes, 0),
         mtime: Date.parse(project.createdAt),
         expanded: true,
-        desc: `${escapeHtml(project.connector)} · ${escapeHtml(project.manifestState)}`,
+        desc: `${project.connector} · ${project.manifestState}`,
         access: "both",
       });
       links.push({ s: "hub:product", t: projectId, k: "spoke", w: 1 });
       content.set(
         projectId,
-        `# ${projectName}\n\nConnecteur : ${escapeHtml(project.connector)}\n\nÉtat : ${escapeHtml(project.manifestState)}\n\n${documents.length} document(s).`,
+        `# ${escapeHtml(projectName)}\n\nConnecteur : ${escapeHtml(project.connector)}\n\nÉtat : ${escapeHtml(project.manifestState)}\n\n${documents.length} document(s).`,
       );
       for (const document of documents) {
-        const documentRef = escapeHtml(document.ref);
-        const documentName = escapeHtml(basename(document.ref));
+        const documentRef = document.ref;
+        const documentName = basename(document.ref);
         const id = `document:${project.id}:${encodeURIComponent(document.ref)}`;
         nodes.push({
           id,
@@ -216,7 +216,7 @@ function createSource(onError: (message: string | null) => void): CortexSource {
         links.push({ s: projectId, t: id, k: "spoke", w: 1 });
         content.set(
           id,
-          `# ${documentName}\n\nChemin : ${documentRef}\n\nTaille : ${document.bytes} octets\n\nProjet : ${projectName}`,
+          `# ${escapeHtml(documentName)}\n\nChemin : ${escapeHtml(documentRef)}\n\nTaille : ${document.bytes} octets\n\nProjet : ${escapeHtml(projectName)}`,
         );
       }
     }
@@ -289,8 +289,8 @@ function createSource(onError: (message: string | null) => void): CortexSource {
       if (change.action === "unhide-all") hidden.clear();
       if (change.action === "edit")
         labels.set(id, {
-          label: escapeHtml(String(change.label ?? "")),
-          desc: escapeHtml(String(change.desc ?? "")),
+          label: String(change.label ?? ""),
+          desc: String(change.desc ?? ""),
         });
       graph = null;
       return { ok: true };

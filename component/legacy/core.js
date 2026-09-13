@@ -1127,6 +1127,11 @@ window.BrainCore = (function () {
     return Math.round(d / 86400e3) + 'd ago';
   }
 
+  function esc(value) {
+    const escapes = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return String(value ?? '').replace(/[&<>"']/g, ch => escapes[ch]);
+  }
+
   function accBadge(n) {
     return `<span class="badge" style="border-color:${ACC[n.access]};color:${ACC[n.access]}">${ACCL[n.access] || n.access}</span>`;
   }
@@ -1135,14 +1140,14 @@ window.BrainCore = (function () {
     const c = colorOf(n);
     if (n.type === 'router') return `<b>CLAUDE.md - the router</b><div class="tmut">Every request starts here. Click to flip layout.</div>`;
     if (n.type === 'agent') {
-      if (n.reach) return `<b style="color:${c}">${n.label} - VPS agent</b><div class="tmut">Reaches ${n.reachTotal} synced files over Syncthing. ${n.secretsExcluded} secret files locked out.</div>${accBadge(n)}`;
-      return `<b style="color:${c}">${n.label} - employee agent</b><div class="tmut">${n.desc || ''}</div><div class="tfaint">${(n.links || []).length} skills + memory grants · click to spotlight</div>`;
+      if (n.reach) return `<b style="color:${c}">${esc(n.label)} - VPS agent</b><div class="tmut">Reaches ${n.reachTotal} synced files over Syncthing. ${n.secretsExcluded} secret files locked out.</div>${accBadge(n)}`;
+      return `<b style="color:${c}">${esc(n.label)} - employee agent</b><div class="tmut">${esc(n.desc || '')}</div><div class="tfaint">${(n.links || []).length} skills + memory grants · click to spotlight</div>`;
     }
-    if (n.type === 'hub') return `<b>${n.label}</b><div class="tmut">${n.hubKind === 'dept' ? 'Department - click to filter' : S.layerLabel[n.layer]}</div>`;
-    if (n.type === 'app') return `<b>${n.label}</b><div class="tmut">${n.kind.toUpperCase()} · ${n.desc || ''}</div>${accBadge(n)}${n.status === 'needs-auth' ? '<span class="badge" style="border-color:#f5a623;color:#f5a623">needs auth</span>' : ''}`;
-    if (n.type === 'routine') return `<b>${n.label}</b><div class="tmut">${n.schedule} · runs on ${n.runner}</div>${accBadge(n)}`;
-    if (n.type === 'dir') return `<b style="color:${c}">${n.label}/</b><div class="tmut">${n.files} files · ${n.mdFiles} md · ${fmtBytes(n.size)}</div><div class="tmut">${n.path}</div><div class="tfaint">click to ${n.expanded ? 'collapse' : 'expand'}</div>${accBadge(n)}`;
-    return `<b style="color:${c}">${n.label}</b><div class="tmut">${S.deptLabel[n.dept] || ''} · ${fmtBytes(n.size)} · ${timeAgo(n.mtime)}</div><div class="tmut">${n.path}</div><div class="tfaint">click to inspect · double-click to fly</div>${accBadge(n)}${n.secret ? '<span class="badge" style="border-color:#ef4444;color:#ef4444">secret - never syncs</span>' : ''}`;
+    if (n.type === 'hub') return `<b>${esc(n.label)}</b><div class="tmut">${n.hubKind === 'dept' ? 'Department - click to filter' : esc(S.layerLabel[n.layer])}</div>`;
+    if (n.type === 'app') return `<b>${esc(n.label)}</b><div class="tmut">${esc(n.kind.toUpperCase())} · ${esc(n.desc || '')}</div>${accBadge(n)}${n.status === 'needs-auth' ? '<span class="badge" style="border-color:#f5a623;color:#f5a623">needs auth</span>' : ''}`;
+    if (n.type === 'routine') return `<b>${esc(n.label)}</b><div class="tmut">${esc(n.schedule)} · runs on ${esc(n.runner)}</div>${accBadge(n)}`;
+    if (n.type === 'dir') return `<b style="color:${c}">${esc(n.label)}/</b><div class="tmut">${n.files} files · ${n.mdFiles} md · ${fmtBytes(n.size)}</div><div class="tmut">${esc(n.path)}</div><div class="tfaint">click to ${n.expanded ? 'collapse' : 'expand'}</div>${accBadge(n)}`;
+    return `<b style="color:${c}">${esc(n.label)}</b><div class="tmut">${esc(S.deptLabel[n.dept] || '')} · ${fmtBytes(n.size)} · ${timeAgo(n.mtime)}</div><div class="tmut">${esc(n.path)}</div><div class="tfaint">click to inspect · double-click to fly</div>${accBadge(n)}${n.secret ? '<span class="badge" style="border-color:#ef4444;color:#ef4444">secret - never syncs</span>' : ''}`;
   }
 
   // ======================= selection + detail card =======================
@@ -1183,11 +1188,11 @@ window.BrainCore = (function () {
     }
     neigh.sort((a, b) => (b.w || 1) - (a.w || 1));
     const rows = neigh.slice(0, 16).map(e =>
-      `<div class="nrow" data-id="${escapeAttr(e.n.id)}"><span class="dot" style="background:${colorOf(e.n)}"></span><span class="nlab">${e.n.label}</span><span class="nkind">${e.k}${e.w > 1 ? ' ×' + e.w : ''}</span></div>`).join('');
+      `<div class="nrow" data-id="${escapeAttr(e.n.id)}"><span class="dot" style="background:${colorOf(e.n)}"></span><span class="nlab">${esc(e.n.label)}</span><span class="nkind">${esc(e.k)}${e.w > 1 ? ' ×' + e.w : ''}</span></div>`).join('');
     card.innerHTML = `
       <div class="card-head">
         <div>
-          <div class="card-title">${title}</div>
+          <div class="card-title">${esc(title)}</div>
           <div class="card-badges">
             <span class="badge" style="border-color:${c};color:${c}">${n.type === 'file' || n.type === 'dir' ? (S.st.view === 'folders' ? (n.top || '(root)') : (S.deptLabel[n.dept] || n.layer)) : (S.layerLabel[n.layer] || n.type)}</span>
             ${n.access ? accBadge(n) : ''}
@@ -1196,9 +1201,9 @@ window.BrainCore = (function () {
         </div>
         <button id="card-close">×</button>
       </div>
-      <div class="card-stats">${stats}</div>
-      ${n.desc ? `<div class="card-desc">${n.desc}</div>` : ''}
-      ${n.path ? `<div class="card-path">${n.path}</div>` : ''}
+      <div class="card-stats">${esc(stats)}</div>
+      ${n.desc ? `<div class="card-desc">${esc(n.desc)}</div>` : ''}
+      ${n.path ? `<div class="card-path">${esc(n.path)}</div>` : ''}
       <div class="card-actions">${actions}<button class="act" data-act="fly">Fly to</button>${(n.type === 'app' || n.type === 'routine' || n.type === 'agent') ? '<button class="act" data-act="edit">Edit</button>' : ''}${n.type !== 'router' ? '<button class="act" data-act="remove" style="border-color:#ef4444;color:#ef4444">Remove</button>' : ''}</div>
       ${rows ? `<div class="card-sub">Connections</div><div class="card-neigh">${rows}</div>` : ''}`;
     card.querySelector('#card-close').onclick = () => select(null);
@@ -1228,7 +1233,7 @@ window.BrainCore = (function () {
     });
   }
 
-  function escapeAttr(s) { return s.replace(/"/g, '&quot;'); }
+  function escapeAttr(s) { return esc(s); }
 
   async function apiOpen(path) {
     if (!path) return;
@@ -1508,8 +1513,8 @@ window.BrainCore = (function () {
         results.innerHTML = d.results.slice(0, 14).map(x => `
           <button type="button" class="res" data-path="${escapeAttr(x.path)}" data-type="${x.type}">
             <span class="dot" style="background:${x.layer === 'S' ? S.layerColor.S : (S.deptColor[x.dept] || '#8fa3ad')}"></span>
-            <span class="r-name">${x.name}${x.type === 'dir' ? '/' : ''}</span>
-            <span class="r-path">${x.path}</span>
+            <span class="r-name">${esc(x.name)}${x.type === 'dir' ? '/' : ''}</span>
+            <span class="r-path">${esc(x.path)}</span>
           </button>`).join('') || '<div class="res-none">No hits</div>';
         results.querySelectorAll('.res').forEach(el => el.onclick = () => {
           results.style.display = 'none'; input.value = '';
