@@ -1,30 +1,40 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 
-const component = await readFile(new URL("../component/WorkspaceGraph.tsx", import.meta.url), "utf8");
+const root = new URL("../component/", import.meta.url);
+const files = ["WorkspaceGraph.tsx", "WorkspaceGraph.css", ...((await readdir(new URL("legacy/", root))).map((name) => `legacy/${name}`))];
+const sources = await Promise.all(files.map(async (name) => [name, await readFile(new URL(name, root), "utf8")]));
+const joined = sources.map(([name, body]) => `\n/* ${name} */\n${body}`).join("");
 
-test("le composant embarqué ne crée ni iframe ni appel réseau", () => {
-  assert.doesNotMatch(component, /<iframe|createElement\(["']iframe|\bfetch\s*\(|XMLHttpRequest|WebSocket|EventSource/i);
-  assert.doesNotMatch(component, /:5210|https?:\/\//i);
+test("inventaire réseau: une porte produit same-origin, aucun ancien serveur ni CDN", () => {
+  const component = sources.find(([name]) => name === "WorkspaceGraph.tsx")[1];
+  assert.equal((joined.match(/\bfetch\s*\(/g) ?? []).length, 1);
+  assert.match(component, /fetch\(path, \{ credentials: "include"/);
+  assert.match(component, /"\/api\/hermes-projects"/);
+  assert.doesNotMatch(joined, /:5210|https?:\/\/|XMLHttpRequest|WebSocket|EventSource/i);
 });
 
-test("le composant consomme la coquille et expose des nœuds accessibles", () => {
-  assert.match(component, /export function WorkspaceGraph/);
-  assert.match(component, /useDashboardStore/);
-  assert.match(component, /state\.projects/);
-  assert.match(component, /state\.mindGraph/);
-  assert.match(component, /<canvas/);
-  assert.match(component, /<dialog/);
-  assert.match(component, /useLayoutEffect/);
-  assert.match(component, /showModal/);
-  assert.match(component, /passive: false/);
-  assert.match(component, /Math\.min\(42/);
-  assert.match(component, /48 - memory\.length/);
-  assert.match(component, /mindGraph\?\.edges/);
-  assert.match(component, /documentQueues/);
-  assert.match(component, /window\.addEventListener\("resize", draw\)/);
-  assert.doesNotMatch(component, /requestAnimationFrame/);
-  assert.match(component, /aria-label="Nœuds du Cortex"/);
-  assert.match(component, /onClick=\{\(\) => setSelectedId/);
+test("montage composant: actifs historiques complets, aucun browsing context", () => {
+  assert.doesNotMatch(joined, /<iframe|createElement\(["']iframe|<object|<embed/i);
+  assert.match(joined, /function setLayout/);
+  assert.match(joined, /{ v: 'rings', label: 'Rings' }/);
+  assert.match(joined, /{ v: 'deck', label: 'Deck' }/);
+  assert.match(joined, /function openViewer/);
+  assert.match(joined, /function flyToNode/);
+  assert.match(joined, /function buildPanels/);
+  assert.match(joined, /function destroy/);
+  assert.match(joined, /BRAIN_ICON_PATHS/);
+  assert.match(joined, /export function WorkspaceGraph/);
+  assert.match(joined, /role="dialog"/);
+  assert.doesNotMatch(joined, /\.slice\(0,\s*(24|48)\)|operationalCapacity/);
+});
+
+test("les nœuds viennent tous du vault authentifié et leurs ids sont dédupliqués", () => {
+  const component = sources.find(([name]) => name === "WorkspaceGraph.tsx")[1];
+  assert.match(component, /Promise\.all\(projects\.map/);
+  assert.match(component, /\/documents`/);
+  assert.match(component, /const ids = new Set<string>\(\)/);
+  assert.match(component, /nodes: nodes\.filter/);
+  assert.match(component, /onError\(null\)/);
 });

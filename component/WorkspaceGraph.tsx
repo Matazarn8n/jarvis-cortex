@@ -1,167 +1,166 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useDashboardStore } from "@/store/dashboard";
+import { useEffect, useMemo, useRef, useState } from "react";
+import * as d3 from "d3";
+import { marked } from "marked";
+import "./legacy/icons";
+import "./legacy/flows";
+import "./legacy/core";
+import "./legacy/skin";
+import "./legacy/controls";
 import "./WorkspaceGraph.css";
 
-type CortexNode = { id: string; label: string; detail: string; kind: "project" | "document" | "memory" };
-type Point = CortexNode & { x: number; y: number };
+type Project = {
+  id: string;
+  name: string;
+  connector: string;
+  manifestState: string;
+  createdAt: string;
+};
+type ProjectDocument = { ref: string; bytes: number };
+type LegacyNode = {
+  id: string;
+  label: string;
+  type: "router" | "hub" | "dir" | "file";
+  layer: "M";
+  dept?: "product";
+  hubKind?: "dept";
+  path?: string;
+  ext?: string;
+  desc?: string;
+  files?: number;
+  mdFiles?: number;
+  size?: number;
+  mtime?: number;
+  expanded?: boolean;
+  access: "both";
+};
+type Graph = {
+  meta: { totalFiles: number; totalNodes: number; mdLinks: number; scanMs: number; hiddenCount: number };
+  departments: { key: string; label: string; color: string; icon: string }[];
+  layers: { key: string; label: string; color: string; shape: string }[];
+  nodes: LegacyNode[];
+  links: { s: string; t: string; k: string; w: number }[];
+  mdLinks: [string, string][];
+};
+type CortexSource = {
+  graph: () => Promise<Graph>;
+  expand: (id: string) => Promise<{ nodes: LegacyNode[] }>;
+  search: (query: string) => Promise<{ results: { path: string; name: string; type: string; layer: string; dept?: string }[] }>;
+  file: (path: string) => Promise<{ content?: string; error?: string }>;
+  open: (path: string) => Promise<{ ok: boolean; error?: string }>;
+  tweak: (change: Record<string, unknown>) => Promise<{ ok: boolean }>;
+  bake: (snapshot: unknown) => Promise<{ ok: boolean; path: string }>;
+  rescan: () => Promise<{ ok: boolean }>;
+};
+type LegacyWindow = Window & {
+  d3: typeof d3;
+  marked: typeof marked;
+  BrainCore: { boot: (skin: unknown, source: CortexSource, root: HTMLElement) => Promise<void>; destroy: () => void; S: { root: HTMLElement } };
+  BRAIN_SKIN: unknown;
+  BRAIN_CONTROLS: () => void;
+};
 
-const TAU = Math.PI * 2;
+const api = async <T,>(path: string): Promise<T> => {
+  const response = await fetch(path, { credentials: "include", headers: { "x-hermes-origin": "cockpit" } });
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+  return response.json() as Promise<T>;
+};
+const basename = (path: string) => path.split("/").pop() || path;
+const extension = (path: string) => {
+  const match = /(?:^|\/)[^/]+(\.[^.\/]+)$/.exec(path);
+  return match?.[1].toLowerCase() || "";
+};
+
+function createSource(onError: (message: string | null) => void): CortexSource {
+  let graph: Graph | null = null;
+  const content = new Map<string, string>();
+  const hidden = new Set<string>();
+  const labels = new Map<string, { label?: string; desc?: string }>();
+
+  const load = async (): Promise<Graph> => {
+    const started = performance.now();
+    const { projects } = await api<{ projects: Project[] }>("/api/hermes-projects");
+    const records = await Promise.all(projects.map(async (project) => ({
+      project,
+      documents: (await api<{ documents: ProjectDocument[] }>(`/api/hermes-projects/${encodeURIComponent(project.id)}/documents`)).documents,
+    })));
+    const nodes: LegacyNode[] = [
+      { id: "CLAUDE.md", label: "Vault", type: "router", layer: "M", path: "CLAUDE.md", desc: "Vault du compte authentifié", size: 0, mtime: Date.now(), access: "both" },
+      { id: "hub:product", label: "Projects", type: "hub", hubKind: "dept", dept: "product", layer: "M", access: "both" },
+    ];
+    const links = [{ s: "CLAUDE.md", t: "hub:product", k: "route", w: 1 }];
+    content.set("CLAUDE.md", `# Vault\n\n${projects.length} projet(s) visible(s) pour ce compte.`);
+    for (const { project, documents } of records) {
+      const projectId = `project:${project.id}`;
+      nodes.push({ id: projectId, label: project.name, type: "dir", dept: "product", layer: "M", path: projectId, files: documents.length, mdFiles: documents.filter((document) => document.ref.endsWith(".md")).length, size: documents.reduce((sum, document) => sum + document.bytes, 0), mtime: Date.parse(project.createdAt), expanded: true, desc: `${project.connector} · ${project.manifestState}`, access: "both" });
+      links.push({ s: "hub:product", t: projectId, k: "spoke", w: 1 });
+      content.set(projectId, `# ${project.name}\n\nConnecteur : ${project.connector}\n\nÉtat : ${project.manifestState}\n\n${documents.length} document(s).`);
+      for (const document of documents) {
+        const id = `document:${project.id}:${encodeURIComponent(document.ref)}`;
+        nodes.push({ id, label: basename(document.ref), type: "file", dept: "product", layer: "M", path: id, ext: extension(document.ref), desc: `${document.ref} · ${document.bytes} octets`, size: document.bytes, mtime: Date.parse(project.createdAt), access: "both" });
+        links.push({ s: projectId, t: id, k: "spoke", w: 1 });
+        content.set(id, `# ${basename(document.ref)}\n\nChemin : ${document.ref}\n\nTaille : ${document.bytes} octets\n\nProjet : ${project.name}`);
+      }
+    }
+    const ids = new Set<string>();
+    graph = {
+      meta: { totalFiles: records.reduce((sum, item) => sum + item.documents.length, 0), totalNodes: nodes.length, mdLinks: 0, scanMs: Math.round(performance.now() - started), hiddenCount: hidden.size },
+      departments: [{ key: "product", label: "Projects", color: "#56d97a", icon: "folder" }],
+      layers: [{ key: "M", label: "Memory", color: "#8fa3ad", shape: "circle" }, { key: "S", label: "Skills", color: "#ff6b1a", shape: "diamond" }, { key: "R", label: "Routines", color: "#b47aff", shape: "hex" }, { key: "A", label: "Applications", color: "#2196f3", shape: "square" }],
+      nodes: nodes.filter((node) => !ids.has(node.id) && ids.add(node.id) && !hidden.has(node.id)).map((node) => ({ ...node, ...labels.get(node.id) })),
+      links,
+      mdLinks: [],
+    };
+    onError(null);
+    return graph;
+  };
+
+  return {
+    graph: async () => graph ?? load(),
+    expand: async () => ({ nodes: [] }),
+    search: async (query) => {
+      const current = graph ?? await load();
+      const needle = query.toLocaleLowerCase();
+      return { results: current.nodes.filter((node) => `${node.label} ${node.desc ?? ""}`.toLocaleLowerCase().includes(needle)).map((node) => ({ path: node.id, name: node.label, type: node.type, layer: node.layer, dept: node.dept })) };
+    },
+    file: async (path) => ({ content: content.get(path) ?? "Contenu indisponible." }),
+    open: async () => ({ ok: false, error: "Ouverture locale indisponible dans la coquille web" }),
+    tweak: async (change) => {
+      const id = typeof change.id === "string" ? change.id : "";
+      if (change.action === "hide") hidden.add(id);
+      if (change.action === "unhide-all") hidden.clear();
+      if (change.action === "edit") labels.set(id, { label: String(change.label ?? ""), desc: String(change.desc ?? "") });
+      graph = null;
+      return { ok: true };
+    },
+    bake: async () => ({ ok: true, path: "clipboard" }),
+    rescan: async () => { graph = null; return { ok: true }; },
+  };
+}
 
 export function WorkspaceGraph({ onClose, onCtrlWheel }: { onClose: () => void; onCtrlWheel?: (deltaY: number, at: number) => void }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const projects = useDashboardStore((state) => state.projects);
-  const mindGraph = useDashboardStore((state) => state.mindGraph);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-
-  const nodes = useMemo<CortexNode[]>(() => {
-    const projectNodes = projects.map((project) => ({
-      id: `project:${project.id}`, label: project.name, detail: project.description || project.path || "Projet", kind: "project" as const,
-    }));
-    const memory = (mindGraph?.nodes ?? []).slice(0, 24).map((node) => ({
-      id: `memory:${node.id}`, label: node.label, detail: node.file || "Nœud de mémoire", kind: "memory" as const,
-    }));
-    const operationalCapacity = 48 - memory.length;
-    const visibleProjects = projectNodes.slice(0, Math.ceil(operationalCapacity / 2));
-    const visibleIds = new Set(visibleProjects.map((project) => project.id.slice("project:".length)));
-    const documentQueues = projects.filter((project) => visibleIds.has(project.id)).map((project) =>
-      (project.documents ?? []).map((document) => ({
-        id: `document:${project.id}:${document}`, label: document.split("/").pop() || document, detail: document, kind: "document" as const,
-      })),
-    );
-    const visibleDocuments: CortexNode[] = [];
-    for (let round = 0; visibleDocuments.length < operationalCapacity - visibleProjects.length; round++) {
-      let added = false;
-      for (const documents of documentQueues) if (documents[round] && visibleDocuments.length < operationalCapacity - visibleProjects.length) {
-        visibleDocuments.push(documents[round]);
-        added = true;
-      }
-      if (!added) break;
-    }
-    return [...visibleProjects, ...visibleDocuments, ...memory];
-  }, [mindGraph, projects]);
-
-  const points = useMemo<Point[]>(() => nodes.map((node, index) => {
-    const ring = 1 + Math.floor(index / 12);
-    const slot = index % 12;
-    const angle = -Math.PI / 2 + slot / Math.min(12, Math.max(nodes.length, 1)) * TAU + ring * 0.18;
-    const radius = Math.min(42, 14 + ring * 9);
-    return { ...node, x: 50 + Math.cos(angle) * radius, y: 50 + Math.sin(angle) * radius };
-  }), [nodes]);
-
-  const links = useMemo(() => {
-    const visible = new Set(points.map((point) => point.id));
-    const result: Array<[string, string]> = [];
-    for (const edge of mindGraph?.edges ?? []) {
-      const link: [string, string] = [`memory:${edge.source}`, `memory:${edge.target}`];
-      if (visible.has(link[0]) && visible.has(link[1])) result.push(link);
-    }
-    for (const project of projects) for (const document of project.documents ?? []) {
-      const link: [string, string] = [`project:${project.id}`, `document:${project.id}:${document}`];
-      if (visible.has(link[0]) && visible.has(link[1])) result.push(link);
-    }
-    return result;
-  }, [mindGraph, points, projects]);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
+  const source = useMemo(() => createSource(setError), []);
 
   useEffect(() => {
-    if (!selectedId && nodes[0]) setSelectedId(nodes[0].id);
-    if (selectedId && !nodes.some((node) => node.id === selectedId)) setSelectedId(nodes[0]?.id ?? null);
-  }, [nodes, selectedId]);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    const draw = () => {
-      const rect = canvas.getBoundingClientRect();
-      const scale = window.devicePixelRatio || 1;
-      const width = Math.max(1, Math.round(rect.width * scale));
-      const height = Math.max(1, Math.round(rect.height * scale));
-      if (canvas.width !== width || canvas.height !== height) { canvas.width = width; canvas.height = height; }
-      context.setTransform(scale, 0, 0, scale, 0, 0);
-      const w = rect.width;
-      const h = rect.height;
-      context.fillStyle = "#05060d";
-      context.fillRect(0, 0, w, h);
-      context.strokeStyle = "rgba(255,255,255,.055)";
-      context.lineWidth = 0.7;
-      for (let x = -20; x < w + 40; x += 35) for (let y = -20; y < h + 40; y += 30) {
-        context.beginPath();
-        for (let side = 0; side < 6; side++) {
-          const a = side * Math.PI / 3;
-          const px = x + Math.cos(a) * 20;
-          const py = y + Math.sin(a) * 20;
-          side ? context.lineTo(px, py) : context.moveTo(px, py);
-        }
-        context.closePath();
-        context.stroke();
-      }
-      context.strokeStyle = "rgba(255,107,26,.22)";
-      const byId = new Map(points.map((point) => [point.id, point]));
-      for (const [sourceId, targetId] of links) {
-        const source = byId.get(sourceId);
-        const target = byId.get(targetId);
-        if (!source || !target) continue;
-        const sx = source.x / 100 * w, sy = source.y / 100 * h;
-        const tx = target.x / 100 * w, ty = target.y / 100 * h;
-        context.beginPath();
-        context.moveTo(sx, sy);
-        context.quadraticCurveTo((sx + tx) / 2 + (ty - sy) * .08, (sy + ty) / 2 - (tx - sx) * .08, tx, ty);
-        context.stroke();
-      }
-      const glow = context.createRadialGradient(w / 2, h / 2, 0, w / 2, h / 2, Math.min(w, h) * .18);
-      glow.addColorStop(0, "rgba(255,107,26,.24)");
-      glow.addColorStop(1, "rgba(255,107,26,0)");
-      context.fillStyle = glow;
-      context.beginPath(); context.arc(w / 2, h / 2, Math.min(w, h) * .18, 0, TAU); context.fill();
-    };
-    draw();
-    window.addEventListener("resize", draw);
-    return () => window.removeEventListener("resize", draw);
-  }, [links, points]);
-
-  useLayoutEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
-    if (!dialog.open) dialog.showModal();
-    const wheel = (event: globalThis.WheelEvent) => {
+    const root = rootRef.current;
+    if (!root) return;
+    const legacy = window as unknown as LegacyWindow;
+    legacy.d3 = d3;
+    legacy.marked = marked;
+    void legacy.BrainCore.boot(legacy.BRAIN_SKIN, source, root).then(() => legacy.BRAIN_CONTROLS()).catch((cause) => setError(cause instanceof Error ? cause.message : "Cortex indisponible"));
+    const wheel = (event: WheelEvent) => {
       if (!event.ctrlKey || !onCtrlWheel) return;
-      event.preventDefault();
-      event.stopPropagation();
       onCtrlWheel(event.deltaY, performance.timeOrigin + event.timeStamp);
     };
-    dialog.addEventListener("wheel", wheel, { passive: false });
-    return () => {
-      dialog.removeEventListener("wheel", wheel);
-      if (dialog.open) dialog.close();
-    };
-  }, [onCtrlWheel]);
-
-  const selected = nodes.find((node) => node.id === selectedId) ?? null;
+    root.addEventListener("wheel", wheel, { passive: true });
+    return () => { root.removeEventListener("wheel", wheel); legacy.BrainCore.destroy(); };
+  }, [onCtrlWheel, source]);
 
   return (
-    <dialog ref={dialogRef} className="cortex-overlay" aria-label="Cortex" onCancel={(event) => { event.preventDefault(); onClose(); }}>
-      <canvas ref={canvasRef} className="cortex-canvas" aria-hidden="true" />
-      <header className="cortex-hud">
-        <div><strong>ALFRED · CORTEX</strong><small>{nodes.length} nœuds · vault actif</small></div>
-        <button type="button" className="cortex-close" onClick={onClose} aria-label="Fermer le Cortex">×</button>
-      </header>
-      <div className="cortex-nodes" aria-label="Nœuds du Cortex">
-        {points.map((node) => (
-          <button
-            type="button"
-            key={node.id}
-            className={`cortex-node cortex-node-${node.kind}${node.id === selectedId ? " selected" : ""}`}
-            style={{ left: `${node.x}%`, top: `${node.y}%` }}
-            onClick={() => setSelectedId(node.id)}
-            aria-pressed={node.id === selectedId}
-          >
-            <span />{node.label}
-          </button>
-        ))}
-      </div>
-      {selected ? <aside className="cortex-detail" aria-live="polite"><small>{selected.kind}</small><strong>{selected.label}</strong><p>{selected.detail}</p></aside> : <p className="cortex-empty">Le vault ne contient encore aucun nœud.</p>}
-    </dialog>
+    <div ref={rootRef} className="cortex-root" role="dialog" aria-modal="true" aria-label="Cortex">
+      <button type="button" className="cortex-close" onClick={onClose} aria-label="Fermer le Cortex">×</button>
+      {error ? <p className="cortex-error" role="alert">Données du Cortex indisponibles : {error}</p> : null}
+    </div>
   );
 }
