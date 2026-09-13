@@ -25,7 +25,7 @@ window.BrainCore = (function () {
     anchors: [], deckRing: 330, hermes: null, router: null,
     colorOf, pass, radiusOf, w2s, s2w, groupKeyOf,
     perf: { fps: 0, frames: 0, last: performance.now() },
-    source: null, root: null, running: false, abort: null,
+    source: null, root: null, running: false, abort: null, reducedMotion: false,
   };
 
   const listen = (target, type, handler, options = {}) =>
@@ -47,6 +47,7 @@ window.BrainCore = (function () {
     S.root = root;
     S.abort = new AbortController();
     S.running = true;
+    S.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
     S.theme = localStorage.getItem('robo-theme') || skin.defaultTheme || 'dark';
     const persisted = JSON.parse(localStorage.getItem('brain-v2-' + skin.key) || '{}');
     S.st = Object.assign({}, DEFAULT_ST, skin.st || {}, persisted);
@@ -59,7 +60,7 @@ window.BrainCore = (function () {
       if (S.abort.signal.aborted) return;
       if (data.error) throw new Error(data.error);
     } catch (e) {
-      splash(true, 'Scan failed: ' + e.message + ' - is server.js running?');
+      splash(true, 'Scan failed: ' + e.message);
       return;
     }
     ingest(data);
@@ -939,8 +940,9 @@ window.BrainCore = (function () {
   // ======================= render loop =======================
   function loop() {
     if (!S.running) return;
-    const st = S.st; S.tick++;
+    const st = S.st; if (!S.reducedMotion) S.tick++;
     if (S.fly) {
+      if (S.reducedMotion) S.fly.dur = 1;
       S.fly.t++;
       const p = Math.min(1, S.fly.t / S.fly.dur), e = 1 - Math.pow(1 - p, 3);
       S.cam.k = S.fly.from.k + (S.fly.to.k - S.fly.from.k) * e;
