@@ -465,3 +465,15 @@ test('t25-2 : terminaison … sans troncature necessaire (entree 99 < 200) : ent
   m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
   assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /\[Guide\]\(reference_guide\.md\) \u2014 2026-01-01 AUTORISER\u2026/);
 });
+
+test('t28-1 : ligne contenant le lien hors format d entree (virgule) : CONSERVEE ; entree divergente multiligne : rien retire', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  ancien(b, 'ssh', 'ssh\nancienne consigne');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'),
+    `- [SSH](feedback_ssh.md), sauvegarder chaque nuit.\n- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\nautre chose\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.match(idx, /sauvegarder chaque nuit/);
+  assert.match(idx, new RegExp(`feedback_ssh\\.md\\) \u2014 ${d} ssh\nautre chose`));
+});

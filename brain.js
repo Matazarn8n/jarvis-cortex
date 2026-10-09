@@ -481,11 +481,13 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     const sortie = [];
     for (let i = 0; i < lignes.length; i++) {
       const l = lignes[i];
-      if (!pointe(l)) { sortie.push(l); continue; }
+      // Seule une ligne AU FORMAT D'ENTRÉE (`[titre](fichier) — AAAA-MM-JJ …`) est une entrée à retirer :
+      // `- [SSH](f.md), sauvegarder…` ou une phrase contenant le lien est une ligne indépendante.
+      if (!pointe(l) || !/^\s*(?:[-*+]|\d+[.)])?\s*\[[^\]]+\]\([^)]+\) — \d{4}-\d{2}-\d{2} /.test(l)) { sortie.push(l); continue; }
       // Une ligne au format d'entrée de store (`[titre](fichier) — AAAA-MM-JJ …`) est une entrée
       // indépendante, jamais une continuation. Une continuation est une ligne de l'ancien fait,
       // égale à la ligne du desc, ou — pour la dernière — tronquée par '...' / '…'.
-      let k = 0;
+      let k = 0; let douteuse = false;
       const mt = l.match(/^(.*\) — (\d{4}-\d{2}-\d{2}) )([^\n]*)$/);
       for (const { desc, date } of (i === derniere ? courantes : revisions)) {
         if (!mt || (date && mt[2] !== date)) continue;
@@ -496,8 +498,11 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
         const tete = mt[1];
         const E = tete + (tete.length + desc.length > ENTRY_MAX - 1 ? desc.slice(0, Math.max(0, ENTRY_MAX - 2 - tete.length)).trimEnd() + '…' : desc);
         const nl = E.split('\n').length;
-        if (lignes.slice(i, i + nl).join('\n') === E && nl - 1 > k) k = nl - 1;
+        if (lignes.slice(i, i + nl).join('\n') === E) { if (nl - 1 > k) k = nl - 1; }
+        else if (nl > 1 && E.split('\n')[0] === l) douteuse = true; // 1re ligne d'un fait multiligne, suite divergente
       }
+      // Doute : entrée multiligne dont la suite ne correspond pas exactement -> RIEN n'est retiré.
+      if (douteuse && k === 0) { sortie.push(l); continue; }
       i += k;
     }
     const garde = sortie.join('\n').replace(/\n*$/, '');
