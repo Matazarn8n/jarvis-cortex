@@ -343,3 +343,15 @@ test('feedback remplace : entree courante monoligne, section independante homony
   assert.match(idx, /## Services\nconsigne globale/);
   assert.match(idx, /INTERDIRE/);
 });
+
+for (const [nom, fait] of [['saut initial', '\n## Services\nconsigne globale'], ['fin identique', 'ssh\n## Services\nssh']]) {
+  test(`feedback remplace : entree aplatie du store actuel (${nom}) : section independante CONSERVEE`, async () => {
+    const b = bac(); const m = await charge(b);
+    m.store(fait, { type: 'feedback', name: 'ssh' });
+    fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '## Services\nconsigne globale\nssh\n');
+    m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+    const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+    assert.match(idx, /## Services\nconsigne globale\nssh/);
+    assert.match(idx, /INTERDIRE/);
+  });
+}

@@ -474,7 +474,12 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       const ENTREE = /^\s*(?:[-*+]|\d+[.)])?\s*\[[^\]]+\]\([^)]+\) — \d{4}-\d{2}-\d{2}\b/;
       let k = 0;
       for (const { d, date } of (i === derniere ? courantes : revisions)) {
-        if (!l.endsWith(d[0]) || (date && !l.includes(` — ${date} `))) continue;
+        // 1re ligne EXACTE : `tete + desc` historique. Une entrée aplatie (store actuel) dont le
+        // texte se termine par d[0] n'est pas une entrée multiligne. Tronquée par '…' : préfixe.
+        const reste = (l.match(/\) — \d{4}-\d{2}-\d{2} (.*)$/) || [])[1];
+        if (reste === undefined || (date && !l.includes(` — ${date} `))) continue;
+        const tr = reste.match(/^(.*?)(\.\.\.|…)$/);
+        if (reste !== d[0] && !(tr && tr[1] !== '' && d[0].startsWith(tr[1]))) continue;
         let n = 0;
         for (let q = 1; q < d.length; q++) {
           const x = lignes[i + q];
