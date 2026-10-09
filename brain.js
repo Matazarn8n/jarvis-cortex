@@ -434,8 +434,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // Le front matter recopie `description: ${desc}` (qui peut contenir des '---') : on le saute
     // jusqu'à son bloc `metadata:\n  type:` fixe, pas jusqu'au premier '---'. La fin du fait est
     // ambiguë (le fait peut contenir `**Why:**`) : on retourne TOUTES les coupes plausibles.
-    const faits = (t, crlf = false) => {
-      const W = (x) => (crlf ? x.replace(/\n/g, '\r\n') : x); // longueurs/préfixes mesurés comme l'ancien store les a écrits
+    const faits = (t) => {
       const FIN = /\nmetadata:\n  type: [^\n]*\n---(?=\n)/g;
       const dm = t.match(/^---\nname: [^\n]*\ndescription: /);
       if (dm) {
@@ -448,8 +447,8 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
           if (!apres.startsWith('\n\n')) continue;
           const corps = apres.slice(2);
           // Desc historique = fait brut (≤ 110) ou fait tronqué à 107 + '...' (donc EXACTEMENT 110 car.).
-          if (W(cand).length <= 110 && W(corps).startsWith(W(cand))) out.add(cand);
-          else if (W(cand).length === 110 && cand.endsWith('...') && W(corps).length > 110 && W(corps).startsWith(W(cand).slice(0, 107))) out.add(cand);
+          if (cand.length <= 110 && corps.startsWith(cand)) out.add(cand);
+          else if (cand.length === 110 && cand.endsWith('...') && corps.length > 110 && corps.startsWith(cand.slice(0, 107))) out.add(cand);
         }
         return out.size > 1 ? null : [...out]; // plusieurs coupes plausibles (faux bloc metadata dans le fait) : ambigu
       }
@@ -459,22 +458,22 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       const sansPied = t.slice(fm ? fm[0].length : 0).replace(/\n\n?\*Saved [^\n]*\n?$/, '').replace(/\r?\n$/, ''); // un seul saut final (terminateur de fichier), jamais de trim
       const coupes = new Set([sansPied]);
       for (let m = sansPied.indexOf('\n\n**Why:**'); m >= 0; m = sansPied.indexOf('\n\n**Why:**', m + 1)) coupes.add(sansPied.slice(0, m));
-      return [...coupes];
+      return coupes.size > 1 ? null : [...coupes]; // `**Why:**` : fin du fait ambiguë
     };
     // Chaque révision écrit son entrée à SA date (`*Saved AAAA-MM-JJ*`) : le pointeur et son desc
     // ne se rapprochent que d'une révision de même date, sinon une archive voisine pourrait
     // prêter ses lignes à une autre entrée.
     let ambigu = false; // coupe du fait ambiguë : RIEN n'est retiré de l'index
     const revs = (textes) => textes.flatMap((t0) => {
-      // Fichier ENTIÈREMENT CRLF : on analyse en LF puis on rétablit CRLF. Fins mixtes (gabarit LF, fait CRLF) : octets bruts, comparaison exacte.
-      const crlf = t0.includes('\r\n') && !/(^|[^\r])\n/.test(t0); const t = crlf ? t0.replace(/\r\n/g, '\n') : t0;
+      // Fichier entièrement CRLF : jamais écrit par le store (gabarit LF) -> origine inconnue, ambigu, rien retiré.
+      if (t0.includes('\r\n') && !/(^|[^\r])\n/.test(t0)) { ambigu = true; return []; }
+      const t = t0;
       const date = (t.match(/\*Saved (\d{4}-\d{2}-\d{2}) via brain store\.\*\s*$/) || [])[1]; // pied FINAL seulement
       const aDesc = /^---\nname: [^\n]*\ndescription: /.test(t);
-      const vers = (f) => (crlf ? f.replace(/\n/g, '\r\n') : f);
       // avec `description:` faits() rend déjà le desc final ; sans, c'est le fait brut à tronquer
-      const fs_ = faits(t, crlf);
+      const fs_ = faits(t);
       if (!fs_) { ambigu = true; return []; }
-      return fs_.map((f) => (aDesc ? vers(f) : (f = vers(f)).length <= 110 ? f : f.slice(0, 107) + '...'))
+      return fs_.map((f) => (aDesc ? f : f.length <= 110 ? f : f.slice(0, 107) + '...'))
         .filter((f) => f.includes('\n')).map((f) => ({ date, desc: f }));
     });
     const textes = ancien.split('\u0000');

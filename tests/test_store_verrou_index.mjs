@@ -498,7 +498,7 @@ test('t29-2 : entree multiligne divergente contenant une autre entree vers le me
   assert.ok(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8').startsWith(bloc));
 });
 
-test('t29-3 : fichier ancien entierement CRLF, entree divergente : rien retire ; entree exacte : retiree', async () => {
+test('t29-3 : fichier ancien entierement CRLF (origine inconnue) : rien retire, divergent ou non', async () => {
   const b = bac(); const m = await charge(b);
   const d = new Date().toISOString().slice(0, 10);
   fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), `---\r\nname: ssh\r\ndescription: ssh\r\nAUTORISER root\r\nmetadata:\r\n  type: feedback\r\n---\r\n\r\nssh\r\nAUTORISER root\r\n\r\n*Saved ${d} via brain store.*\r\n`);
@@ -508,7 +508,7 @@ test('t29-3 : fichier ancien entierement CRLF, entree divergente : rien retire ;
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\r\nAUTORISER root\n`);
   fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), `---\r\nname: ssh\r\ndescription: ssh\r\nAUTORISER root\r\nmetadata:\r\n  type: feedback\r\n---\r\n\r\nssh\r\nAUTORISER root\r\n\r\n*Saved ${d} via brain store.*\r\n`);
   m.store('ssh INTERDIRE root 2', { type: 'feedback', name: 'ssh' });
-  assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
 });
 
 test('t30-1 : date+lien dans la description : le pointeur principal reste la tete (continuation retiree)', async () => {
@@ -521,7 +521,7 @@ test('t30-1 : date+lien dans la description : le pointeur principal reste la tet
   assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
 });
 
-test('t30-2 : fait CRLF > 110 car. (desc tronquee) : entree et continuation retirees', async () => {
+test('t30-2 : fait CRLF > 110 car. (fichier CRLF, ambigu) : rien retire', async () => {
   const b = bac(); const m = await charge(b);
   const d = new Date().toISOString().slice(0, 10);
   const fait = 'ssh\r\n' + 'a'.repeat(60) + '\r\n' + 'AUTORISER root ' + 'b'.repeat(40);
@@ -529,16 +529,16 @@ test('t30-2 : fait CRLF > 110 car. (desc tronquee) : entree et continuation reti
   fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), `---\r\nname: ssh\r\ndescription: ${desc.replace(/\r\n/g, '\r\n')}\r\nmetadata:\r\n  type: feedback\r\n---\r\n\r\n${fait}\r\n\r\n*Saved ${d} via brain store.*\r\n`);
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — ${d} ${desc}\n`);
   m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
-  assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /aaaa/);
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /aaaa/);
 });
 
-test('t30-3 : index entierement CRLF, entree exacte : retiree (\\r final tolere)', async () => {
+test('t30-3 : fichier ancien CRLF, index CRLF : rien retire', async () => {
   const b = bac(); const m = await charge(b);
   const d = new Date().toISOString().slice(0, 10);
   fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), `---\r\nname: ssh\r\ndescription: ssh\r\nAUTORISER root\r\nmetadata:\r\n  type: feedback\r\n---\r\n\r\nssh\r\nAUTORISER root\r\n\r\n*Saved ${d} via brain store.*\r\n`);
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — ${d} ssh\r\nAUTORISER root\r\n`);
   m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
-  assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
 });
 
 test('t31-1 : faux bloc metadata dans le fait : ambigu, rien retire (## Services independant garde)', async () => {
@@ -559,4 +559,25 @@ test('t31-2 : fait aux fins de ligne mixtes : entree exacte (octets) retiree ave
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ${fait}\n`);
   m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
   assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
+});
+
+test('t32-1 : fait sans description avec **Why:** (coupe ambigue) : rien retire, section independante gardee', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), `---\nname: ssh\n---\n\nssh\n\n**Why:** note\n## Services\nconsigne INDEPENDANTE\n\n*Saved ${d} via brain store.*\n`);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\n## Services\nconsigne INDEPENDANTE\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /## Services\nconsigne INDEPENDANTE/);
+});
+
+test('t32-2 : fichier converti LF->CRLF apres coup, desc tronquee : rien retire (origine inconnue)', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  const fait = 'ssh\n' + 'a'.repeat(60) + '\nVoir [Guide](reference_guide.md) AUTORISER root ' + 'b'.repeat(40);
+  const desc = fait.slice(0, 107) + '...';
+  const crlf = (x) => x.replace(/\n/g, '\r\n');
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), crlf(`---\nname: ssh\ndescription: ${desc}\nmetadata:\n  type: feedback\n---\n\n${fait}\n\n*Saved ${d} via brain store.*\n`));
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ${desc}\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /aaaa/);
 });
