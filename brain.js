@@ -431,13 +431,24 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // pris pour une continuation.
     // Le front matter recopie `description: ${desc}` (qui peut contenir des '---') : on le saute
     // jusqu'à son bloc `metadata:\n  type:` fixe, pas jusqu'au premier '---'.
-    const fait = (t) => { const c = /\nmetadata:\n  type: [^\n]*\n---\n/.test(t) ? t.replace(/^[\s\S]*?\nmetadata:\n  type: [^\n]*\n---\n\n?/, '') : t.replace(/^---\n[\s\S]*?\n---\n\n?/, ''); const m = c.search(/\n\n\*\*Why:\*\*|\n\n?\*Saved /); return (m < 0 ? c : c.slice(0, m)).trimEnd(); };
+    // Le front matter recopie `description: ${desc}` (qui peut contenir des '---') : on le saute
+    // jusqu'à son bloc `metadata:\n  type:` fixe, pas jusqu'au premier '---'. La fin du fait est
+    // ambiguë (le fait peut contenir `**Why:**`) : on retourne TOUTES les coupes plausibles.
+    const faits = (t) => {
+      const c = /\nmetadata:\n  type: [^\n]*\n---\n/.test(t) ? t.replace(/^[\s\S]*?\nmetadata:\n  type: [^\n]*\n---\n\n?/, '') : t.replace(/^---\n[\s\S]*?\n---\n\n?/, '');
+      const sansPied = c.replace(/\n\n?\*Saved [^\n]*\n?$/, '');
+      const coupes = new Set([sansPied.trimEnd()]);
+      for (let m = sansPied.indexOf('\n\n**Why:**'); m >= 0; m = sansPied.indexOf('\n\n**Why:**', m + 1)) coupes.add(sansPied.slice(0, m).trimEnd());
+      return [...coupes];
+    };
     // Chaque révision écrit son entrée à SA date (`*Saved AAAA-MM-JJ*`) : le pointeur et son desc
     // ne se rapprochent que d'une révision de même date, sinon une archive voisine pourrait
     // prêter ses lignes à une autre entrée.
-    const revisions = ancien.split('\u0000').map((t) => ({ f: fait(t), date: (t.match(/\*Saved (\d{4}-\d{2}-\d{2}) /) || [])[1] }))
-      .filter((r) => r.f.includes('\n'))
-      .map((r) => ({ date: r.date, d: (r.f.length > 110 ? r.f.slice(0, 107) + '...' : r.f).split('\n') }));
+    const revisions = ancien.split('\u0000').flatMap((t) => {
+      const date = (t.match(/\*Saved (\d{4}-\d{2}-\d{2}) /) || [])[1];
+      return faits(t).filter((f) => f.includes('\n'))
+        .map((f) => ({ date, d: (f.length > 110 ? f.slice(0, 107) + '...' : f).split('\n') }));
+    });
     const lignes = prev.split('\n');
     const sortie = [];
     for (let i = 0; i < lignes.length; i++) {

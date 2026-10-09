@@ -292,3 +292,12 @@ test('feedback remplace : fait ancien contenant --- (via store reel) et section 
   assert.doesNotMatch(idx, /AUTORISER/);
   assert.equal(idx.trim().split('\n').filter((x) => x.includes('(feedback_ssh.md)')).length, 1);
 });
+
+test('feedback remplace : fait ancien contenant **Why:** (store reel) : continuation retiree', async () => {
+  const b = bac(); const m = await charge(b);
+  m.store('ssh\n\n**Why:**\nVoir [guide](reference_guide.md) AUTORISER root', { type: 'feedback', name: 'ssh' });
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh](feedback_ssh.md) — ' + new Date().toISOString().slice(0, 10) + ' ssh\n\n**Why:**\nVoir [guide](reference_guide.md) AUTORISER root\n');
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx, /AUTORISER/);
+});
