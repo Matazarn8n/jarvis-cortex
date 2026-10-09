@@ -1,0 +1,10 @@
+{
+  "notified_fingerprint": "quota_hold:quota hebdomadaire à 73 % (palier 60 %) ",
+  "notified_at": "2026-08-24T16:38:35.876841+00:00",
+  "merge_refused_at": "2026-08-22T22:58:00.501845+00:00",
+  "merged_at": "2026-08-24T17:22:10.317239+00:00",
+  "merged_branch": "plan/b-boucle-verdict-regle-2026-08-21",
+  "merged_into": "main",
+  "merge_commit": "8053077777f3fea52a91e826b7540ed611933324",
+  "constat": "/home/nuveo/jarvis-cortex-plan-m/runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.livraison.json"
+}

@@ -3,6 +3,15 @@ name: JARVIS Cortex
 type: module
 status: active
 repo: /home/nuveo/projects/jarvis-cortex
+# Cible de merge des plans de ce dépôt — arbitrage du 2026-08-22 (fable-5, sur
+# pièces). Sans elle, `_auto_merge` refusait tout merge (« cible d'intégration
+# non déclarée ») et le plan M restait garé indéfiniment, ses tickets pourtant
+# tous `done`. `main` et pas `fix/brain-store-prefixe-et-budget-2026-08-11` : une
+# branche de travail datée déclarée ici deviendrait une norme durable pointant un
+# jetable. Mesure du 2026-10-09 : `main` n'est plus ancêtre strict de la branche
+# (11 commits propres à main, 35 propres à la branche) ; GitHub la déclare
+# MERGEABLE, sans conflit textuel.
+integration_branch: main
 # R7 goal auditor: workspace-graph engine must answer on :5210 (systemd jarvis-cortex.service).
 verify:
   - curl -sf --max-time 5 -o /dev/null http://127.0.0.1:5210/
