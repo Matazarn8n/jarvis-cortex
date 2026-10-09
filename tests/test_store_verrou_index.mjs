@@ -233,3 +233,14 @@ test('feedback remplace : section etrangere et continuation contenant un lien', 
   assert.match(idx, /## Services/);
   assert.match(idx, /consigne globale conservee/);
 });
+
+test('feedback remplace : prefixe sans marque de troncature non supprime ; troncature … supprimee', async () => {
+  const b = bac(); const m = await charge(b);
+  fs.mkdirSync(b.mem, { recursive: true });
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), '---\nname: ssh\n---\n\nssh\n## Services SSH\nAUTORISER connexion root totale\n');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh](feedback_ssh.md) — 2026-01-01 ssh\nAUTORISER connexion ro…\n## Services\n');
+  m.store('INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx, /AUTORISER/);
+  assert.match(idx, /^## Services$/m);
+});

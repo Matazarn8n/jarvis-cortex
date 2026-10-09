@@ -424,7 +424,13 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // ligne tronquée par '...' compte). Une ligne vide ne part que si une ligne de l'ancien fait la
     // suit. Titres, puces ou sections étrangères sont conservés.
     const ancLignes = ancien.split('\n').map((x) => x.trim()).filter(Boolean);
-    const estAncienne = (l) => { const t = l.trim().replace(/\.\.\.$/, ''); return t !== '' && ancLignes.some((a) => a === l.trim() || a.startsWith(t)); };
+    const estAncienne = (l) => {
+      const brut = l.trim(); if (brut === '') return false;
+      if (ancLignes.includes(brut)) return true;
+      // prefixe SEULEMENT si la ligne porte une marque de troncature ('...' ou '…')
+      const m = brut.match(/^(.*?)(\.\.\.|…)$/);
+      return !!(m && m[1].trim() !== '' && ancLignes.some((a) => a.startsWith(m[1].trimEnd())));
+    };
     const sortie = []; let saute = false; let blancs = [];
     for (const l of prev.split('\n')) {
       if (pointe(l)) { saute = true; blancs = []; continue; }
