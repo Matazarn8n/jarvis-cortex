@@ -265,91 +265,92 @@ ${fact}
 ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
 *Saved ${today} via brain store.*
 `;
-  // Trois régimes d'écriture, pilotés par `type` (déjà calculé plus haut) :
-  //  - user/reference (sémantique)  : upsert, comportement historique inchangé.
-  //  - project (épisodique)         : append-only — un fichier existant bloque
-  //    l'écriture (perte de fait silencieuse sinon), sauf --force explicite.
-  //  - feedback (procédural)        : remplacement versionné — l'ancien
-  //    contenu part dans <base>.vN.md avant d'être remplacé, jamais perdu.
-  // Un type inconnu garde l'écrasement inconditionnel d'origine.
-  // Réserves HAUTE 3d906ce7d7f9 et 6e708b04ecfa (audit 2026-08-21, arbitrées
-  // FIX le 2026-08-22). Les deux régimes non triviaux tenaient leur promesse par
-  // un `existsSync` suivi d'une écriture : entre les deux, un autre processus
-  // passe. `project` perdait le fait qu'il jure de ne jamais perdre, et
-  // `feedback` pouvait archiver deux fois le MÊME contenu sous deux `.vN`
-  // différents, puis laisser une des deux écritures disparaître sans archive.
-  if (type === 'project' && !opts.force) {
-    // Création EXCLUSIVE : c'est le noyau qui tranche, pas nous. `wx` échoue en
-    // EEXIST si le fichier apparaît entre-temps, ce qu'aucun test préalable ne
-    // peut garantir. `--force` retombe sur l'écrasement demandé explicitement.
-    try {
-      fs.writeFileSync(file, body, { flag: 'wx' });
-    } catch (e) {
-      if (e.code !== 'EEXIST') throw e;
-      throw new Error(`store refuse d'écraser "${path.basename(file)}" (type project = append-only, le fait existant serait perdu) — relancez avec --force pour l'autoriser explicitement.`);
-    }
-  } else if (type === 'feedback') {
-    // Le choix du `.vN`, la copie et le remplacement forment UN geste : les
-    // séparer laissait deux écrivains choisir le même numéro, ou archiver le
-    // même original deux fois avant que l'un des deux corps ne soit écrasé sans
-    // jamais avoir été archivé. Verrou exclusif de fichier, du même dossier.
-    withStoreLock(dir, () => {
+  // UN seul verrou pour tout le geste (corps + index) et pour TOUS les types : l'index
+  // est partagé, deux écrivains ne doivent jamais s'y croiser.
+  let entry;
+  withStoreLock(dir, () => {
+    // Trois régimes d'écriture, pilotés par `type` (déjà calculé plus haut) :
+    //  - user/reference (sémantique)  : upsert, comportement historique inchangé.
+    //  - project (épisodique)         : append-only — un fichier existant bloque
+    //    l'écriture (perte de fait silencieuse sinon), sauf --force explicite.
+    //  - feedback (procédural)        : remplacement versionné — l'ancien
+    //    contenu part dans <base>.vN.md avant d'être remplacé, jamais perdu.
+    // Un type inconnu garde l'écrasement inconditionnel d'origine.
+    // Réserves HAUTE 3d906ce7d7f9 et 6e708b04ecfa (audit 2026-08-21, arbitrées
+    // FIX le 2026-08-22). Les deux régimes non triviaux tenaient leur promesse par
+    // un `existsSync` suivi d'une écriture : entre les deux, un autre processus
+    // passe. `project` perdait le fait qu'il jure de ne jamais perdre, et
+    // `feedback` pouvait archiver deux fois le MÊME contenu sous deux `.vN`
+    // différents, puis laisser une des deux écritures disparaître sans archive.
+    if (type === 'project' && !opts.force) {
+      // Création EXCLUSIVE : c'est le noyau qui tranche, pas nous. `wx` échoue en
+      // EEXIST si le fichier apparaît entre-temps, ce qu'aucun test préalable ne
+      // peut garantir. `--force` retombe sur l'écrasement demandé explicitement.
+      try {
+        fs.writeFileSync(file, body, { flag: 'wx' });
+      } catch (e) {
+        if (e.code !== 'EEXIST') throw e;
+        throw new Error(`store refuse d'écraser "${path.basename(file)}" (type project = append-only, le fait existant serait perdu) — relancez avec --force pour l'autoriser explicitement.`);
+      }
+    } else if (type === 'feedback') {
+      // Le choix du `.vN`, la copie et le remplacement forment UN geste : les
+      // séparer laissait deux écrivains choisir le même numéro, ou archiver le
+      // même original deux fois avant que l'un des deux corps ne soit écrasé sans
+      // jamais avoir été archivé. Verrou exclusif de fichier, du même dossier.
       if (fs.existsSync(file)) {
         let n = 1;
         while (fs.existsSync(file.replace(/\.md$/, `.v${n}.md`))) n++;
         fs.copyFileSync(file, file.replace(/\.md$/, `.v${n}.md`));
       }
       fs.writeFileSync(file, body);
-    });
-  } else {
-    fs.writeFileSync(file, body);
-  }
-  // one index line - append-only, no reads needed beyond the index itself
-  const index = path.join(dir, MEM_INDEX);
-  const title = name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  // Budget d'index EXÉCUTOIRE. memory-gc porte déjà la règle « une entrée ≤ 200
-  // caractères, le détail vit dans les fichiers » — mais en audit sur demande,
-  // que personne ne lance : 30 des 134 lignes de MEMORY.md la violaient au
-  // 2026-08-11. Un index toujours chargé qui grossit sans plafond finit par
-  // coûter plus cher que ce qu'il fait gagner, donc on tronque à l'écriture.
-  const ENTRY_MAX = 200;
-  // Plafond de 200 caractères SANS couper le pointeur [titre](fichier) : on rabote d'abord la
-  // description, puis le titre affiché (lisible, pas un identifiant). Le nom de fichier, lui,
-  // n'est jamais tronqué.
-  const fixe = (t) => `- [${t}](${path.basename(file)}) — ${today} `;
-  let tt = title;
-  let tete = fixe(tt);
-  const reserveDesc = 40;
-  if (tete.length + reserveDesc > ENTRY_MAX - 1 && tt.length > 8) {
-    const surplus = tete.length + reserveDesc - (ENTRY_MAX - 1);
-    tt = tt.slice(0, Math.max(8, tt.length - surplus - 1)).trimEnd() + '…';
-    tete = fixe(tt);
-  }
-  const reste = Math.max(0, ENTRY_MAX - 1 - tete.length);
-  let entry = tete + desc + '\n';
-  if (entry.length - 1 > ENTRY_MAX) entry = tete + (reste > 1 ? desc.slice(0, reste - 1).trimEnd() + '…' : '…') + '\n';
-  if (opts.sandbox && !fs.existsSync(index)) fs.writeFileSync(index, '# Sandbox Memory Index\n\n');
-  if (type === 'feedback') {
-    // Remplacement versionné : l'entrée d'index de la règle précédente est RETIRÉE (sinon le
-    // rappel par index transmettrait l'ancienne consigne révoquée à côté de la nouvelle).
-    withStoreLock(dir, () => {
+    } else {
+      fs.writeFileSync(file, body);
+    }
+    // one index line - append-only, no reads needed beyond the index itself
+    const index = path.join(dir, MEM_INDEX);
+    const title = name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    // Budget d'index EXÉCUTOIRE. memory-gc porte déjà la règle « une entrée ≤ 200
+    // caractères, le détail vit dans les fichiers » — mais en audit sur demande,
+    // que personne ne lance : 30 des 134 lignes de MEMORY.md la violaient au
+    // 2026-08-11. Un index toujours chargé qui grossit sans plafond finit par
+    // coûter plus cher que ce qu'il fait gagner, donc on tronque à l'écriture.
+    const ENTRY_MAX = 200;
+    // Plafond de 200 caractères SANS couper le pointeur [titre](fichier) : on rabote d'abord la
+    // description, puis le titre affiché (lisible, pas un identifiant). Le nom de fichier, lui,
+    // n'est jamais tronqué.
+    const fixe = (t) => `- [${t}](${path.basename(file)}) — ${today} `;
+    let tt = title;
+    let tete = fixe(tt);
+    const reserveDesc = 40;
+    if (tete.length + reserveDesc > ENTRY_MAX - 1 && tt.length > 8) {
+      const surplus = tete.length + reserveDesc - (ENTRY_MAX - 1);
+      tt = tt.slice(0, Math.max(8, tt.length - surplus - 1)).trimEnd() + '…';
+      tete = fixe(tt);
+    }
+    const reste = Math.max(0, ENTRY_MAX - 1 - tete.length);
+    entry = tete + desc + '\n';
+    if (entry.length - 1 > ENTRY_MAX) entry = tete + (reste > 1 ? desc.slice(0, reste - 1).trimEnd() + '…' : '…') + '\n';
+    if (opts.sandbox && !fs.existsSync(index)) fs.writeFileSync(index, '# Sandbox Memory Index\n\n');
+    if (type === 'feedback') {
+      // Remplacement versionné : l'entrée d'index de la règle précédente est RETIRÉE (sinon le
+      // rappel par index transmettrait l'ancienne consigne révoquée à côté de la nouvelle).
       const motif = `](${path.basename(file)})`;
       const prev = fs.existsSync(index) ? fs.readFileSync(index, 'utf8') : '';
       const garde = prev.split('\n').filter((l) => !l.includes(motif)).join('\n').replace(/\n*$/, '');
       const tmp = `${index}.tmp-${process.pid}`;
       fs.writeFileSync(tmp, (garde ? garde + '\n' : '') + entry);
       fs.renameSync(tmp, index);
-    });
-  } else {
-    fs.appendFileSync(index, entry);
-  }
-  // Le fait n'est jamais perdu (il est dans son fichier) — mais l'index qui
-  // déborde doit se voir, sinon la dérive reprend. Alerte, pas exception.
-  const indexBytes = fs.statSync(index).size;
-  const INDEX_MAX = 16000;
-  if (indexBytes > INDEX_MAX) {
-    console.error(`[brain] MEMORY.md ${indexBytes} c > budget ${INDEX_MAX} c — lancer la skill memory-gc`);
-  }
+    } else {
+      fs.appendFileSync(index, entry);
+    }
+    // Le fait n'est jamais perdu (il est dans son fichier) — mais l'index qui
+    // déborde doit se voir, sinon la dérive reprend. Alerte, pas exception.
+    const indexBytes = fs.statSync(index).size;
+    const INDEX_MAX = 16000;
+    if (indexBytes > INDEX_MAX) {
+      console.error(`[brain] MEMORY.md ${indexBytes} c > budget ${INDEX_MAX} c — lancer la skill memory-gc`);
+    }
+  });
   const bytes = Buffer.byteLength(body) + Buffer.byteLength(entry);
   return { file: path.relative(ROOT, file), indexLine: entry.trim(), bytes, ms: +(performance.now() - t0).toFixed(2) };
 }

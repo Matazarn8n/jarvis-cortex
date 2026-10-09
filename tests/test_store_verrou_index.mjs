@@ -133,3 +133,22 @@ test('feedback remplace : l entree d index precedente est retiree, rappel et pro
   assert.doesNotMatch(rec, /autoriser/);
   assert.doesNotMatch(JSON.stringify(m.buildAsk('ssh')), /autoriser/);
 });
+
+test('index : feedback remplace + project/user concurrents -> aucune entree perdue, une seule par regle', async () => {
+  const { spawn } = await import('node:child_process');
+  const b = bac();
+  const top = Date.now() + 600;
+  const code = `const {store}=require(${JSON.stringify(b.mod)});while(Date.now()<${top}){}
+const i=Number(process.argv[1]);
+if(i%2===0)store('regle version '+i,{type:'feedback',name:'meme_regle'});
+else store('fait numero '+i,{type:i%4===1?'project':'user',name:'fait_'+i});`;
+  const rcs = await Promise.all(Array.from({ length: 12 }, (_, i) => new Promise((res) => {
+    spawn(process.execPath, ['-e', code, String(i)], { stdio: 'ignore' }).on('exit', res);
+  })));
+  assert.deepEqual(rcs, Array(12).fill(0));
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8').split('\n');
+  assert.equal(idx.filter((l) => l.includes('(feedback_meme_regle.md)')).length, 1);
+  for (const i of [1, 3, 5, 7, 9, 11]) {
+    assert.equal(idx.filter((l) => l.includes(`fait_${i}.md)`)).length, 1, `fait ${i} perdu`);
+  }
+});
