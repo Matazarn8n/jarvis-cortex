@@ -152,3 +152,20 @@ else store('fait numero '+i,{type:i%4===1?'project':'user',name:'fait_'+i});`;
     assert.equal(idx.filter((l) => l.includes(`fait_${i}.md)`)).length, 1, `fait ${i} perdu`);
   }
 });
+
+test('feedback multiligne remplace : plus de continuation de l ancienne consigne', async () => {
+  const b = bac(); const m = await charge(b);
+  m.store('ssh\nAUTORISER connexion root', { type: 'feedback', name: 'ssh_ml' });
+  m.store('ssh\nINTERDIRE connexion root', { type: 'feedback', name: 'ssh_ml' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx, /AUTORISER/);
+  assert.match(idx, /INTERDIRE/);
+  assert.equal(idx.trim().split('\n').length, 1);
+  // ancienne entree multiligne deja presente dans l index
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh Ml](feedback_ssh_ml.md) — 2026-01-01 ssh\nAUTORISER ancien\n- [Autre](feedback_autre.md) — 2026-01-01 voir [SSH](feedback_ssh_ml.md)\n');
+  m.store('ssh\nINTERDIRE v3', { type: 'feedback', name: 'ssh_ml' });
+  const idx2 = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx2, /AUTORISER/);
+  assert.match(idx2, /\(feedback_autre\.md\)/); // l entree d un autre fichier qui CITE le lien est conservee
+  assert.match(idx2, /INTERDIRE v3/);
+});

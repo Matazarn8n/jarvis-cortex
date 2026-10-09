@@ -253,7 +253,8 @@ function store(fact, opts) {
   const base = name.replace(/-/g, '_');
   const file = path.join(dir, (prefix && base.startsWith(prefix) ? '' : prefix) + base + '.md');
   const today = new Date().toISOString().slice(0, 10);
-  const desc = fact.length > 110 ? fact.slice(0, 107) + '...' : fact;
+  const flat = fact.replace(/\s+/g, ' ').trim(); // l'entrée d'index tient sur UNE ligne
+  const desc = flat.length > 110 ? flat.slice(0, 107) + '...' : flat;
   const body = `---
 name: ${name}
 description: ${desc}
@@ -334,10 +335,19 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     if (type === 'feedback') {
       // Remplacement versionné : l'entrée d'index de la règle précédente est RETIRÉE (sinon le
       // rappel par index transmettrait l'ancienne consigne révoquée à côté de la nouvelle).
-      const motif = `](${path.basename(file)})`;
-      const prev = fs.existsSync(index) ? fs.readFileSync(index, 'utf8') : '';
-      const garde = prev.split('\n').filter((l) => !l.includes(motif)).join('\n').replace(/\n*$/, '');
-      const tmp = `${index}.tmp-${process.pid}`;
+      const cible = path.basename(file);
+    const pointe = (l) => { const m = l.match(/^- \[[^\]]*\]\(([^)]+)\)/); return m && m[1] === cible; };
+    const prev = fs.existsSync(index) ? fs.readFileSync(index, 'utf8') : '';
+    // On retire l'entrée dont le pointeur PRINCIPAL est ce fichier, et ses éventuelles lignes de
+    // continuation (anciennes entrées multilignes) jusqu'à la prochaine entrée ou ligne vide.
+    const sortie = []; let saute = false;
+    for (const l of prev.split('\n')) {
+      if (pointe(l)) { saute = true; continue; }
+      if (saute && l.trim() !== '' && !/^(- |#)/.test(l)) continue;
+      saute = false; sortie.push(l);
+    }
+    const garde = sortie.join('\n').replace(/\n*$/, '');
+    const tmp = `${index}.tmp-${process.pid}`;
       fs.writeFileSync(tmp, (garde ? garde + '\n' : '') + entry);
       fs.renameSync(tmp, index);
     } else {

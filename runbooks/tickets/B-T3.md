@@ -179,6 +179,13 @@ versionne le fichier.
 
 ### 3. La concurrence — un verrou par racine, et un remplacement atomique
 
+> **MISE À JOUR (branche fix/brain-store-prefixe-et-budget)** : `brain.js store()` prend désormais
+> lui-même `memory/.store.lock` pour TOUT le geste (corps + index, tous les types) et, pour un
+> remplacement `feedback`, RETIRE l'ancienne entrée d'index avant d'ajouter la nouvelle (une seule
+> ligne par règle). Le pont n'a donc plus à relire/dédoublonner/réécrire `MEMORY.md` ni à prendre
+> `.memory.lock` pour l'index : cette réécriture est supprimée du contrat, et la « dette »
+> ci-dessous est fermée par le magasin. Le texte qui suit décrit l'ancien état (index append-only).
+
 Le point précédent te met dans une situation que `brain.js` ne gère pas pour toi.
 Il ajoute sa ligne d'index **en append-only** (l. 208-220) : tenir *une* ligne
 par règle à travers les révisions t'oblige donc à **relire `MEMORY.md`, le
