@@ -80,7 +80,17 @@ const ARCHIVE_RE = /^feedback_.*\.v0*\d+\.md$/i;
 function isArchived(p) {
   let real = p;
   try { real = fs.realpathSync(p); } catch { /* absent : on teste le nom seul */ }
-  return ARCHIVE_RE.test(path.basename(p)) || ARCHIVE_RE.test(path.basename(real));
+  if (ARCHIVE_RE.test(path.basename(p)) || ARCHIVE_RE.test(path.basename(real))) return true;
+  // lien physique : un autre nom pour le même inode qu'une archive du dossier mémoire
+  try {
+    const st = fs.statSync(p);
+    for (const f of fs.readdirSync(MEM)) {
+      if (!ARCHIVE_RE.test(f)) continue;
+      const a = fs.statSync(path.join(MEM, f));
+      if (a.ino === st.ino && a.dev === st.dev) return true;
+    }
+  } catch { /* fichier absent : rien à comparer */ }
+  return false;
 }
 
 // ---------- recall ----------

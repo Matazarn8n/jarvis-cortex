@@ -144,3 +144,16 @@ test('recall: un document racine (routage) qui pointe vers une archive est ignor
   const r = m.recall('rule workspace', { k: 3, hop: false });
   assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)), JSON.stringify(r.hits.map(h => h.file)));
 });
+
+test('recall: lien physique (hardlink) vers une archive ignore, racine et dossier memoire', async () => {
+  const b = bac();
+  const m = await import(b.mod + '?t=' + Math.random());
+  m.store('regle ancienne suppression', { type: 'feedback', name: 'suppression' });
+  m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
+  const v1 = path.join(b.mem, 'feedback_suppression.v1.md');
+  fs.linkSync(v1, path.join(b.dir, 'CLAUDE.md'));
+  fs.linkSync(v1, path.join(b.mem, 'suppression_alias.md'));
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '- [B](suppression_alias.md) — suppression\n');
+  const r = m.recall('suppression rule', { k: 9, hop: false });
+  assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)), JSON.stringify(r.hits.map(h => h.file)));
+});
