@@ -1,6 +1,7 @@
 /* jarvis-cortex server - local engine for the JARVIS Cortex workspace graph.
    Zero dependencies. Serves the two visual options + the graph API over the
    real workspace. Run:  node server.js   ->  http://localhost:5210
+   Check : node open-file.js
    Endpoints:
      GET  /api/graph[?fresh=1]  default-visible graph + all md links
      GET  /api/expand?path=rel  children of a folded folder
@@ -13,7 +14,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { openFile } = require('./open-file');
 const scan = require('./scan');
 
 const PORT = Number(process.env.PORT) || 5210;
@@ -132,14 +133,8 @@ const handle = async (req, res) => {
       const abs = safeResolve(body.path || '');
       if (!abs || !fs.existsSync(abs)) return sendJSON(res, { error: 'Not found' }, 404);
       const ext = path.extname(abs).toLowerCase();
-      const isHtml = (ext === '.html' || ext === '.htm');
-      let cmd, args;
-      if (process.platform === 'win32') { cmd = 'cmd'; args = isHtml ? ['/c', 'start', 'chrome', abs] : ['/c', 'start', '', abs]; }
-      else if (process.platform === 'darwin') { cmd = 'open'; args = [abs]; }
-      else { cmd = 'xdg-open'; args = [abs]; }
-      const child = spawn(cmd, args, { detached: true, stdio: 'ignore' });
-      child.on('error', (e) => { console.error('[open] spawn failed:', cmd, e.message); });
-      child.unref();
+      try { await openFile(abs, ext === '.html' || ext === '.htm'); }
+      catch (e) { console.error('[open] failed:', e.message); return sendJSON(res, { error: 'Open failed: ' + e.message }, 500); }
       return sendJSON(res, { ok: true });
     }
 
