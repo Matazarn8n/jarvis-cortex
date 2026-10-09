@@ -241,16 +241,45 @@ test('feedback remplace : section etrangere et continuation contenant un lien', 
   assert.match(idx, /consigne globale conservee/);
 });
 
-test('feedback remplace : prefixe sans marque de troncature non supprime ; troncature … supprimee (entree reellement tronquee)', async () => {
+// Entree EXACTE de l'ancien store (main) : tete + desc, desc coupee a 198-tete + '…' si > 199.
+const ancienne = (nom, desc, date) => {
+  const tete = `- [Ssh](feedback_${nom}.md) \u2014 ${date} `;
+  return tete + (tete.length + desc.length > 199 ? desc.slice(0, 198 - tete.length).trimEnd() + '\u2026' : desc);
+};
+
+test('feedback remplace : entree reellement tronquee par l ancien store, reproduite exactement : supprimee', async () => {
   const b = bac(); const m = await charge(b);
-  fs.mkdirSync(b.mem, { recursive: true });
-  const nom = 'ssh_' + 'x'.repeat(100); // pointeur long : l'entree complete depasse 200 et fut tronquee
-  fs.writeFileSync(path.join(b.mem, `feedback_${nom}.md`), '---\nname: ssh\n---\n\nssh\n## Services SSH\nAUTORISER connexion root totale et sans limite\n');
-  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_${nom}.md) — 2026-01-01 ssh\n## Services SSH\nAUTORISER connexion root totale et ...\n## Services\n`);
+  const d = new Date().toISOString().slice(0, 10);
+  const nom = 'ssh_' + 'x'.repeat(100);
+  const fait = 'ssh\n## Services SSH\nAUTORISER connexion root totale et sans limite';
+  ancien(b, nom, fait);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), ancienne(nom, fait, d) + '\n## Services\n');
   m.store('INTERDIRE root', { type: 'feedback', name: nom });
   const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
   assert.doesNotMatch(idx, /AUTORISER/);
   assert.match(idx, /^## Services$/m);
+});
+
+test('t27-1 : ligne voisine finissant par … / ... mais NON identique a la troncature exacte : CONSERVEE', async () => {
+  for (const fin of ['consigne\u2026', 'consigne...', 'consigne complete a conserv\u2026']) {
+    const b = bac(); const m = await charge(b);
+    const d = new Date().toISOString().slice(0, 10);
+    const nom = 'ssh_' + 'x'.repeat(100);
+    ancien(b, nom, 'ssh\n- [Guide](reference_guide.md) \u2014 2026-01-01 consigne complete a conserver');
+    fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_${nom}.md) \u2014 ${d} ssh\n- [Guide](reference_guide.md) \u2014 2026-01-01 ${fin}\n`);
+    m.store('INTERDIRE root', { type: 'feedback', name: nom });
+    assert.ok(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8').includes(`2026-01-01 ${fin}`), fin);
+  }
+});
+
+test('t27-2 : metadata dans le fait ne fabrique pas de faux candidat de desc : titre independant CONSERVE', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'),
+    `---\nname: ssh\ndescription: ssh\n## Services...\nmetadata:\n  type: feedback\n---\n\nssh\n## Services DIFFERENT\n\n*Saved ${d} via brain store.*\n`);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\n## Services...\nconsigne INDEPENDANTE\n`);
+  m.store('INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /## Services\.\.\.\nconsigne INDEPENDANTE/);
 });
 
 test('feedback remplace : continuations des revisions anterieures (archives .vN) retirees aussi', async () => {

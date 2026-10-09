@@ -446,7 +446,9 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
           const apres = t.slice(dm[0].length + m.index + m[0].length);
           if (!apres.startsWith('\n\n')) continue;
           const corps = apres.slice(2);
-          if (corps.startsWith(cand) || (cand.endsWith('...') && corps.startsWith(cand.slice(0, -3)))) out.add(cand);
+          // Desc historique = fait brut (≤ 110) ou fait tronqué à 107 + '...' (donc EXACTEMENT 110 car.).
+          if (cand.length <= 110 && corps.startsWith(cand)) out.add(cand);
+          else if (cand.length === 110 && cand.endsWith('...') && corps.length > 110 && corps.startsWith(cand.slice(0, 107))) out.add(cand);
         }
         return [...out];
       }
@@ -463,8 +465,10 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // prêter ses lignes à une autre entrée.
     const revs = (textes) => textes.flatMap((t) => {
       const date = (t.match(/\*Saved (\d{4}-\d{2}-\d{2}) via brain store\.\*\s*$/) || [])[1]; // pied FINAL seulement
-      return faits(t).filter((f) => f.includes('\n'))
-        .map((f) => ({ date, d: (f.length > 110 ? f.slice(0, 107) + '...' : f).split('\n') }));
+      const aDesc = /^---\nname: [^\n]*\ndescription: /.test(t);
+      // avec `description:` faits() rend déjà le desc final ; sans, c'est le fait brut à tronquer
+      return faits(t).map((f) => (aDesc || f.length <= 110 ? f : f.slice(0, 107) + '...'))
+        .filter((f) => f.includes('\n')).map((f) => ({ date, desc: f }));
     });
     const textes = ancien.split('\u0000');
     const revisions = revs(textes);
@@ -482,26 +486,17 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // indépendante, jamais une continuation. Une continuation est une ligne de l'ancien fait,
       // égale à la ligne du desc, ou — pour la dernière — tronquée par '...' / '…'.
       let k = 0;
-      for (const { d, date } of (i === derniere ? courantes : revisions)) {
-        // 1re ligne EXACTE : `tete + desc` historique. Une entrée aplatie (store actuel) dont le
-        // texte se termine par d[0] n'est pas une entrée multiligne.
-        const reste = (l.match(/\) — \d{4}-\d{2}-\d{2} ([^\n]*)$/) || [])[1];
-        if (reste !== d[0] || (date && !l.includes(` — ${date} `))) continue;
-        // Toutes les lignes suivantes du desc doivent être là, à l'identique (une ligne égale gagne
-        // même au format d'entrée) ; seule la dernière ligne présente peut être tronquée par '...'/'…'
-        // (plafond d'index). Une divergence = lignes étrangères : rien n'est retiré.
-        let n = 0; let ok = true;
-        // Une troncature par '...'/'…' n'existe que si l'entrée complète dépassait le plafond.
-        const tronque = (l.length - reste.length) + d.join('\n').length > ENTRY_MAX;
-        for (let q = 1; q < d.length; q++) {
-          const x = lignes[i + q];
-          if (x === undefined) { ok = false; break; }
-          if (x === d[q]) { n = q; continue; }
-          const m = x.match(/^([^\n]*?)(?:\.\.\.|…)\r?$/);
-          if (tronque && m && m[1] !== '' && d[q].startsWith(m[1])) { n = q; break; }
-          ok = false; break;
-        }
-        if (ok && n > k) k = n;
+      const mt = l.match(/^(.*\) — (\d{4}-\d{2}-\d{2}) )([^\n]*)$/);
+      for (const { desc, date } of (i === derniere ? courantes : revisions)) {
+        if (!mt || (date && mt[2] !== date)) continue;
+        // Reproduction EXACTE, octet pour octet, de ce que l'ancien store a écrit : `tete + desc`,
+        // ou `tete + desc.slice(0, 198 - tete.length).trimEnd() + '…'` si tete + desc dépassait 199.
+        // Aucune tolérance : au moindre écart d'une ligne, rien n'est retiré (un doublon vaut mieux
+        // qu'une ligne indépendante perdue).
+        const tete = mt[1];
+        const E = tete + (tete.length + desc.length > ENTRY_MAX - 1 ? desc.slice(0, Math.max(0, ENTRY_MAX - 2 - tete.length)).trimEnd() + '…' : desc);
+        const nl = E.split('\n').length;
+        if (lignes.slice(i, i + nl).join('\n') === E && nl - 1 > k) k = nl - 1;
       }
       i += k;
     }
