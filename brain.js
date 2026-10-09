@@ -485,7 +485,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       for (const { d, date } of (i === derniere ? courantes : revisions)) {
         // 1re ligne EXACTE : `tete + desc` historique. Une entrée aplatie (store actuel) dont le
         // texte se termine par d[0] n'est pas une entrée multiligne.
-        const reste = (l.match(/\) — \d{4}-\d{2}-\d{2} (.*)$/) || [])[1];
+        const reste = (l.match(/\) — \d{4}-\d{2}-\d{2} ([^\n]*)$/) || [])[1];
         if (reste !== d[0] || (date && !l.includes(` — ${date} `))) continue;
         // Toutes les lignes suivantes du desc doivent être là, à l'identique (une ligne égale gagne
         // même au format d'entrée) ; seule la dernière ligne présente peut être tronquée par '...'/'…'
@@ -494,8 +494,8 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
         for (let q = 1; q < d.length; q++) {
           const x = lignes[i + q];
           if (x === undefined) { ok = false; break; }
-          if (x.trimEnd() === d[q].trimEnd()) { n = q; continue; }
-          const m = x.trimEnd().match(/^(.*?)(\.\.\.|…)$/);
+          if (x === d[q]) { n = q; continue; }
+          const m = x.match(/^([^\n]*?)(?:\.\.\.|…)\r?$/);
           if (m && m[1] !== '' && d[q].startsWith(m[1])) { n = q; break; }
           ok = false; break;
         }
