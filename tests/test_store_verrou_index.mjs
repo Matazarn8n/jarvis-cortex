@@ -256,3 +256,14 @@ test('feedback remplace : continuations des revisions anterieures (archives .vN)
   assert.doesNotMatch(idx, /AUTORISER/);
   assert.equal(idx.trim().split('\n').length, 1);
 });
+
+test('feedback remplace : entree voisine identique a une ligne d archive conservee', async () => {
+  const b = bac(); const m = await charge(b);
+  fs.mkdirSync(b.mem, { recursive: true });
+  const l = '- [Services](reference_services.md) — 2026-01-01 services';
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.v1.md'), `---\nname: ssh\n---\n\nssh\n${l}\n`);
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), '---\nname: ssh\n---\n\nssh\n');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — 2026-01-01 ssh\n${l}\n`);
+  m.store('INTERDIRE', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /reference_services\.md/);
+});

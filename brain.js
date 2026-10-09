@@ -440,7 +440,8 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       if (pointe(l)) { saute = true; blancs = []; continue; }
       if (saute) {
         if (l.trim() === '') { blancs.push(l); continue; }
-        if (estAncienne(l)) { blancs = []; continue; }
+        // entrée indépendante (puce/numéro + lien en tête de ligne) : JAMAIS une continuation
+        if (!/^\s*(?:[-*+]|\d+[.)])\s+\[[^\]]+\]\([^)]+\)/.test(l) && estAncienne(l)) { blancs = []; continue; }
         saute = false; sortie.push(...blancs); blancs = [];
       }
       sortie.push(l);

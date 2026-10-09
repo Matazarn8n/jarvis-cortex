@@ -255,7 +255,7 @@ Exigences, une par axe :
 > INCHANGÉ : défense en profondeur, voir la NOTE de B-T3 §3.
 
 **Puis la concurrence — cinq axes de plus, et le trou que l'audit a nommé.**
-`brain.js` indexe en append-only (l. 208-220) : tenir *une* ligne par règle
+`brain.js` indexait en append-only (avant le correctif de la branche ; il retire maintenant l'ancienne entrée d'un `feedback` remplacé) : tenir *une* ligne par règle
 oblige le pont à relire, dédoublonner et réécrire `MEMORY.md`. C'est un cycle
 lecture-modification-écriture sur un fichier que **la mémoire réelle partage**
 entre tous les gates. Une suite séquentielle ne peut pas voir ce défaut : elle
