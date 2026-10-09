@@ -581,3 +581,23 @@ test('t32-2 : fichier converti LF->CRLF apres coup, desc tronquee : rien retire 
   m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
   assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /aaaa/);
 });
+
+test('t33-1 : deux archives du meme jour, etendues differentes plausibles : rien retire, ligne independante gardee', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  const mk = (f, fait) => fs.writeFileSync(path.join(b.mem, f), `---\nname: ssh\n---\n\n${fait}\n\n*Saved ${d} via brain store.*\n`);
+  mk('feedback_ssh.v1.md', 'ssh\n## Services'); mk('feedback_ssh.v2.md', 'ssh\n## Services\nconsigne INDEPENDANTE'); mk('feedback_ssh.md', 'ssh INTERDIRE');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\n## Services\nconsigne INDEPENDANTE\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /consigne INDEPENDANTE/);
+});
+
+test('t33-2 : archive monoligne + archive multiligne exactes : ambigu, ligne independante gardee', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  const mk = (f, fait) => fs.writeFileSync(path.join(b.mem, f), `---\nname: ssh\n---\n\n${fait}\n\n*Saved ${d} via brain store.*\n`);
+  mk('feedback_ssh.v1.md', 'ssh'); mk('feedback_ssh.v2.md', 'ssh\n## Services'); mk('feedback_ssh.md', 'ssh INTERDIRE');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\n## Services\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /## Services/);
+});

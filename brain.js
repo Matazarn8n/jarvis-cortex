@@ -474,7 +474,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       const fs_ = faits(t);
       if (!fs_) { ambigu = true; return []; }
       return fs_.map((f) => (aDesc ? f : f.length <= 110 ? f : f.slice(0, 107) + '...'))
-        .filter((f) => f.includes('\n')).map((f) => ({ date, desc: f }));
+        .map((f) => ({ date, desc: f }));
     });
     const textes = ancien.split('\u0000');
     const revisions = revs(textes);
@@ -497,18 +497,24 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // égale à la ligne du desc, ou — pour la dernière — tronquée par '...' / '…'.
       let k = 0; let douteuse = 0;
       const mt = l.match(/^(\s*(?:[-*+]|\d+[.)])?\s*\[[^\]]+\]\([^)]+\) — (\d{4}-\d{2}-\d{2}) )([^\n]*)$/);
+      // Reproduction EXACTE, octet pour octet, de ce que l'ancien store a écrit : `tete + desc`,
+      // ou `tete + desc.slice(0, 198 - tete.length).trimEnd() + '…'` si tete + desc dépassait 199.
+      // Aucune tolérance : au moindre écart d'une ligne, rien n'est retiré (un doublon vaut mieux
+      // qu'une ligne indépendante perdue). Plusieurs révisions exactes de même 1re ligne mais
+      // d'étendues différentes : ambigu, rien n'est retiré non plus.
+      const Es = new Set();
       for (const { desc, date } of (i === derniere ? courantes : revisions)) {
         if (!mt || (date && mt[2] !== date)) continue;
-        // Reproduction EXACTE, octet pour octet, de ce que l'ancien store a écrit : `tete + desc`,
-        // ou `tete + desc.slice(0, 198 - tete.length).trimEnd() + '…'` si tete + desc dépassait 199.
-        // Aucune tolérance : au moindre écart d'une ligne, rien n'est retiré (un doublon vaut mieux
-        // qu'une ligne indépendante perdue).
         const tete = mt[1];
         const E = tete + (tete.length + desc.length > ENTRY_MAX - 1 ? desc.slice(0, Math.max(0, ENTRY_MAX - 2 - tete.length)).trimEnd() + '…' : desc);
+        if (E.split('\n')[0] === l) Es.add(E);
+      }
+      const exact = (E) => { const bl = lignes.slice(i, i + E.split('\n').length).join('\n'); return bl === E || bl === E + '\r'; };
+      if ([...Es].filter(exact).length > 1) { sortie.push(l); continue; }
+      for (const E of Es) {
         const nl = E.split('\n').length;
-        const bloc = lignes.slice(i, i + nl).join('\n'); // index CRLF : la dernière ligne peut garder son \r
-        if (bloc === E || bloc === E + '\r') { if (nl - 1 > k) k = nl - 1; }
-        else if (nl > 1 && E.split('\n')[0] === l) douteuse = Math.max(douteuse, nl); // 1re ligne d'un fait multiligne, suite divergente
+        if (exact(E)) k = nl - 1;
+        else if (nl > 1) douteuse = nl; // 1re ligne d'un fait multiligne, suite divergente
       }
       // Doute : entrée multiligne dont la suite ne correspond pas exactement -> RIEN n'est retiré.
       if (douteuse && k === 0) {
