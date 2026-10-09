@@ -27,6 +27,7 @@ ici :
 8. l'index tient toujours une seule ligne après cette révision ;
 9. deux écrivains concurrents produisent leurs **deux** `<slug>.md` ;
 10. et leurs **deux** lignes d'index, une par slug ;
+(items 11 à 13 : OBSOLÈTES, voir MISE À JOUR de §3 — verrou et index tenus par `brain.js store()`)
 11. le verrou `<racine>/.memory.lock` est réellement pris (refus observé) ;
 12. une ligne ajoutée par un écrivain **direct** pendant le cycle survit ;
 13. le verrou n'est rendu qu'**après** le `os.replace()` de l'index ; cet axe
@@ -280,6 +281,8 @@ Elle exige ensuite :
   contient `WHY_A`, et `<slug>.md` contient `WHY_B` — la révision d'une
   justification est versionnée, pas avalée ;
 - `MEMORY.md` porte **toujours une seule** ligne après le quatrième appel.
+
+> **OBSOLÈTE (branche fix/brain-store-prefixe-et-budget)** : les exigences ci-dessous sur `.memory.lock`, la réécriture d'index par le pont et le `os.replace()` sont ABROGÉES par la MISE À JOUR de §3 : `brain.js store()` tient `memory/.store.lock` et gère l'index (une ligne par règle). Ne pas les exiger du pont ni de la sonde.
 
 Puis elle exerce la **concurrence**, ce que les quatre appels séquentiels ne
 peuvent pas faire : dans un sous-dossier neuf du bac à sable — une racine

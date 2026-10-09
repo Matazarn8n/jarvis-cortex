@@ -115,7 +115,7 @@ function recall(query, opts) {
   if (fs.existsSync(hub)) {
     for (const line of read(hub).split('\n')) {
       const m = line.match(/\[([^\]]+)\]\(([^)]+)\)/);
-      if (!m || /\.v\d+\.md$/.test(m[2])) continue; // archives versionnées : jamais rappelées
+      if (!m || ARCHIVE_RE.test(path.basename(m[2]))) continue; // archives feedback versionnées : jamais rappelées
       const lw = words(line);
       let score = 0;
       for (const w of qw) {
@@ -196,7 +196,7 @@ function recall(query, opts) {
   if (hits.length && opts.hop !== false && !found) {
     const m = hits[0].slice.match(/[\w][\w\/.-]*\.md/g);
     for (const cand of (m || [])) {
-      if (/^(MEMORY|memory-)/.test(cand) || /\.v\d+\.md$/.test(cand)) continue; // jamais d'archive révoquée
+      if (/^(MEMORY|memory-)/.test(cand) || ARCHIVE_RE.test(path.basename(cand))) continue; // jamais d'archive feedback révoquée
       const p1 = path.resolve(ROOT, cand);
       const p2 = path.resolve(path.dirname(path.join(ROOT, hits[0].file)), cand);
       const hp = fs.existsSync(p1) ? p1 : (fs.existsSync(p2) ? p2 : null);
@@ -411,7 +411,8 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // Remplacement versionné : l'entrée d'index de la règle précédente est RETIRÉE (sinon le
       // rappel par index transmettrait l'ancienne consigne révoquée à côté de la nouvelle).
       const cible = path.basename(file);
-    const pointe = (l) => { const m = l.match(/^- \[[^\]]*\]\(([^)]+)\)/); return m && path.resolve(dir, m[1]) === file; };
+    const ENT = /^\s*[-*+]\s+\[[^\]]*\]\(([^)]+)\)/; // puces -, * ou + : meme lecture que recall()
+    const pointe = (l) => { const m = l.match(ENT); return m && path.resolve(dir, m[1]) === file; };
     const prev = fs.existsSync(index) ? fs.readFileSync(index, 'utf8') : '';
     // On retire l'entrée dont le pointeur PRINCIPAL est ce fichier, et ses éventuelles lignes de
     // continuation (anciennes entrées multilignes) jusqu'à la prochaine ENTRÉE d'index (lignes vides, puces ou titres compris : une ancienne
@@ -419,7 +420,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     const sortie = []; let saute = false;
     for (const l of prev.split('\n')) {
       if (pointe(l)) { saute = true; continue; }
-      if (saute && !/^- \[[^\]]*\]\([^)]+\)/.test(l)) continue;
+      if (saute && !ENT.test(l)) continue;
       saute = false; sortie.push(l);
     }
     const garde = sortie.join('\n').replace(/\n*$/, '');

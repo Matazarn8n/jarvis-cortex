@@ -191,3 +191,21 @@ test('feedback remplace : ancienne entree au lien ./ ou dossier/../ retiree', as
   assert.match(idx, /\(feedback_autre\.md\)/);
   assert.match(idx, /INTERDIRE/);
 });
+
+test('feedback remplace : puces * conservees/retirees comme recall() les lit', async () => {
+  const b = bac(); const m = await charge(b);
+  fs.mkdirSync(b.mem, { recursive: true });
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '* [Old](feedback_star.md) — 2026-01-01 AUTORISER root\n* [Other](reference_opaque.v1.md) — 2026-01-01 garde\n');
+  m.store('INTERDIRE root', { type: 'feedback', name: 'star' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx, /AUTORISER/);
+  assert.match(idx, /reference_opaque\.v1\.md/);
+});
+
+test('recall: reference active .v1.md citee par l index reste rappelable (seules archives feedback exclues)', async () => {
+  const b = bac(); const m = await charge(b);
+  fs.mkdirSync(b.mem, { recursive: true });
+  fs.writeFileSync(path.join(b.mem, 'reference_opaque.v1.md'), '---\nname: x\n---\nneedle fact\n');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [needle](reference_opaque.v1.md) — 2026-01-01 needle\n');
+  assert.match(JSON.stringify(m.recall('needle')), /reference_opaque\.v1\.md/);
+});
