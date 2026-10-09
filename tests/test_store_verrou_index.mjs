@@ -169,3 +169,14 @@ test('feedback multiligne remplace : plus de continuation de l ancienne consigne
   assert.match(idx2, /\(feedback_autre\.md\)/); // l entree d un autre fichier qui CITE le lien est conservee
   assert.match(idx2, /INTERDIRE v3/);
 });
+
+test('feedback remplace : ancienne description avec ligne vide, puce, titre retiree', async () => {
+  const b = bac(); const m = await charge(b);
+  fs.mkdirSync(b.mem, { recursive: true });
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh Ml](feedback_ssh_ml.md) — 2026-01-01 ssh\n\nAUTORISER vide\n- AUTORISER puce\n# AUTORISER titre\n- [Autre](feedback_autre.md) — 2026-01-01 garde\n');
+  m.store('ssh INTERDIRE', { type: 'feedback', name: 'ssh_ml' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx, /AUTORISER/);
+  assert.match(idx, /\(feedback_autre\.md\)/);
+  assert.match(idx, /INTERDIRE/);
+});

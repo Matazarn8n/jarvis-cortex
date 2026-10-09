@@ -339,11 +339,12 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     const pointe = (l) => { const m = l.match(/^- \[[^\]]*\]\(([^)]+)\)/); return m && m[1] === cible; };
     const prev = fs.existsSync(index) ? fs.readFileSync(index, 'utf8') : '';
     // On retire l'entrée dont le pointeur PRINCIPAL est ce fichier, et ses éventuelles lignes de
-    // continuation (anciennes entrées multilignes) jusqu'à la prochaine entrée ou ligne vide.
+    // continuation (anciennes entrées multilignes) jusqu'à la prochaine ENTRÉE d'index (lignes vides, puces ou titres compris : une ancienne
+    // description multiligne peut en contenir, et la laisser garderait la consigne révoquée).
     const sortie = []; let saute = false;
     for (const l of prev.split('\n')) {
       if (pointe(l)) { saute = true; continue; }
-      if (saute && l.trim() !== '' && !/^(- |#)/.test(l)) continue;
+      if (saute && !/^- \[[^\]]*\]\([^)]+\)/.test(l)) continue;
       saute = false; sortie.push(l);
     }
     const garde = sortie.join('\n').replace(/\n*$/, '');
