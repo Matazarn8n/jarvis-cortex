@@ -329,7 +329,20 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
   let entry = tete + desc + '\n';
   if (entry.length - 1 > ENTRY_MAX) entry = tete + (reste > 1 ? desc.slice(0, reste - 1).trimEnd() + '…' : '…') + '\n';
   if (opts.sandbox && !fs.existsSync(index)) fs.writeFileSync(index, '# Sandbox Memory Index\n\n');
-  fs.appendFileSync(index, entry);
+  if (type === 'feedback') {
+    // Remplacement versionné : l'entrée d'index de la règle précédente est RETIRÉE (sinon le
+    // rappel par index transmettrait l'ancienne consigne révoquée à côté de la nouvelle).
+    withStoreLock(dir, () => {
+      const motif = `](${path.basename(file)})`;
+      const prev = fs.existsSync(index) ? fs.readFileSync(index, 'utf8') : '';
+      const garde = prev.split('\n').filter((l) => !l.includes(motif)).join('\n').replace(/\n*$/, '');
+      const tmp = `${index}.tmp-${process.pid}`;
+      fs.writeFileSync(tmp, (garde ? garde + '\n' : '') + entry);
+      fs.renameSync(tmp, index);
+    });
+  } else {
+    fs.appendFileSync(index, entry);
+  }
   // Le fait n'est jamais perdu (il est dans son fichier) — mais l'index qui
   // déborde doit se voir, sinon la dérive reprend. Alerte, pas exception.
   const indexBytes = fs.statSync(index).size;

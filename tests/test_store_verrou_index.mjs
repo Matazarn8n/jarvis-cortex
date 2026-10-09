@@ -120,3 +120,16 @@ test('--name trop long refuse ; 120 caracteres tient dans 200', async () => {
   assert.ok(ligne.length <= 200, `${ligne.length}`);
   assert.match(ligne, /\(reference_c+\.md\)/);
 });
+
+test('feedback remplace : l entree d index precedente est retiree, rappel et prompt sans l ancienne consigne', async () => {
+  const b = bac(); const m = await charge(b);
+  m.store('ssh: autoriser la connexion root', { type: 'feedback', name: 'ssh_root' });
+  m.store('ssh: interdire la connexion root', { type: 'feedback', name: 'ssh_root' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.equal(idx.split('\n').filter((l) => l.includes('(feedback_ssh_root.md)')).length, 1);
+  assert.doesNotMatch(idx, /autoriser/);
+  assert.match(idx, /interdire/);
+  const rec = JSON.stringify(m.recall('ssh'));
+  assert.doesNotMatch(rec, /autoriser/);
+  assert.doesNotMatch(JSON.stringify(m.buildAsk('ssh')), /autoriser/);
+});
