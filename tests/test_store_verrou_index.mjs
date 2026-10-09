@@ -280,3 +280,15 @@ test('feedback remplace : ligne [..](..) — date sans puce voisine conservee ; 
   assert.doesNotMatch(idx, /AUTORISER/);
   assert.match(idx, /reference_services\.md/);
 });
+
+test('feedback remplace : fait ancien contenant --- (via store reel) et section voisine d une autre revision', async () => {
+  const b = bac(); const m = await charge(b);
+  m.store('ssh\n---\n- [Guide](reference_guide.md) AUTORISER root', { type: 'feedback', name: 'ssh' });
+  m.store('ssh\n## Services\nconsigne globale', { type: 'feedback', name: 'ssh' });
+  m.store('ssh', { type: 'feedback', name: 'ssh' });
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '## Services\nconsigne globale\n');
+  m.store('ssh INTERDIRE', { type: 'feedback', name: 'ssh' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx, /AUTORISER/);
+  assert.equal(idx.trim().split('\n').filter((x) => x.includes('(feedback_ssh.md)')).length, 1);
+});

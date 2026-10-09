@@ -12,8 +12,8 @@ runner monte le systeme en lecture-ecriture : un ticket qui garde Bash peut
 ecrire dans les 431 fichiers personnels de l'Owner pendant toute sa session, et
 aucun controle a posteriori ne le rattrape.
 
-C'est le `check:` qui recalcule les metriques, verifie l'empreinte et **compile**
-le runbook B avec le moteur. Ce que tu ecris reste un diff local, c'est normal
+C'est le `check:` qui compare les metriques et l'empreinte au recu commite et valide
+le runbook B statiquement (structure, modeles, gates). Ce que tu ecris reste un diff local, c'est normal
 ici.
 
 ## Pourquoi ce ticket existe

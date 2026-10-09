@@ -429,9 +429,15 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // les faits de l'ancien fichier et de ses archives .vN : on saute exactement les lignes de ce
     // desc, pas une ligne de plus — une entrée voisine, une section ou un titre ne sont jamais
     // pris pour une continuation.
-    const fait = (t) => { const c = t.replace(/^---\n[\s\S]*?\n---\n\n?/, ''); const m = c.search(/\n\n\*\*Why:\*\*|\n\n?\*Saved /); return (m < 0 ? c : c.slice(0, m)).trimEnd(); };
-    const descs = ancien.split('\u0000').map(fait).filter((f) => f.includes('\n'))
-      .map((f) => (f.length > 110 ? f.slice(0, 107) + '...' : f).split('\n'));
+    // Le front matter recopie `description: ${desc}` (qui peut contenir des '---') : on le saute
+    // jusqu'à son bloc `metadata:\n  type:` fixe, pas jusqu'au premier '---'.
+    const fait = (t) => { const c = /\nmetadata:\n  type: [^\n]*\n---\n/.test(t) ? t.replace(/^[\s\S]*?\nmetadata:\n  type: [^\n]*\n---\n\n?/, '') : t.replace(/^---\n[\s\S]*?\n---\n\n?/, ''); const m = c.search(/\n\n\*\*Why:\*\*|\n\n?\*Saved /); return (m < 0 ? c : c.slice(0, m)).trimEnd(); };
+    // Chaque révision écrit son entrée à SA date (`*Saved AAAA-MM-JJ*`) : le pointeur et son desc
+    // ne se rapprochent que d'une révision de même date, sinon une archive voisine pourrait
+    // prêter ses lignes à une autre entrée.
+    const revisions = ancien.split('\u0000').map((t) => ({ f: fait(t), date: (t.match(/\*Saved (\d{4}-\d{2}-\d{2}) /) || [])[1] }))
+      .filter((r) => r.f.includes('\n'))
+      .map((r) => ({ date: r.date, d: (r.f.length > 110 ? r.f.slice(0, 107) + '...' : r.f).split('\n') }));
     const lignes = prev.split('\n');
     const sortie = [];
     for (let i = 0; i < lignes.length; i++) {
@@ -442,8 +448,8 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // égale à la ligne du desc, ou — pour la dernière — tronquée par '...' / '…'.
       const ENTREE = /^\s*(?:[-*+]|\d+[.)])?\s*\[[^\]]+\]\([^)]+\) — \d{4}-\d{2}-\d{2}\b/;
       let k = 0;
-      for (const d of descs) {
-        if (!l.endsWith(d[0])) continue;
+      for (const { d, date } of revisions) {
+        if (!l.endsWith(d[0]) || (date && !l.includes(` — ${date} `))) continue;
         let n = 0;
         for (let q = 1; q < d.length; q++) {
           const x = lignes[i + q];
