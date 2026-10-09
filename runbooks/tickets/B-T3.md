@@ -186,8 +186,15 @@ versionne le fichier.
 
 ### 3. La concurrence — un verrou par racine, et un remplacement atomique
 
-Le point précédent te met dans une situation que `brain.js` ne gère pas pour toi.
-Il ajoute sa ligne d'index **en append-only** (l. 208-220) : tenir *une* ligne
+> **MISE À JOUR (branche fix/brain-store-prefixe-et-budget)** : `brain.js store()` prend désormais
+> lui-même `memory/.store.lock` pour TOUT le geste (corps + index, tous les types) et, pour un
+> remplacement `feedback`, RETIRE l'ancienne entrée d'index avant d'ajouter la nouvelle (une seule
+> ligne par règle). Le magasin ne coordonne que `store()` contre `store()` : la « dette » ci-dessous
+> (écrivain direct pendant la réécriture du pont, `.memory.lock` ≠ `.store.lock`) RESTE OUVERTE, elle n'est pas fermée par le magasin. Le contrat du pont reste INCHANGÉ (`.memory.lock`, réécriture bornée
+> à son slug, quatorze axes, autotest) : c'est une défense en profondeur, le pont ne dépend pas du magasin.
+
+Le point précédent te met dans une situation que `brain.js` ne gère pas toujours pour toi (le magasin retire désormais toutes les anciennes entrées d'un `feedback` remplacé, mais pas les écrits directs concurrents du pont).
+Avant le correctif, il ajoutait sa ligne d'index **en append-only** : tenir *une* ligne
 par règle à travers les révisions t'oblige donc à **relire `MEMORY.md`, le
 dédoublonner, et le réécrire**. C'est un cycle lecture-modification-écriture sur
 un fichier partagé, et la mémoire réelle *est* partagée : deux gates qui
@@ -273,6 +280,8 @@ Elle exige ensuite :
   contient `WHY_A`, et `<slug>.md` contient `WHY_B` — la révision d'une
   justification est versionnée, pas avalée ;
 - `MEMORY.md` porte **toujours une seule** ligne après le quatrième appel.
+
+> **NOTE (branche fix/brain-store-prefixe-et-budget)** : les axes de concurrence ci-dessous (11 à 13, quatorze axes au total) RESTENT exigés du pont : `brain.js store()` ajoute sa propre protection (`.store.lock`, une ligne par règle), le pont garde la sienne (`.memory.lock`) en défense en profondeur.
 
 Puis elle exerce la **concurrence**, ce que les quatre appels séquentiels ne
 peuvent pas faire : dans un sous-dossier neuf du bac à sable — une racine

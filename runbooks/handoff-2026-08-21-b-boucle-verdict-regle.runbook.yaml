@@ -72,7 +72,7 @@
 # dette: le runner ne borne pas les écritures d'un `check:` hors `repo:` — les sondes B-T3 et B-T4 écrivent dans un `tempfile.mkdtemp()` propre à l'exécution, hors de ce dépôt, effacé dans un `finally`.
 # dette: aucun `check:` ne peut lire la liste des fichiers du diff du ticket ; la non-régression de périmètre se borne donc au contenu des trois fichiers de gouvernance, pas à une whitelist du commit.
 # dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas, et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
-# dette: `brain.js` ne prend aucun verrou pour indexer — un écrivain qui l'appelle directement et dont l'ajout tombe entre la dernière vérification de `os.stat()` du pont et son `os.replace()` perd sa ligne ; fermer cette fenêtre exige un changement de `brain.js`, hors du dépôt de B, et B-T3 se borne donc à ne jamais retirer une ligne qui n'est pas un doublon de son propre slug.
+# dette RESTE OUVERTE (fix/brain-store-prefixe-et-budget : brain.js tient memory/.store.lock, mais le pont tient .memory.lock — deux verrous qui ne se coordonnent pas ; seul store() contre store() est sérialisé) : `brain.js` ne prend aucun verrou pour indexer — un écrivain qui l'appelle directement et dont l'ajout tombe entre la dernière vérification de `os.stat()` du pont et son `os.replace()` perd sa ligne ; fermer cette fenêtre exige un changement de `brain.js`, hors du dépôt de B, et B-T3 se borne donc à ne jamais retirer une ligne qui n'est pas un doublon de son propre slug.
 # dette: rien ne distingue un ticket `kind: human` d'un ticket de session aux yeux des contrôles amont — B-T5 porte donc un `model:` inerte qu'aucune exécution ne lira, faute de pouvoir déclarer « ce ticket n'a pas de modèle ».
 # dette: `AskUserQuestion` échoue en session de plan (`readonly database`) — un ticket ne peut pas poser la question que la consigne lui impose de poser.
 # dette: le sha256 de `brain.js` n'est pas épinglé, seulement son chemin (`requires_access` ci-dessus, `--oracle` du check B-T3) : le fichier vit hors du dépôt de B et M-T1 le modifie légitimement, un condensat littéral serait périmé avant le premier run — la sonde imprime donc celui qu'elle a réellement chargé, et prouve le régime versionné par comportement au lieu de faire confiance au fichier.
@@ -336,6 +336,7 @@ tickets:
     # MAIS DEUX FILS LANCÉS UNE FOIS NE PROUVENT PAS LE VERROU — l'ordonnanceur
     # peut les sérialiser, et un pont sans verrou passe alors. Deux axes de plus,
     # indépendants de l'ordonnancement : la sonde tente elle-même
+# NOTE (fix/brain-store-prefixe-et-budget) : ces axes RESTENT exigés (quatorze) ; brain.js store() ajoute sa protection, le pont garde la sienne (défense en profondeur).
     # `flock(<racine>/.memory.lock, LOCK_NB)` pendant qu'une écriture est en vol
     # et exige un refus ; puis, le verrou constaté tenu, elle joue l'écrivain
     # DIRECT que le verrou ne lie pas — un `brain.js` lancé à la main — en
