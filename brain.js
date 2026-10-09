@@ -438,7 +438,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // Début du fait : après CHAQUE bloc `metadata:\n  type:\n---` plausible (la description ou le
       // fait peuvent en contenir un), à défaut après le premier front matter.
       const debuts = [];
-      for (const m of t.matchAll(/\nmetadata:\n  type: [^\n]*\n---\n\n?/g)) debuts.push(m.index + m[0].length);
+      for (const m of t.matchAll(/\nmetadata:\n  type: [^\n]*\n---(?=\n)/g)) debuts.push(m.index + m[0].length + (t.startsWith('\n\n', m.index + m[0].length) ? 2 : 1));
       if (!debuts.length) { const m = t.match(/^---\n[\s\S]*?\n---\n\n?/); debuts.push(m ? m[0].length : 0); }
       const coupes = new Set();
       for (const d of debuts) {
