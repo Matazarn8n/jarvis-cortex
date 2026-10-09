@@ -104,3 +104,14 @@ test('recall: pointeur d index et lien suivi vers une archive .vN ignores', asyn
   assert.ok(r.hits.every(h => !/\.v\d+\.md$/.test(h.file)), JSON.stringify(r.hits.map(h => h.file)));
   assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)));
 });
+
+test('recall: pointeur d index deguise (x.v1.md/.) ne contourne pas le filtre des archives', async () => {
+  const b = bac();
+  const m = await import(b.mod + '?t=' + Math.random());
+  m.store('regle ancienne suppression', { type: 'feedback', name: 'suppression' });
+  m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ancienne suppression](feedback_suppression.v1.md/.) — suppression ancienne\n');
+  const r = m.recall('suppression', { k: 3, hop: false });
+  assert.ok(r.hits.every(h => !/\.v\d+\.md/.test(h.file)), JSON.stringify(r.hits.map(h => h.file)));
+  assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)));
+});

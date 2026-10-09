@@ -96,7 +96,8 @@ function recall(query, opts) {
         if (lw.includes(w)) score += 3;
         else if (lw.some(x => x.startsWith(w) || w.startsWith(x))) score += 1;
       }
-      if (score > 0 && !ARCHIVED.test(m[2])) pointers.push({ file: path.resolve(MEM, m[2]), score, line: line.trim() });
+      const target = path.resolve(MEM, m[2]); // filtrer le chemin RÉSOLU : `x.v1.md/.` se normalise en l'archive
+      if (score > 0 && !ARCHIVED.test(path.basename(target))) pointers.push({ file: target, score, line: line.trim() });
     }
   }
   // 2) filename sweep (names only - no content reads)
@@ -173,7 +174,7 @@ function recall(query, opts) {
       const p1 = path.resolve(ROOT, cand);
       const p2 = path.resolve(path.dirname(path.join(ROOT, hits[0].file)), cand);
       const hp = fs.existsSync(p1) ? p1 : (fs.existsSync(p2) ? p2 : null);
-      if (!hp || hits.some(h => path.resolve(ROOT, h.file) === hp)) continue;
+      if (!hp || ARCHIVED.test(path.basename(hp)) || hits.some(h => path.resolve(ROOT, h.file) === hp)) continue;
       const body = read(hp);
       if (opts.answerRe && opts.answerRe.test(body)) found = true;
       // we arrived via an explicit pointer, so serve the document generously:
