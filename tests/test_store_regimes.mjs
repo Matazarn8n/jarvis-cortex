@@ -115,3 +115,22 @@ test('recall: pointeur d index deguise (x.v1.md/.) ne contourne pas le filtre de
   assert.ok(r.hits.every(h => !/\.v\d+\.md/.test(h.file)), JSON.stringify(r.hits.map(h => h.file)));
   assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)));
 });
+
+test('recall: archives feedback en .V1 / .v01 / lien symbolique ignorees, doc actif reference_x.v1 rappelable', async () => {
+  const b = bac();
+  const m = await import(b.mod + '?t=' + Math.random());
+  m.store('regle ancienne suppression', { type: 'feedback', name: 'suppression' });
+  m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
+  const v1 = path.join(b.mem, 'feedback_suppression.v1.md');
+  fs.copyFileSync(v1, path.join(b.mem, 'feedback_suppression.V1.md'));
+  fs.copyFileSync(v1, path.join(b.mem, 'feedback_suppression.v01.md'));
+  fs.symlinkSync(v1, path.join(b.mem, 'suppression_alias.md'));
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'),
+    '- [A](feedback_suppression.V1.md) — suppression\n- [B](suppression_alias.md) — suppression\n- [C](feedback_suppression.v01.md) — suppression\n');
+  const r = m.recall('suppression', { k: 9, hop: false });
+  assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)), JSON.stringify(r.hits.map(h => h.file)));
+  fs.writeFileSync(path.join(b.mem, 'reference_protocol.v1.md'), '---\nname: p\n---\nprotocole actif');
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '- [P](reference_protocol.v1.md) — protocol\n');
+  const r2 = m.recall('protocol', { k: 3, hop: false });
+  assert.ok(r2.hits.some(h => /reference_protocol\.v1\.md$/.test(h.file)), JSON.stringify(r2.hits.map(h => h.file)));
+});

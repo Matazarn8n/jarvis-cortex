@@ -72,7 +72,16 @@ const ROOT_DOC_HINTS = WS.routing || {
 
 // Archives de versionnage feedback (`<nom>.vN.md`) = règles révoquées : jamais
 // rappelées, ni par l'index, ni par balayage de noms, ni par suivi de lien.
-const ARCHIVED = /\.v\d+\.md$/;
+// Seules les archives de feedback (`feedback_<nom>.vN.md`, écrites par store())
+// sont des règles révoquées ; un document actif `reference_x.v1.md` reste
+// rappelable. Insensible à la casse et à `.v01` ; le chemin ET sa cible réelle
+// (lien symbolique) sont testés.
+const ARCHIVE_RE = /^feedback_.*\.v0*\d+\.md$/i;
+function isArchived(p) {
+  let real = p;
+  try { real = fs.realpathSync(p); } catch { /* absent : on teste le nom seul */ }
+  return ARCHIVE_RE.test(path.basename(p)) || ARCHIVE_RE.test(path.basename(real));
+}
 
 // ---------- recall ----------
 function recall(query, opts) {
@@ -97,12 +106,12 @@ function recall(query, opts) {
         else if (lw.some(x => x.startsWith(w) || w.startsWith(x))) score += 1;
       }
       const target = path.resolve(MEM, m[2]); // filtrer le chemin RÉSOLU : `x.v1.md/.` se normalise en l'archive
-      if (score > 0 && !ARCHIVED.test(path.basename(target))) pointers.push({ file: target, score, line: line.trim() });
+      if (score > 0 && !isArchived(target)) pointers.push({ file: target, score, line: line.trim() });
     }
   }
   // 2) filename sweep (names only - no content reads)
   for (const f of fs.readdirSync(MEM)) {
-    if (!f.endsWith('.md') || ARCHIVED.test(f)) continue; // archives .vN = règles révoquées, jamais rappelées
+    if (!f.endsWith('.md') || isArchived(path.join(MEM, f))) continue; // archives .vN = règles révoquées, jamais rappelées
     const fw = words(f.replace(/\.md$/, ''));
     let score = 0;
     for (const w of qw) {
@@ -170,11 +179,11 @@ function recall(query, opts) {
   if (hits.length && opts.hop !== false && !found) {
     const m = hits[0].slice.match(/[\w][\w\/.-]*\.md/g);
     for (const cand of (m || [])) {
-      if (/^(MEMORY|memory-)/.test(cand) || ARCHIVED.test(cand)) continue;
+      if (/^(MEMORY|memory-)/.test(cand)) continue;
       const p1 = path.resolve(ROOT, cand);
       const p2 = path.resolve(path.dirname(path.join(ROOT, hits[0].file)), cand);
       const hp = fs.existsSync(p1) ? p1 : (fs.existsSync(p2) ? p2 : null);
-      if (!hp || ARCHIVED.test(path.basename(hp)) || hits.some(h => path.resolve(ROOT, h.file) === hp)) continue;
+      if (!hp || isArchived(hp) || hits.some(h => path.resolve(ROOT, h.file) === hp)) continue;
       const body = read(hp);
       if (opts.answerRe && opts.answerRe.test(body)) found = true;
       // we arrived via an explicit pointer, so serve the document generously:
