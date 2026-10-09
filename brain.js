@@ -12,6 +12,41 @@
 */
 'use strict';
 const fs = require('fs');
+
+//: Délai d'attente du verrou d'écriture, en millisecondes. Réglable pour les
+//: tests seulement — un humain n'a aucune raison de le toucher.
+const LOCK_TIMEOUT_MS = Number(process.env.BRAIN_LOCK_TIMEOUT_MS || 5000);
+
+/**
+ * Sérialise `fn()` sur `file` par un fichier `<file>.lock` créé en `wx`.
+ *
+ * ponytail: trois appels stdlib. `proper-lockfile` ferait la même chose avec
+ * une dépendance, un `package.json` et un cycle de mise à jour ; Node n'expose
+ * pas `flock`, mais `O_EXCL` sur un fichier local est exactement la primitive
+ * dont on a besoin ici.
+ *
+ * Verrou tenu au-delà du délai : on REFUSE, on ne reprend pas. Un verrou
+ * périmé se reprend en le supprimant à la main, geste rare et visible ; le
+ * reprendre tout seul rouvrirait la course qu'on vient de fermer, et cette
+ * fonction garde un fait que personne ne peut relire.
+ */
+function withFileLock(file, fn) {
+  const lock = file + '.lock';
+  const limite = Date.now() + LOCK_TIMEOUT_MS;
+  let fd;
+  for (;;) {
+    try { fd = fs.openSync(lock, 'wx'); break; }
+    catch (err) {
+      if (err.code !== 'EEXIST') throw err;
+      if (Date.now() >= limite) {
+        throw new Error(`store: ${path.basename(lock)} est tenu depuis plus de ${LOCK_TIMEOUT_MS} ms — écriture REFUSÉE plutôt que concurrente. Si aucun autre \`brain store\` ne tourne, supprimez ce fichier à la main.`);
+      }
+      // Seul sommeil synchrone de Node : `fn` et ses appelants sont synchrones.
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
+    }
+  }
+  try { return fn(); } finally { fs.closeSync(fd); fs.unlinkSync(lock); }
+}
 const path = require('path');
 const { performance } = require('perf_hooks');
 
@@ -35,8 +70,38 @@ const ROOT_DOC_HINTS = WS.routing || {
   'CLAUDE.md': ['goal', 'goals', 'rule', 'rules', 'workspace', 'folder', 'folders', 'map'],
 };
 
+// Archives de versionnage feedback (`<nom>.vN.md`) = règles révoquées : jamais
+// rappelées, ni par l'index, ni par balayage de noms, ni par suivi de lien.
+// Seules les archives de feedback (`feedback_<nom>.vN.md`, écrites par store())
+// sont des règles révoquées ; un document actif `reference_x.v1.md` reste
+// rappelable. Insensible à la casse et à `.v01` ; le chemin ET sa cible réelle
+// (lien symbolique) sont testés.
+const ARCHIVE_RE = /^feedback_.*\.v0*\d+\.md$/i;
+let archiveInodes = null; // remis à null au début de chaque recall()
+function isArchived(p) {
+  let real = p;
+  try { real = fs.realpathSync(p); } catch { /* absent : on teste le nom seul */ }
+  if (ARCHIVE_RE.test(path.basename(p)) || ARCHIVE_RE.test(path.basename(real))) return true;
+  // lien physique : un autre nom pour le même inode qu'une archive du dossier
+  // mémoire (ensemble construit UNE fois par rappel, pas par candidat)
+  try {
+    if (!archiveInodes) {
+      archiveInodes = new Set();
+      for (const f of fs.readdirSync(MEM)) {
+        if (!ARCHIVE_RE.test(f)) continue;
+        const a = fs.statSync(path.join(MEM, f));
+        archiveInodes.add(a.dev + ':' + a.ino);
+      }
+    }
+    const st = fs.statSync(p);
+    if (archiveInodes.has(st.dev + ':' + st.ino)) return true;
+  } catch { /* fichier absent : rien à comparer */ }
+  return false;
+}
+
 // ---------- recall ----------
 function recall(query, opts) {
+  archiveInodes = null;
   opts = opts || {};
   const t0 = performance.now();
   let bytes = 0;
@@ -57,12 +122,13 @@ function recall(query, opts) {
         if (lw.includes(w)) score += 3;
         else if (lw.some(x => x.startsWith(w) || w.startsWith(x))) score += 1;
       }
-      if (score > 0) pointers.push({ file: path.resolve(MEM, m[2]), score, line: line.trim() });
+      const target = path.resolve(MEM, m[2]); // filtrer le chemin RÉSOLU : `x.v1.md/.` se normalise en l'archive
+      if (score > 0 && !isArchived(target)) pointers.push({ file: target, score, line: line.trim() });
     }
   }
   // 2) filename sweep (names only - no content reads)
   for (const f of fs.readdirSync(MEM)) {
-    if (!f.endsWith('.md') || /\.v\d+\.md$/.test(f)) continue; // archives versionnées : pas des règles actives
+    if (!f.endsWith('.md') || isArchived(path.join(MEM, f))) continue; // archives .vN = règles révoquées, jamais rappelées
     const fw = words(f.replace(/\.md$/, ''));
     let score = 0;
     for (const w of qw) {
@@ -84,7 +150,7 @@ function recall(query, opts) {
   // dedupe by file
   const seen = new Set(), top = [];
   for (const p of pointers) {
-    if (seen.has(p.file)) continue;
+    if (seen.has(p.file) || isArchived(p.file)) continue; // point de passage unique : toute source (index, noms, docs racine) est filtrée
     seen.add(p.file); top.push(p);
     if (top.length >= (opts.k || 3)) break;
   }
@@ -134,7 +200,7 @@ function recall(query, opts) {
       const p1 = path.resolve(ROOT, cand);
       const p2 = path.resolve(path.dirname(path.join(ROOT, hits[0].file)), cand);
       const hp = fs.existsSync(p1) ? p1 : (fs.existsSync(p2) ? p2 : null);
-      if (!hp || hits.some(h => path.resolve(ROOT, h.file) === hp)) continue;
+      if (!hp || isArchived(hp) || hits.some(h => path.resolve(ROOT, h.file) === hp)) continue;
       const body = read(hp);
       if (opts.answerRe && opts.answerRe.test(body)) found = true;
       // we arrived via an explicit pointer, so serve the document generously:
@@ -249,9 +315,14 @@ function store(fact, opts) {
   // convention des memories écrites à la main, et celle des pointeurs [[...]]).
   // Le recoller aveuglément a produit 63 `feedback_feedback_*` et un pointeur
   // mort dans CLAUDE.md racine — vérifié le 2026-08-11.
-  if (name.length > 120) throw new Error(`store: --name de ${name.length} caractères (max 120) — le pointeur d'index doit tenir dans 200 caractères.`);
+  if (name.length > 120) throw new Error(`store: nom trop long (--name de ${name.length} caractères, max 120) — le pointeur d'index doit tenir dans 200 caractères.`);
   const base = name.replace(/-/g, '_');
   const file = path.join(dir, (prefix && base.startsWith(prefix) ? '' : prefix) + base + '.md');
+  // Le lien d'index ne se tronque jamais ; sa longueur doit donc être bornée à
+  // la source pour que l'entrée tienne dans ENTRY_MAX (200) sans le couper.
+  if (path.basename(file).length > 120) {
+    throw new Error(`store: nom trop long (${path.basename(file).length} > 120 caractères) — raccourcir --name.`);
+  }
   const today = new Date().toISOString().slice(0, 10);
   const flat = fact.replace(/\s+/g, ' ').trim(); // l'entrée d'index tient sur UNE ligne
   const desc = flat.length > 110 ? flat.slice(0, 107) + '...' : flat;
@@ -298,12 +369,16 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // séparer laissait deux écrivains choisir le même numéro, ou archiver le
       // même original deux fois avant que l'un des deux corps ne soit écrasé sans
       // jamais avoir été archivé. Verrou exclusif de fichier, du même dossier.
-      if (fs.existsSync(file)) {
-        let n = 1;
-        while (fs.existsSync(file.replace(/\.md$/, `.v${n}.md`))) n++;
-        fs.copyFileSync(file, file.replace(/\.md$/, `.v${n}.md`));
-      }
-      fs.writeFileSync(file, body);
+      // Verrou par fichier (contrat de #2 : écriture REFUSÉE si `<fichier>.lock` est tenu) en plus du
+      // verrou de magasin.
+      withFileLock(file, () => {
+        if (fs.existsSync(file)) {
+          let n = 1;
+          while (fs.existsSync(file.replace(/\.md$/, `.v${n}.md`))) n++;
+          fs.copyFileSync(file, file.replace(/\.md$/, `.v${n}.md`));
+        }
+        fs.writeFileSync(file, body);
+      });
     } else {
       fs.writeFileSync(file, body);
     }
@@ -336,7 +411,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // Remplacement versionné : l'entrée d'index de la règle précédente est RETIRÉE (sinon le
       // rappel par index transmettrait l'ancienne consigne révoquée à côté de la nouvelle).
       const cible = path.basename(file);
-    const pointe = (l) => { const m = l.match(/^- \[[^\]]*\]\(([^)]+)\)/); return m && m[1] === cible; };
+    const pointe = (l) => { const m = l.match(/^- \[[^\]]*\]\(([^)]+)\)/); return m && path.resolve(dir, m[1]) === file; };
     const prev = fs.existsSync(index) ? fs.readFileSync(index, 'utf8') : '';
     // On retire l'entrée dont le pointeur PRINCIPAL est ce fichier, et ses éventuelles lignes de
     // continuation (anciennes entrées multilignes) jusqu'à la prochaine ENTRÉE d'index (lignes vides, puces ou titres compris : une ancienne

@@ -112,10 +112,10 @@ test('rappel : une regle active qui cite son archive .v1.md ne la fait pas lire'
   assert.doesNotMatch(JSON.stringify(m.recall('gamma')), /ANCIENNE/);
 });
 
-test('--name trop long refuse ; 120 caracteres tient dans 200', async () => {
+test('nom de fichier trop long refuse (regle #2, fichier complet <= 120) ; 100 caracteres tient dans 200', async () => {
   const b = bac(); const m = await charge(b);
-  assert.throws(() => m.store('x', { type: 'user', name: 'b'.repeat(180) }), /max 120/);
-  m.store('y'.repeat(300), { type: 'reference', name: 'c'.repeat(120) });
+  assert.throws(() => m.store('x', { type: 'user', name: 'b'.repeat(180) }), /nom trop long/);
+  m.store('y'.repeat(300), { type: 'reference', name: 'c'.repeat(100) });
   const ligne = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8').trim().split('\n').pop();
   assert.ok(ligne.length <= 200, `${ligne.length}`);
   assert.match(ligne, /\(reference_c+\.md\)/);
@@ -175,6 +175,17 @@ test('feedback remplace : ancienne description avec ligne vide, puce, titre reti
   fs.mkdirSync(b.mem, { recursive: true });
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh Ml](feedback_ssh_ml.md) — 2026-01-01 ssh\n\nAUTORISER vide\n- AUTORISER puce\n# AUTORISER titre\n- [Autre](feedback_autre.md) — 2026-01-01 garde\n');
   m.store('ssh INTERDIRE', { type: 'feedback', name: 'ssh_ml' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx, /AUTORISER/);
+  assert.match(idx, /\(feedback_autre\.md\)/);
+  assert.match(idx, /INTERDIRE/);
+});
+
+test('feedback remplace : ancienne entree au lien ./ ou dossier/../ retiree', async () => {
+  const b = bac(); const m = await charge(b);
+  fs.mkdirSync(b.mem, { recursive: true });
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [A](./feedback_regle_alpha.md) — 2026-01-01 credential: AUTORISER root\n- [B](sub/../feedback_regle_alpha.md) — 2026-01-01 AUTORISER bis\n- [C](feedback_autre.md) — 2026-01-01 garde\n');
+  m.store('credential: INTERDIRE root', { type: 'feedback', name: 'regle_alpha' });
   const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
   assert.doesNotMatch(idx, /AUTORISER/);
   assert.match(idx, /\(feedback_autre\.md\)/);

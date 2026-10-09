@@ -1,0 +1,471 @@
+{
+  "nom": "b-boucle-verdict-regle-2026-08-21",
+  "runbook": "/home/nuveo/jarvis-cortex-plan-m/runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+  "erreur": null,
+  "constat_erreur": null,
+  "projet": "b-boucle-verdict-regle-2026-08-21",
+  "phase": "B",
+  "repo": "/home/nuveo/hermes-os-plan-b",
+  "branche": "plan/b-boucle-verdict-regle-2026-08-21",
+  "etat": "done",
+  "prochain_ticket": null,
+  "chaine": {
+    "suivant": null,
+    "genere": null,
+    "statut": "chain_end_acknowledged",
+    "verdict": null,
+    "tours": null
+  },
+  "merge": {
+    "rapport": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/merge-plan_b-boucle-verdict-regle-2026-08-21-20260824T171349.md",
+    "sha": "50ad5c6836818c9b0312a72068cf1580eb6b6b03",
+    "erreur": null
+  },
+  "fichiers": [
+    ".claude/handoff-2026-08-21-airtable-reorg-prompt.md",
+    ".gitignore",
+    "_project.yaml",
+    "dashboard/src/kiosk/KioskApp.tsx",
+    "dashboard/src/kiosk/kiosk.css",
+    "dashboard/src/lib/api.ts",
+    "dashboard_api.py",
+    "docs/ops/2026-08-08-inventaire-routage-llm.md",
+    "docs/ops/2026-08-14-arbitrage-objections-codex.md",
+    "docs/ops/rapports/a1-router-section.html",
+    "docs/ops/rapports/b-boucle-verdict-regle-2026-08-21.html",
+    "docs/ops/rapports/chaine-h1-gateway-source.html",
+    "docs/ops/rapports/chaine-m-memoire-regimes.html",
+    "docs/ops/rapports/demo.html",
+    "docs/ops/rapports/h1-gateway-source.html",
+    "docs/ops/rapports/h3-gain-cache.html",
+    "docs/ops/rapports/hermes-os-h2-cache-exact.html",
+    "docs/ops/rapports/index.html",
+    "docs/ops/rapports/jarvis-android-p0p1.html",
+    "docs/ops/rapports/m-memoire-regimes.html",
+    "docs/ops/rapports/p4-conductor-board.html",
+    "docs/ops/rapports/r-recette-site.html",
+    "docs/ops/rapports/r1-investigator.html",
+    "docs/ops/rapports/veille.html",
+    "docs/plans/2026-08-21-b-contrat-injection.matrice.json",
+    "docs/plans/2026-08-21-b-contrat-injection.md",
+    "docs/plans/2026-08-21-b-raccordement-constate.md",
+    "docs/plans/2026-08-22-h3-gain-cache.md",
+    "docs/plans/handoff-2026-08-03-hermes-os-opportunity-installation-reelle.md",
+    "docs/plans/handoff-2026-08-23-hermes-os-reserves-boucle-b.md",
+    "docs/plans/handoff-2026-08-23-hermes-os-solder-b-quatre-reserves.md",
+    "docs/plans/handoff-2026-08-24-hermes-os-solder-b-trois-tours-de-reaudit.md",
+    "docs/plans/plan-2026-08-13-headroom-emplacement-et-objectif.md",
+    "domains/builder/agents/decompose_worker.py",
+    "domains/builder/agents/verify_worker.py",
+    "domains/builder/build_loop.py",
+    "domains/content/agent.py",
+    "domains/content/exemplaires.json",
+    "domains/content/higgsfield_web.py",
+    "domains/content/portes.py",
+    "domains/content/visuel.py",
+    "domains/opportunity/integration_report.py",
+    "domains/outreach/config/.env.example",
+    "domains/outreach/config/settings.py",
+    "domains/outreach/skills/airtable.py",
+    "hermes_core/agents/base.py",
+    "hermes_core/cdp.py",
+    "hermes_core/db/schema.py",
+    "hermes_core/loop.py",
+    "hermes_core/permission_gate.py",
+    "hermes_core/task_grades.py",
+    "ops/arbitration_triage.py",
+    "ops/brain_bridge.py",
+    "ops/checks/sonde_b.py",
+    "ops/checks/sonde_b.sha256",
+    "ops/content_revue_slack.py",
+    "ops/gate_arbiter.py",
+    "ops/oauth_health.py",
+    "ops/plan_doctor.py",
+    "ops/plan_factory.py",
+    "ops/plan_report.py",
+    "ops/plan_runner.py",
+    "ops/sante_runbooks.py",
+    "ops/slack_socket_listener.py",
+    "ops/systemd/hermes-sante-runbooks.service",
+    "ops/systemd/hermes-sante-runbooks.timer",
+    "ops/systemd/hermes-slack-listener.service",
+    "ops/verdict_hook.py",
+    "ops/verdict_regles.py",
+    "pyproject.toml",
+    "runbooks/codex-waivers.md",
+    "runbooks/fixtures/H3-T2.sh",
+    "runbooks/handoff-2026-08-10-p3-roster-unifie.runbook.yaml",
+    "runbooks/handoff-2026-08-11-e-zero-qui-ment.runbook.yaml",
+    "runbooks/handoff-2026-08-11-f1-garde-fraicheur.runbook.yaml",
+    "runbooks/handoff-2026-08-12-f-disjoncteur-et-perimetre.runbook.yaml",
+    "runbooks/handoff-2026-08-12-f2-gate-fin-et-merge.runbook.yaml",
+    "runbooks/handoff-2026-08-14-c-merge-approbation.runbook.yaml",
+    "runbooks/handoff-2026-08-14-g-pose-ou-cloture.runbook.yaml",
+    "runbooks/handoff-2026-08-14-h2-gateway-rafales.runbook.yaml",
+    "runbooks/handoff-2026-08-20-a1-router-section.runbook.yaml",
+    "runbooks/handoff-2026-08-20-r1-investigator.runbook.yaml",
+    "runbooks/handoff-2026-08-22-h3-gain-cache.runbook.yaml",
+    "runbooks/handoff-2026-08-23-s4a-hermes-domains-suppression.runbook.yaml",
+    "runbooks/handoff-2026-08-25-h4-suite-cache.runbook.yaml",
+    "runbooks/tickets/A-TGEN-generer-b.md",
+    "runbooks/tickets/B-TGEN-generer-c.md",
+    "runbooks/tickets/E-TGEN-maillon-f.md",
+    "runbooks/tickets/F-TGEN-maillon-g.md",
+    "runbooks/tickets/F1-TGEN-generer-f2.md",
+    "runbooks/tickets/F2-T1-spec-primitive-et-patch.md",
+    "runbooks/tickets/F2-T1a-spec-et-patch.md",
+    "runbooks/tickets/F2-T1b-applicateur-a-ancres.md",
+    "runbooks/tickets/F2-T1c-echafaudage-amorce-et-integre.md",
+    "runbooks/tickets/F2-T1d-sonde-du-gate-de-merge.md",
+    "runbooks/tickets/H1-TGEN-ecrire-h2.md",
+    "runbooks/tickets/P3-TGEN-generer-p4.md",
+    "runbooks/tickets/P4-TGEN-generer-p4b.md",
+    "runbooks/tickets/S4A-T1-mort-certain.md",
+    "runbooks/tickets/S4A-T2-une-fonction-pas-une-abstraction.md",
+    "runbooks/tickets/S4A-TGEN-maillon-growth-os.md",
+    "scripts/check_h3.py",
+    "tests/conftest.py",
+    "tests/test_arbitration_queue_atomic.py",
+    "tests/test_brain_bridge.py",
+    "tests/test_build_fix_cycle.py",
+    "tests/test_build_loop.py",
+    "tests/test_build_workers.py",
+    "tests/test_chain_arming.py",
+    "tests/test_chain_autonomy.py",
+    "tests/test_chain_gate_approbation_machine.py",
+    "tests/test_check_contract_missing.py",
+    "tests/test_dashboard_probe_cost.py",
+    "tests/test_garde_fraicheur.py",
+    "tests/test_gate_arbiter.py",
+    "tests/test_gate_disparu.py",
+    "tests/test_loop.py",
+    "tests/test_origin_guard_mutations.py",
+    "tests/test_plan_doctor.py",
+    "tests/test_plan_doctor_merge.py",
+    "tests/test_plan_report.py",
+    "tests/test_plan_runner.py",
+    "tests/test_plan_runner_api.py",
+    "tests/test_runbooks_declared.py",
+    "tests/test_task_grades.py",
+    "tests/test_verdict_hook.py",
+    "tests/test_verdict_recalibre.py",
+    "tests/test_verdict_regles.py",
+    "tests/test_visuel.py"
+  ],
+  "lignee": [
+    "/home/nuveo/projects/jarvis-cortex/runbooks/handoff-2026-08-20-m-memoire-regimes.runbook.yaml",
+    "/home/nuveo/jarvis-cortex-plan-m/runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml"
+  ],
+  "tickets": [
+    {
+      "id": "B-T0",
+      "kind": "session",
+      "modele": "claude-opus-5",
+      "statut": "done",
+      "tentatives": 2,
+      "pourquoi": "Un contrôle empaqueté en one-liners YAML n'est ni relu, ni testé, ni corrigeable : c'est ce qui a fait passer, ailleurs, des sondes qui acceptaient une matrice malformée et des modules à moitié cassés. Le vérificateur devient donc un livrable relu par un gate, écrit AVANT les modules qu'il juge — il ne peut pas être taillé pour les faire passer.",
+      "livrables": [
+        {
+          "chemin": "ops/checks/sonde_b.py",
+          "absolu": "/home/nuveo/hermes-os-plan-b/ops/checks/sonde_b.py",
+          "vide": false,
+          "livre": true,
+          "existe": true,
+          "octets": 130098,
+          "sha256": "aa46ed9f1cb12e7769e9eefb4395fb8ddfdaa85950fd594fbd7a9c60484014f7",
+          "mtime": "2026-08-24T15:34:44+00:00"
+        },
+        {
+          "chemin": "ops/checks/sonde_b.sha256",
+          "absolu": "/home/nuveo/hermes-os-plan-b/ops/checks/sonde_b.sha256",
+          "vide": false,
+          "livre": true,
+          "existe": true,
+          "octets": 88,
+          "sha256": "09106a239e7f56b99c3e8d1b3a632813da6740e65c5ef1ca5ae2efe9d555a1ef",
+          "mtime": "2026-08-24T15:32:39+00:00"
+        }
+      ],
+      "verdict": "GO_AVEC_RESERVES",
+      "check_output": "ne_dans_verdicts_armes\ncas_ok=piege:contrat:cas_productif_non_arme\ncas_ok=piege:contrat:egalite_champs_sans_why\ncas_ok=piege:contrat:lignes_index_par_regle_2\ncas_ok=piege:contrat:rapport_surnumeraire\ncas_ok=piege:contrat:attendus_desordonnes\ncas_ok=piege:contrat:cle_sans_le_fait\ncas_ok=valide:decision\ncas_ok=piege:decision:regles_sans_fait\ncas_ok=piege:decision:type_non_feedback\ncas_ok=piege:decision:slug_hors_sha256\ncas_ok=piege:decision:stub_toujours_productif\ncas_ok=valide:pont\ncas_ok=piege:pont:pas_de_v1\ncas_ok=piege:pont:v2_empile_au_rejeu\ncas_ok=piege:pont:index_par_appel\ncas_ok=piege:pont:egalite_sur_le_fait_seul\ncas_ok=piege:pont:sans_verrou_perd_une_ligne\ncas_ok=piege:pont:n_ouvre_jamais_memory_lock\ncas_ok=piege:pont:index_depuis_un_instantane\ncas_ok=piege:pont:verrou_relache_avant_replace\ncas_ok=valide:entree\ncas_ok=piege:entree:leve_au_lieu_de_journaliser\ncas_ok=piege:entree:ecrit_meme_sur_go\ncas_ok=piege:entree:chemin_par_defaut_sans_disque\ncas_ok=piege:entree:cli_echec_mais_code_zero\ncas_ok=piege:entree:gouvernance_modifiee\ncas_ok=piege:entree:ecrit_sur_go_sans_journaliser\ncas_ok=piege:entree:abandon_a_la_premiere_erreur\ncas_ok=piege:entree:cli_dry_run_marqueur_constant\ncas_ok=piege:entree:module_qui_contrefait_cas_ok\ncas_ok=valide:raccordement\ncas_ok=piege:raccordement:sans_mention\ncas_ok=piege:raccordement:import_et_commentaire\ncas_ok=piege:raccordement:appel_avant_l_ancre\ncas_ok=piege:raccordement:module_manquant\ncas_ok=piege:raccordement:hook_leve_a_l_import\ncas_ok=piege:raccordement:dry_run_non_nul\ncas_ok=piege:raccordement:runner_non_analysable\ncas_ok=piege:raccordement:arguments_non_vivants\ncas_ok=piege:raccordement:appel_hors_fonction_porteuse\ncas_ok=piege:raccordement:ancre_sur_cs\ncas_ok=piege:raccordement:appel_non_lie\ncas_ok=piege:raccordement:appel_apres_return\ncas_ok=piege:raccordement:appel_sous_if_false\ncas_ok=piege:raccordement:dry_run_marqueur_constant\narbres=59 valides_acceptes=5 pieges_refuses=54 sondes=5\nB-T0 sonde=autotest cas_ok=59",
+      "rapports": [
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T0-a1-20260821T155042.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T0-a2-20260821T161021.md"
+      ],
+      "preuve": "[GO_AVEC_RESERVES accepté au tour 2/4, réserves traitées en session — rapport /home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T0-a2-20260821T161021.md] ne_dans_verdicts_armes\ncas_ok=piege:contrat:cas_productif_non_arme\ncas_ok=piege:contrat:egalite_champs_sans_why\ncas_ok=piege:contrat:lignes_index_par_regle_2\ncas_ok=piege:contrat:rapport_surnumeraire\ncas_ok=piege:contrat:attendus_d",
+      "gate": null
+    },
+    {
+      "id": "B-T1",
+      "kind": "session",
+      "modele": "claude-opus-5",
+      "statut": "done",
+      "tentatives": 2,
+      "pourquoi": "Sans contrat écrit, chacun des trois tickets suivants réinvente le déclencheur et la dérivation du slug — et une boucle qui écrit vite avec trois conventions divergentes fabrique des doublons à la cadence des gates.",
+      "livrables": [
+        {
+          "chemin": "docs/plans/2026-08-21-b-contrat-injection.md",
+          "absolu": "/home/nuveo/hermes-os-plan-b/docs/plans/2026-08-21-b-contrat-injection.md",
+          "vide": false,
+          "livre": true,
+          "existe": true,
+          "octets": 25809,
+          "sha256": "7167e645a0e613951affa643da53e0e87d583386ceb749dd689faa615efa440a",
+          "mtime": "2026-08-21T16:28:06+00:00"
+        },
+        {
+          "chemin": "docs/plans/2026-08-21-b-contrat-injection.matrice.json",
+          "absolu": "/home/nuveo/hermes-os-plan-b/docs/plans/2026-08-21-b-contrat-injection.matrice.json",
+          "vide": false,
+          "livre": true,
+          "existe": true,
+          "octets": 5681,
+          "sha256": "d8fe98484606d5766f75b65b274240a805f4ba189b8ed5f6a5708e78dd953000",
+          "mtime": "2026-08-21T16:25:55+00:00"
+        }
+      ],
+      "verdict": "GO_AVEC_RESERVES",
+      "check_output": "cas_ok=document:ancres\ncas_ok=decision:schema\ncas_ok=decision:verdicts_armes\ncas_ok=decision:severites_retenues\ncas_ok=decision:cle\ncas_ok=decision:egalite_champs\ncas_ok=decision:contenu\ncas_ok=decision:lignes_index_par_regle\ncas_ok=decision:jamais\ncas_ok=cas:GO\ncas_ok=cas:GO_AVEC_RESERVES\ncas_ok=cas:NO_GO\ncas_ok=cas:NO_VERDICT\ncas_ok=cas:NO_REVIEWER\ncas_ok=cas:REVIEWER_DOWN\ncas=6 verdicts_productifs=GO_AVEC_RESERVES,NO_GO regles_attendues=3 lignes_document=432 derivation=feedback__+_sha256(cle_encodée_en_utf-8).hexdigest()[:12]_—_cle_=_\"<fichier>|<fait>\",_le_fichier_privé_de_son_numéro_de_ligne_et_le_fait_pris_tel_que_le_reviewer_l'écrit,_tous_deux_normalisés_(casse_basse,_espaces_réduits)_avant_hachage verdicts_armes=GO,GO_AVEC_RESERVES,NO_GO severites_retenues=CRITIQUE,HAUTE\nB-T1 sonde=contrat cas_ok=15",
+      "rapports": [
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T1-a1-20260821T162213.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T1-a2-20260821T163403.md"
+      ],
+      "preuve": "[GO_AVEC_RESERVES accepté au tour 2/4, réserves traitées en session — rapport /home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T1-a2-20260821T163403.md] cas_ok=document:ancres\ncas_ok=decision:schema\ncas_ok=decision:verdicts_armes\ncas_ok=decision:severites_retenues\ncas_ok=decision:cle\ncas_ok=decision:egalite_champs\ncas_ok=decision:contenu\ncas_ok=decision:lignes_index_par_regle\ncas_o",
+      "gate": null
+    },
+    {
+      "id": "B-T2",
+      "kind": "session",
+      "modele": "claude-sonnet-5",
+      "statut": "done",
+      "tentatives": 2,
+      "pourquoi": "Isoler la décision dans une fonction pure et sans effet de bord est la seule façon de l'exercer sur les six verdicts du domaine : les branches où la boucle ne doit RIEN écrire ne se testent pas autrement.",
+      "livrables": [
+        {
+          "chemin": "ops/verdict_regles.py",
+          "absolu": "/home/nuveo/hermes-os-plan-b/ops/verdict_regles.py",
+          "vide": false,
+          "livre": true,
+          "existe": true,
+          "octets": 3472,
+          "sha256": "56c4dc66d7b895da4605a2f628508b23a6ac9e7c8e2f402c957521721f7b765a",
+          "mtime": "2026-08-21T16:44:26+00:00"
+        }
+      ],
+      "verdict": "GO_AVEC_RESERVES",
+      "check_output": "cas_ok=verdict:GO\ncas_ok=verdict:GO_AVEC_RESERVES\ncas_ok=verdict:NO_GO\ncas_ok=verdict:NO_VERDICT\ncas_ok=verdict:NO_REVIEWER\ncas_ok=verdict:REVIEWER_DOWN\ncas=6 regles_obtenues=3 regles_attendues=3 detail=GO:0/0,GO_AVEC_RESERVES:1/1,NO_GO:2/2,NO_VERDICT:0/0,NO_REVIEWER:0/0,REVIEWER_DOWN:0/0\nB-T2 sonde=decision cas_ok=6",
+      "rapports": [
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T2-a1-20260821T163951.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T2-a2-20260821T164723.md"
+      ],
+      "preuve": "[GO_AVEC_RESERVES accepté au tour 2/4, réserves traitées en session — rapport /home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T2-a2-20260821T164723.md] cas_ok=verdict:GO\ncas_ok=verdict:GO_AVEC_RESERVES\ncas_ok=verdict:NO_GO\ncas_ok=verdict:NO_VERDICT\ncas_ok=verdict:NO_REVIEWER\ncas_ok=verdict:REVIEWER_DOWN\ncas=6 regles_obtenues=3 regles_attendues=3 detail=GO:0/0,GO_AVEC_RESERVES:1/1,",
+      "gate": null
+    },
+    {
+      "id": "B-TM",
+      "kind": "human",
+      "modele": "claude-haiku-4-5",
+      "statut": "done",
+      "tentatives": 0,
+      "pourquoi": "B-T3 épingle `/home/nuveo/projects/jarvis-cortex/brain.js` comme oracle, et ce fichier NE PORTE PAS le régime versionné de M-T1 : celui-ci vit sur `plan/jarvis-cortex-m-memoire-regimes`, non fusionnée. Vérifié le 2026-08-21 — `grep` sur `.v1` dans le brain.js canonique rend zéro. Aucun ticket de ce bloc n'intègre M, donc la sonde de B-T3 échouerait sur `.v1` absent, à chaque tour, sans qu'aucune correction de B ne puisse y changer quoi que ce soit. Le runbook s'en remettait à une note de PRÉREQUIS ; une note n'intègre rien. Relevé HAUTE par l'audit a4 du 2026-08-21.",
+      "livrables": [],
+      "verdict": "",
+      "check_output": "",
+      "rapports": [],
+      "preuve": "gate gate-bb1c4e28ba6e approved by kiosk",
+      "gate": "gate-bb1c4e28ba6e"
+    },
+    {
+      "id": "B-T3",
+      "kind": "session",
+      "modele": "claude-opus-5",
+      "statut": "done",
+      "tentatives": 2,
+      "pourquoi": "C'est le seul ticket qui touche le disque, et une erreur s'y industrialise à la cadence des gates : sans idempotence portée ici, un gate rejoué empile une version et une ligne d'index par tentative.",
+      "livrables": [
+        {
+          "chemin": "ops/brain_bridge.py",
+          "absolu": "/home/nuveo/hermes-os-plan-b/ops/brain_bridge.py",
+          "vide": false,
+          "livre": true,
+          "existe": true,
+          "octets": 29694,
+          "sha256": "0ea5e7e5e8b2877cd32eb0e40d7f5805607afe9e3f662eadd5647daced4afaa5",
+          "mtime": "2026-08-24T15:31:30+00:00"
+        }
+      ],
+      "verdict": "GO_AVEC_RESERVES",
+      "check_output": "cas_ok=oracle:epingle\ncas_ok=v1:versionne_premier\ncas_ok=md:contenu_courant\ncas_ok=v2:absent_au_rejeu\ncas_ok=index:une_ligne\ncas_ok=etat:inchangee\ncas_ok=revision:why_versionne\ncas_ok=index:une_ligne_apres_revision\ncas_ok=concurrence:deux_fichiers\ncas_ok=concurrence:index_une_ligne_par_slug\ncas_ok=verrou:pris\ncas_ok=concurrence:ecrivain_direct_preserve\ncas_ok=verrou:tenu_jusqu_au_replace\nbrain_js=/home/nuveo/projects/jarvis-cortex/brain.js brain_js_sha256=e400107c586c53d94f987922a995caad137753223a545c7aaa9ccb5f59e54bce appels_sequentiels=4 fichiers_du_slug=3 refus_de_verrou=2816 axe_relachement_exerce=1 index_trouves=1\nB-T3 sonde=pont cas_ok=13",
+      "rapports": [
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T3-a1-20260821T172110.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T3-a2-20260821T172940.md"
+      ],
+      "preuve": "[GO_AVEC_RESERVES accepté au tour 2/4, réserves traitées en session — rapport /home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T3-a2-20260821T172940.md] cas_ok=oracle:epingle\ncas_ok=v1:versionne_premier\ncas_ok=md:contenu_courant\ncas_ok=v2:absent_au_rejeu\ncas_ok=index:une_ligne\ncas_ok=etat:inchangee\ncas_ok=revision:why_versionne\ncas_ok=index:une_ligne_apres_revision\ncas_ok=concurren",
+      "gate": null
+    },
+    {
+      "id": "B-T4",
+      "kind": "session",
+      "modele": "claude-sonnet-5",
+      "statut": "done",
+      "tentatives": 2,
+      "pourquoi": "Une session de plan ne touche pas aux fichiers de gouvernance : la boucle s'arrête donc à un point d'entrée autonome, appelable et observable, que le mainteneur du moteur raccorde ensuite — sans quoi B n'aurait aucun livrable exerçable de bout en bout.",
+      "livrables": [
+        {
+          "chemin": "ops/verdict_hook.py",
+          "absolu": "/home/nuveo/hermes-os-plan-b/ops/verdict_hook.py",
+          "vide": false,
+          "livre": true,
+          "existe": true,
+          "octets": 6329,
+          "sha256": "0e2e158a6aba83c3b4e216d7eadd2a5b5cc0f0028e8dfe20bffad01d2b3e154f",
+          "mtime": "2026-08-24T13:14:29+00:00"
+        }
+      ],
+      "verdict": "GO_AVEC_RESERVES",
+      "check_output": "cas_ok=passe:ecrivain_injecte\ncas_ok=passe:go_sans_finding\ncas_ok=passe:ecrivain_qui_leve\ncas_ok=passe:chemin_par_defaut\ncas_ok=passe:racine_impossible\ncas_ok=cli:dry_run\ncas_ok=cli:racine_impossible\ncas_ok=nonregression:gouvernance\npasses=8 regles_attendues=2 fichiers_poses=feedback_f5c1e0ab91a5.md,feedback_81eba2170396.md gouvernance_comparee=3 base_sha=4be2969ef85d\nB-T4 sonde=entree cas_ok=8",
+      "rapports": [
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T4-a2-20260821T174117.md"
+      ],
+      "preuve": "[GO_AVEC_RESERVES accepté au tour 2/4, réserves traitées en session — rapport /home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T4-a2-20260821T174117.md] cas_ok=passe:ecrivain_injecte\ncas_ok=passe:go_sans_finding\ncas_ok=passe:ecrivain_qui_leve\ncas_ok=passe:chemin_par_defaut\ncas_ok=passe:racine_impossible\ncas_ok=cli:dry_run\ncas_ok=cli:racine_impossible\ncas_ok=nonregression:gouvernanc",
+      "gate": null
+    },
+    {
+      "id": "B-T5",
+      "kind": "human",
+      "modele": "claude-haiku-4-5",
+      "statut": "done",
+      "tentatives": 0,
+      "pourquoi": "Sans ce geste, B livre quatre modules dans un worktree que le moteur ne lit pas, et aucun verdict n'écrit jamais de règle : le bloc s'appellerait « boucle » sans en être une. Il est HUMAIN parce qu'une session de plan ne modifie pas un fichier de gouvernance — et il est un TICKET, pas une dette, parce qu'une dette en commentaire laisse le plan finir `done` sur une boucle ouverte, défaut déjà payé ici.",
+      "livrables": [],
+      "verdict": "",
+      "check_output": "",
+      "rapports": [],
+      "preuve": "gate gate-62c04bccfcad approved by api:unknown",
+      "gate": "gate-62c04bccfcad"
+    },
+    {
+      "id": "B-T6",
+      "kind": "session",
+      "modele": "claude-haiku-4-5",
+      "statut": "done",
+      "tentatives": 2,
+      "pourquoi": "Le runner ferme un ticket `kind: human` sur approbation SANS exécuter son `check:` : sans ce ticket-ci, un clic sur B-T5 finissait le plan `done` alors que rien n'avait bougé dans `/home/nuveo/hermes-os`. B-T6 rend le geste de B-T5 observable par une exécution que personne n'approuve, et il le fait sur un dépôt où aucune session ne peut écrire — donc où le bloc ne peut pas se donner raison à lui-même.",
+      "livrables": [
+        {
+          "chemin": "docs/plans/2026-08-21-b-raccordement-constate.md",
+          "absolu": "/home/nuveo/hermes-os-plan-b/docs/plans/2026-08-21-b-raccordement-constate.md",
+          "vide": false,
+          "livre": true,
+          "existe": true,
+          "octets": 2277,
+          "sha256": "995edd5a91050818c175fc78274586071d585e47dffef354f9cdb1438896394c",
+          "mtime": "2026-08-22T17:49:31+00:00"
+        }
+      ],
+      "verdict": "GO",
+      "check_output": "cas_ok=moteur:parse\ncas_ok=modules:presents\ncas_ok=ancre:verdict_motif\ncas_ok=appel:apres_ancre\ncas_ok=invocation:dry_run\nmoteur=/home/nuveo/hermes-os lignes_moteur=9163 ancres_ts=1 ancre_lineno=7981 appel_lineno=8013 fonction_porteuse=process_session_ticket appel_args=verdict,report,ts slugs_dry_run=feedback_81eba2170396,feedback_f5c1e0ab91a5 modules=ops.verdict_regles,ops.brain_bridge,ops.verdict_hook\nB-T6 sonde=raccordement cas_ok=5",
+      "rapports": [
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T6-a1-20260822T174901.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/codex-B-T6-a2-20260822T175109.md"
+      ],
+      "preuve": "cas_ok=moteur:parse\ncas_ok=modules:presents\ncas_ok=ancre:verdict_motif\ncas_ok=appel:apres_ancre\ncas_ok=invocation:dry_run\nmoteur=/home/nuveo/hermes-os lignes_moteur=9163 ancres_ts=1 ancre_lineno=7981 appel_lineno=8013 fonction_porteuse=process_session_ticket appel_args=verdict,report,ts slugs_dry_run=feedback_81eba2170396,feedback_f5c1e0ab91a5 modules=ops.verdict_regles,ops.brain_bridge,ops.verdic",
+      "gate": null
+    }
+  ],
+  "reserves": [
+    [
+      "0f884065f04d",
+      "HAUTE | ops/checks/sonde_b.py:219 | Le critère de GO interdit n’est recherché que sur les lignes contenant littéralement `GO` ; un Markdown `## GO` suivi de `- zéro défaut CRITIQUE` passe. Ce faux négatif a été reproduit. | Analyser la section GO entière ou une fenêtre normalisée incluant les sauts de ligne, puis ajouter ce piège multiligne à l’autotest.",
+      true
+    ],
+    [
+      "2b2753af7eea",
+      "HAUTE | ops/verdict_regles.py:70 | Les findings CRITIQUE/HAUTE déjà neutralisés par arbitrage produisent quand même une règle, contrairement au §4.2 ; cela réinjecte des désaccords clos dans la mémoire | Faire fournir les findings préclassés à la fonction, ou faire arbitrer puis adapter le contrat, la sonde et les appelants sans introduire de lecture de fichier dans ce module pur",
+      true
+    ],
+    [
+      "402bd41d19cf",
+      "HAUTE | ops/checks/sonde_b.py:1138 | Toute définition ou affectation locale nommée `injecter_regles` est réputée résolue, et un import depuis n’importe quel module est accepté. Le runner peut donc appeler un stub sans rapport avec `ops.verdict_hook`, tandis que le dry-run séparé reste vert. | Exiger une liaison vérifiable vers `ops.verdict_hook.injecter_regles`, alias compris, et ajouter des pièges « stub local » et « mauvais module ».",
+      true
+    ],
+    [
+      "46e86ff9190d",
+      "HAUTE | ops/checks/sonde_b.py:315 | La dérivation de clé reste autodéclarative : `cle_champs=[\"x\"]`, une normalisation quelconque et des clés arbitraires désactivent tous les contrôles conditionnels ; `cle_exclus` n’est jamais appliqué. | Imposer les champs et exclusions attendus, puis recalculer exactement chaque clé canonique au lieu d’en vérifier quelques sous-chaînes.",
+      true
+    ],
+    [
+      "6cb9f0e5d368",
+      "HAUTE | ops/brain_bridge.py:421 | La postcondition vérifie seulement que le fichier et son pointeur existaient, pas que l’écriture demandée a réellement modifié le contenu. Un exécutable `HERMES_NODE` qui rend 0 sans agir, face à un ancien fichier déjà indexé, produit un faux succès `ecrite`. | Passer `regle` à `_postcondition` et exiger que les champs persistés `fait`, `why` et `type` correspondent après l’appel ; vérifier également la création d’une version lors d’une révision.",
+      true
+    ],
+    [
+      "6f066c41090a",
+      "HAUTE | ops/checks/sonde_b.py:238 | `verdicts_armes` et `severites_retenues` ne sont contrôlés que comme sous-ensembles du domaine. Une matrice peut n’armer que `NO_GO`, retenir seulement `CRITIQUE`, mettre les autres cas à zéro et passer. | Exiger exactement les ensembles doctrinaux attendus, sans doublons, et ajouter des pièges d’omission.",
+      true
+    ],
+    [
+      "a1589dabd478",
+      "HAUTE | ops/checks/sonde_b.py:1097 | L’analyse d’atteignabilité accepte encore des appels morts : une lambda jamais invoquée et un appel placé après `if True: return` sont tous deux considérés atteignables, ce qui a été reproduit. | Exclure les portées différées et employer un parcours de contrôle conservateur ; ajouter ces deux arbres pièges.",
+      true
+    ],
+    [
+      "a1db92bee899",
+      "HAUTE | ops/verdict_hook.py:40 | Le chargement de l’écrivain par défaut est hors du `try` : un `ImportError` remonte et peut faire tomber le ticket, contrairement au contrat « ne jamais lever ». | Intercepter l’échec d’import, journaliser un état `echec:` pour chaque règle dérivée, puis retourner normalement.",
+      true
+    ],
+    [
+      "a9844e8f0185",
+      "HAUTE | ops/checks/sonde_b.py:380 | `fait` et `why` sont chacun cherchés dans la ligne complète du finding. Une matrice qui les inverse passe, puis permet à `decision` de valider un module qui inverse lui aussi ces champs. | Comparer chaque attendu au champ positionnel correspondant du rapport, avec structure et nombre de champs validés.",
+      true
+    ],
+    [
+      "afbbe0090a99",
+      "HAUTE | docs/plans/2026-08-21-b-contrat-injection.matrice.json:72 | Le cas `NO_VERDICT` contient des findings `CRITIQUE` et `HAUTE`, alors que le contrat réel du gate impose `NO_GO` dès qu’un tel finding existe. La matrice décrit donc une sortie reviewer impossible et valide une branche non représentative. | Remplacer le rapport par un véritable cas `UNVERIFIABLE: ...` sans finding grave, puis aligner le §4.1 sur ce cas.",
+      true
+    ],
+    [
+      "b6f44fa13425",
+      "HAUTE | ops/verdict_hook.py:63 | `--verdict` accepte toute chaîne : `NO_G0` produit réellement `regles=0 echecs=0` avec un code 0, soit un faux succès sans effet. | Déclarer les six verdicts contractuels dans `choices=` afin qu’`argparse` rejette toute valeur inconnue avec un code non nul.",
+      true
+    ],
+    [
+      "bb24f67b980a",
+      "HAUTE | docs/plans/2026-08-21-b-contrat-injection.md:269 | Le `why` exige `verdict_motif`, l’identifiant du ticket et la date, tout en imposant que B‑T2 le produise via `regles_depuis_verdict(verdict, report)` ; ces données ne sont pas fournies à B‑T2, et le `ts` passé ensuite au hook ne contient pas l’identifiant du ticket. Le contrat aval est donc inexécutable tel qu’écrit. | Définir explicitement où la provenance est ajoutée et acheminer le contexte nécessaire, par exemple via un argument optionnel de contexte rempli par B‑T4/B‑T5, ou réduire le contenu obligatoire aux données réellement disponibles.",
+      true
+    ],
+    [
+      "e2c81f3171db",
+      "HAUTE | ops/verdict_regles.py:79 | `why` omet `verdict_motif`, l’identifiant du ticket et la date du gate, pourtant obligatoires au §4.5 ; la règle perd sa traçabilité et les changements de provenance ne créent aucune révision | Faire trancher l’incompatibilité entre la signature à deux arguments et le contrat, puis transmettre explicitement ces données et tester le contenu complet de `why`",
+      true
+    ],
+    [
+      "e47f6ae5842e",
+      "HAUTE | ops/brain_bridge.py:238 | Le confinement par `racine` est incomplet : les liens symboliques de `.brain-runtime/config/workspace.json`, `memory/MEMORY.md` et `memory/<nom>.md` ne sont pas contrôlés. `write_text`, `writeFileSync` et `appendFileSync` peuvent donc écraser ou modifier un fichier hors de la racine. | Sous verrou et avant toute écriture, contrôler ces chemins avec `lstat()` et refuser tout lien symbolique.",
+      true
+    ],
+    [
+      "e64e1998d674",
+      "HAUTE | ops/checks/sonde_b.py:743 | `pont` vérifie le chemin et l’empreinte de `BRAIN_JS`, mais ne prouve jamais que `ecrire_regle` l’appelle ; même le faux pont déclaré valide dans l’autotest réimplémente tout en Python et ignore l’oracle. | Observer une invocation réelle de l’oracle épinglé et faire échouer un nouveau piège qui expose `BRAIN_JS` sans l’utiliser.",
+      true
+    ],
+    [
+      "e9e046809458",
+      "HAUTE | ops/checks/sonde_b.py:812 | `entree` n’exerce comme verdict productif que `NO_GO`; `GO`, `GO_AVEC_RESERVES` et `NO_VERDICT` peuvent être silencieusement ignorés par `injecter_regles` tout en laissant toutes les sondes vertes. | Parcourir les six cas de la matrice et vérifier, pour chacun, appels, slugs, journal et absence de mutation attendus.",
+      true
+    ],
+    [
+      "faa825cc3c14",
+      "HAUTE | ops/brain_bridge.py:389 | Une valeur `why` commençant par `--` est interprétée comme un drapeau par le parseur de `brain.js`, qui persiste alors `true` au lieu du texte demandé. Le pont annonce pourtant `ecrite`, puis chaque rejeu crée une nouvelle version puisque le `why` reste différent. | Refuser ces valeurs avant l’appel ou utiliser une voie d’invocation qui transmet `why` sans passer par ce parseur de drapeaux.",
+      true
+    ]
+  ],
+  "reserves_illisibles": [],
+  "constat": {
+    "ecrit_le": "2026-08-24T17:22:10+00:00",
+    "merged_at": "2026-08-24T17:22:10.317239+00:00",
+    "merged_branch": "plan/b-boucle-verdict-regle-2026-08-21",
+    "merged_into": "main",
+    "merge_commit": "8053077777f3fea52a91e826b7540ed611933324"
+  }
+}

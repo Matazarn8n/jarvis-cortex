@@ -157,7 +157,7 @@ tickets:
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 42
+      && test "$cas" -ge 90
       && echo "$sortie"
       && echo "B-T0 sonde=autotest cas_ok=${cas}"
 
@@ -201,7 +201,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 90
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py contrat
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
@@ -241,7 +241,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 90
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py decision
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/verdict_regles.py)
@@ -342,18 +342,18 @@ tickets:
     # ajoutant sans verrou une ligne d'index qui doit survivre. C'est ce qui
     # oblige le pont à ne retirer que les doublons de SON slug au lieu de
     # réécrire l'index depuis un instantané périmé.
-    # Treize axes, donc treize `cas_ok=` attendus : c'est la quantité que le
+    # Quatorze axes, donc quatorze `cas_ok=` attendus : c'est la quantité que le
     # check compte, sur l'artefact que `--module` nomme.
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 90
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/brain_bridge.py
       --oracle /home/nuveo/projects/jarvis-cortex/brain.js)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 13
+      && test "$cas" -ge 14
       && echo "$sortie"
       && echo "B-T3 sonde=pont cas_ok=${cas}"
 
@@ -391,16 +391,19 @@ tickets:
     # contrôle. Le code non nul est celui de la CLI, PAS du hook moteur, qui
     # reste non bloquant. Enfin la non-régression de périmètre sur les trois
     # fichiers de gouvernance.
-    # Huit axes, donc huit `cas_ok=` : les cinq passes, les deux CLI, le périmètre.
+    # Quatorze axes, donc quatorze `cas_ok=` : les six cas de la matrice, les six
+    # passes (dont `ecrivain_muet`), les deux CLI et le périmètre. Le seuil est
+    # resté à 8 pendant que six axes `verdict:<V>` étaient ajoutés — six axes
+    # pouvaient donc disparaître sans faire tomber le compte.
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 90
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py entree
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/verdict_hook.py)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 8
+      && test "$cas" -ge 15
       && echo "$sortie"
       && echo "B-T4 sonde=entree cas_ok=${cas}"
 
@@ -505,7 +508,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 90
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py raccordement
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --moteur /home/nuveo/hermes-os)

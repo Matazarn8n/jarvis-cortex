@@ -67,3 +67,93 @@ test('user/reference (semantique): upsert sans version creee', async () => {
   assert.equal(fs.existsSync(path.join(b.mem, 'user_sonde_user.v1.md')), false);
   assert.equal(fs.existsSync(path.join(b.mem, 'reference_sonde_ref.v1.md')), false);
 });
+
+test('index: une entree trop longue garde son lien intact (parseable par recall)', async () => {
+  const b = bac();
+  const store = await chargeStore(b);
+  const name = 'n'.repeat(100);
+  store('x'.repeat(300), { type: 'feedback', name });
+  const ligne = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8').trim().split('\n').pop();
+  assert.ok(ligne.length <= 200, 'longueur ' + ligne.length);
+  assert.match(ligne, /\[[^\]]+\]\([^)]+\.md\)/);
+});
+
+test('recall: une regle revoquee (.vN) n est jamais rappelee', async () => {
+  const b = bac();
+  const m = await import(b.mod + '?t=' + Math.random());
+  m.store('regle ancienne suppression', { type: 'feedback', name: 'suppression' });
+  m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
+  const r = m.recall('suppression', { k: 5 });
+  assert.ok(r.hits.every(h => !/\.v\d+\.md$/.test(h.file)), JSON.stringify(r.hits.map(h => h.file)));
+});
+
+test('store: un nom de fichier > 120 caracteres est refuse (le lien d index reste borne)', async () => {
+  const b = bac();
+  const store = await chargeStore(b);
+  assert.throws(() => store('fait', { type: 'feedback', name: 'n'.repeat(220) }), /nom trop long/);
+});
+
+test('recall: pointeur d index et lien suivi vers une archive .vN ignores', async () => {
+  const b = bac();
+  const m = await import(b.mod + '?t=' + Math.random());
+  m.store('regle ancienne suppression', { type: 'feedback', name: 'suppression' });
+  m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '- [Vieux](feedback_suppression.v1.md) — suppression ancienne\n');
+  fs.appendFileSync(path.join(b.mem, 'feedback_suppression.md'), '\nVoir feedback_suppression.v1.md\n');
+  const r = m.recall('suppression', { k: 1 });
+  assert.ok(r.hits.every(h => !/\.v\d+\.md$/.test(h.file)), JSON.stringify(r.hits.map(h => h.file)));
+  assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)));
+});
+
+test('recall: pointeur d index deguise (x.v1.md/.) ne contourne pas le filtre des archives', async () => {
+  const b = bac();
+  const m = await import(b.mod + '?t=' + Math.random());
+  m.store('regle ancienne suppression', { type: 'feedback', name: 'suppression' });
+  m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ancienne suppression](feedback_suppression.v1.md/.) — suppression ancienne\n');
+  const r = m.recall('suppression', { k: 3, hop: false });
+  assert.ok(r.hits.every(h => !/\.v\d+\.md/.test(h.file)), JSON.stringify(r.hits.map(h => h.file)));
+  assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)));
+});
+
+test('recall: archives feedback en .V1 / .v01 / lien symbolique ignorees, doc actif reference_x.v1 rappelable', async () => {
+  const b = bac();
+  const m = await import(b.mod + '?t=' + Math.random());
+  m.store('regle ancienne suppression', { type: 'feedback', name: 'suppression' });
+  m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
+  const v1 = path.join(b.mem, 'feedback_suppression.v1.md');
+  fs.copyFileSync(v1, path.join(b.mem, 'feedback_suppression.V1.md'));
+  fs.copyFileSync(v1, path.join(b.mem, 'feedback_suppression.v01.md'));
+  fs.symlinkSync(v1, path.join(b.mem, 'suppression_alias.md'));
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'),
+    '- [A](feedback_suppression.V1.md) — suppression\n- [B](suppression_alias.md) — suppression\n- [C](feedback_suppression.v01.md) — suppression\n');
+  const r = m.recall('suppression', { k: 9, hop: false });
+  assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)), JSON.stringify(r.hits.map(h => h.file)));
+  fs.writeFileSync(path.join(b.mem, 'reference_protocol.v1.md'), '---\nname: p\n---\nprotocole actif');
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '- [P](reference_protocol.v1.md) — protocol\n');
+  const r2 = m.recall('protocol', { k: 3, hop: false });
+  assert.ok(r2.hits.some(h => /reference_protocol\.v1\.md$/.test(h.file)), JSON.stringify(r2.hits.map(h => h.file)));
+});
+
+test('recall: un document racine (routage) qui pointe vers une archive est ignore', async () => {
+  const b = bac();
+  const m = await import(b.mod + '?t=' + Math.random());
+  m.store('regle ancienne suppression', { type: 'feedback', name: 'suppression' });
+  m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
+  fs.symlinkSync(path.join(b.mem, 'feedback_suppression.v1.md'), path.join(b.dir, 'CLAUDE.md'));
+  const r = m.recall('rule workspace', { k: 3, hop: false });
+  assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)), JSON.stringify(r.hits.map(h => h.file)));
+});
+
+test('recall: lien physique (hardlink) vers une archive ignore, racine et dossier memoire', async () => {
+  const b = bac();
+  const m = await import(b.mod + '?t=' + Math.random());
+  m.store('regle ancienne suppression', { type: 'feedback', name: 'suppression' });
+  m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
+  const v1 = path.join(b.mem, 'feedback_suppression.v1.md');
+  fs.linkSync(v1, path.join(b.dir, 'CLAUDE.md'));
+  fs.linkSync(v1, path.join(b.mem, 'suppression_alias.md'));
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '- [B](suppression_alias.md) — suppression\n');
+  const r = m.recall('suppression rule', { k: 9, hop: false });
+  assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)), JSON.stringify(r.hits.map(h => h.file)));
+});

@@ -8,8 +8,9 @@ repo: /home/nuveo/projects/jarvis-cortex
 # non déclarée ») et le plan M restait garé indéfiniment, ses tickets pourtant
 # tous `done`. `main` et pas `fix/brain-store-prefixe-et-budget-2026-08-11` : une
 # branche de travail datée déclarée ici deviendrait une norme durable pointant un
-# jetable. Le merge du plan M y est propre par construction — `main` est ancêtre
-# strict de `plan/jarvis-cortex-m-memoire-regimes` (26 devant, 0 derrière).
+# jetable. Mesure du 2026-10-09 : `main` n'est plus ancêtre strict de la branche
+# (11 commits propres à main, 35 propres à la branche) ; GitHub la déclare
+# MERGEABLE, sans conflit textuel.
 integration_branch: main
 # R7 goal auditor: workspace-graph engine must answer on :5210 (systemd jarvis-cortex.service).
 verify:
@@ -25,15 +26,3 @@ docs:
 outputs:
   - server.js
   - brain.js
-
-# Plans issus du contre-audit Codex/Fable du 2026-08-19 (artifact c35f327c).
-# Declarer un plan, c'est l'ARMER : il devient relancable par plan-doctor et
-# pilotable depuis le cockpit. Il n'existe pas de « declare mais dormant ».
-runbooks_archived:
-  # ── ARCHIVÉ le 2026-09-03, geste Owner : « considère tous les runbooks
-  # comme terminés afin qu'ils apparaissent dans cette catégorie sur le
-  # dashboard/kiosk ». Même geste appliqué au parc de hermes-os (44 plans).
-  # Archiver DÉSARME : le plan quitte `discover_runbooks()`, donc le timer
-  # plan-doctor ne le relance plus et le cockpit le montre en « terminé ».
-  # Réarmer = redéplacer la ligne vers `runbooks:`.
-  m-memoire-regimes: runbooks/handoff-2026-08-20-m-memoire-regimes.runbook.yaml
