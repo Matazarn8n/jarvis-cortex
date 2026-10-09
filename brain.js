@@ -453,9 +453,9 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // Fichier sans `description:` (écrit à la main) : le fait est le corps, coupé avant le pied et,
       // faute de mieux, avant chaque `**Why:**` plausible.
       const fm = t.match(/^---\n[\s\S]*?\n---\n\n?/);
-      const sansPied = t.slice(fm ? fm[0].length : 0).replace(/\n\n?\*Saved [^\n]*\n?$/, '');
-      const coupes = new Set([sansPied.trimEnd()]);
-      for (let m = sansPied.indexOf('\n\n**Why:**'); m >= 0; m = sansPied.indexOf('\n\n**Why:**', m + 1)) coupes.add(sansPied.slice(0, m).trimEnd());
+      const sansPied = t.slice(fm ? fm[0].length : 0).replace(/\n\n?\*Saved [^\n]*\n?$/, '').replace(/\r?\n$/, ''); // un seul saut final (terminateur de fichier), jamais de trim
+      const coupes = new Set([sansPied]);
+      for (let m = sansPied.indexOf('\n\n**Why:**'); m >= 0; m = sansPied.indexOf('\n\n**Why:**', m + 1)) coupes.add(sansPied.slice(0, m));
       return [...coupes];
     };
     // Chaque révision écrit son entrée à SA date (`*Saved AAAA-MM-JJ*`) : le pointeur et son desc
@@ -491,12 +491,14 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
         // même au format d'entrée) ; seule la dernière ligne présente peut être tronquée par '...'/'…'
         // (plafond d'index). Une divergence = lignes étrangères : rien n'est retiré.
         let n = 0; let ok = true;
+        // Une troncature par '...'/'…' n'existe que si l'entrée complète dépassait le plafond.
+        const tronque = (l.length - reste.length) + d.join('\n').length > ENTRY_MAX;
         for (let q = 1; q < d.length; q++) {
           const x = lignes[i + q];
           if (x === undefined) { ok = false; break; }
           if (x === d[q]) { n = q; continue; }
           const m = x.match(/^([^\n]*?)(?:\.\.\.|…)\r?$/);
-          if (m && m[1] !== '' && d[q].startsWith(m[1])) { n = q; break; }
+          if (tronque && m && m[1] !== '' && d[q].startsWith(m[1])) { n = q; break; }
           ok = false; break;
         }
         if (ok && n > k) k = n;

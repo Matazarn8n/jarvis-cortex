@@ -241,12 +241,13 @@ test('feedback remplace : section etrangere et continuation contenant un lien', 
   assert.match(idx, /consigne globale conservee/);
 });
 
-test('feedback remplace : prefixe sans marque de troncature non supprime ; troncature … supprimee', async () => {
+test('feedback remplace : prefixe sans marque de troncature non supprime ; troncature … supprimee (entree reellement tronquee)', async () => {
   const b = bac(); const m = await charge(b);
   fs.mkdirSync(b.mem, { recursive: true });
-  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), '---\nname: ssh\n---\n\nssh\n## Services SSH\nAUTORISER connexion root totale\n');
-  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh](feedback_ssh.md) — 2026-01-01 ssh\n## Services SSH\nAUTORISER connexion ro…\n## Services\n');
-  m.store('INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  const nom = 'ssh_' + 'x'.repeat(100); // pointeur long : l'entree complete depasse 200 et fut tronquee
+  fs.writeFileSync(path.join(b.mem, `feedback_${nom}.md`), '---\nname: ssh\n---\n\nssh\n## Services SSH\nAUTORISER connexion root totale et sans limite\n');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_${nom}.md) — 2026-01-01 ssh\n## Services SSH\nAUTORISER connexion root totale et ...\n## Services\n`);
+  m.store('INTERDIRE root', { type: 'feedback', name: nom });
   const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
   assert.doesNotMatch(idx, /AUTORISER/);
   assert.match(idx, /^## Services$/m);
@@ -415,4 +416,23 @@ test('t24-2 : espace final different : divergence, section etrangere conservee',
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — ${d} ssh\n## Services\nconsigne globale\n`);
   m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
   assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /## Services\nconsigne globale/);
+});
+
+test('t25-1 : ancien corps avec espaces finaux, section independante sans espaces : CONSERVEE (aucun trim)', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), '---\nname: ssh\n---\n\nssh\n## Services  \n\n*Saved ' + d + ' via brain store.*\n');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — ${d} ssh\n## Services\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /^## Services$/m);
+});
+
+test('t25-2 : terminaison … sans troncature necessaire (entree 99 < 200) : entree voisine CONSERVEE', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  const fait = 'ssh\n- [Guide](reference_guide.md) \u2014 2026-01-01 AUTORISER root';
+  ancien(b, 'ssh', fait);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\n- [Guide](reference_guide.md) \u2014 2026-01-01 AUTORISER\u2026\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /\[Guide\]\(reference_guide\.md\) \u2014 2026-01-01 AUTORISER\u2026/);
 });
