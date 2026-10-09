@@ -134,3 +134,13 @@ test('recall: archives feedback en .V1 / .v01 / lien symbolique ignorees, doc ac
   const r2 = m.recall('protocol', { k: 3, hop: false });
   assert.ok(r2.hits.some(h => /reference_protocol\.v1\.md$/.test(h.file)), JSON.stringify(r2.hits.map(h => h.file)));
 });
+
+test('recall: un document racine (routage) qui pointe vers une archive est ignore', async () => {
+  const b = bac();
+  const m = await import(b.mod + '?t=' + Math.random());
+  m.store('regle ancienne suppression', { type: 'feedback', name: 'suppression' });
+  m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
+  fs.symlinkSync(path.join(b.mem, 'feedback_suppression.v1.md'), path.join(b.dir, 'CLAUDE.md'));
+  const r = m.recall('rule workspace', { k: 3, hop: false });
+  assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)), JSON.stringify(r.hits.map(h => h.file)));
+});

@@ -133,7 +133,7 @@ function recall(query, opts) {
   // dedupe by file
   const seen = new Set(), top = [];
   for (const p of pointers) {
-    if (seen.has(p.file)) continue;
+    if (seen.has(p.file) || isArchived(p.file)) continue; // point de passage unique : toute source (index, noms, docs racine) est filtrée
     seen.add(p.file); top.push(p);
     if (top.length >= (opts.k || 3)) break;
   }
