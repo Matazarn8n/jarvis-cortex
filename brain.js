@@ -349,7 +349,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // ... et de ses archives .vN : les révisions antérieures ont chacune laissé leur entrée (index
     // historique append-only) avec leurs propres continuations.
     const racine = path.basename(file, '.md');
-    const sources = [file, ...fs.readdirSync(dir).filter((f) => f.startsWith(racine + '.v') && /\.v0*\d+\.md$/.test(f) && f.slice(racine.length).match(/^\.v0*\d+\.md$/)).map((f) => path.join(dir, f))];
+    const sources = [file, ...fs.readdirSync(dir).filter((f) => f.startsWith(racine) && /^\.v0*\d+\.md$/i.test(f.slice(racine.length))).map((f) => path.join(dir, f))];
     const ancien = sources.filter((f) => fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\u0000');
     // Trois régimes d'écriture, pilotés par `type` (déjà calculé plus haut) :
     //  - user/reference (sémantique)  : upsert, comportement historique inchangé.
@@ -510,7 +510,8 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
         if (E.split('\n')[0] === l) Es.add(E);
       }
       const exact = (E) => { const bl = lignes.slice(i, i + E.split('\n').length).join('\n'); return bl === E || bl === E + '\r'; };
-      if ([...Es].filter(exact).length > 1) { sortie.push(l); continue; }
+      const ex = [...Es].filter(exact);
+      if (ex.length > 1) { const n = Math.max(...ex.map((E) => E.split('\n').length)); sortie.push(...lignes.slice(i, i + n)); i += n - 1; continue; }
       for (const E of Es) {
         const nl = E.split('\n').length;
         if (exact(E)) k = nl - 1;

@@ -587,17 +587,17 @@ test('t33-1 : deux archives du meme jour, etendues differentes plausibles : rien
   const d = new Date().toISOString().slice(0, 10);
   const mk = (f, fait) => fs.writeFileSync(path.join(b.mem, f), `---\nname: ssh\n---\n\n${fait}\n\n*Saved ${d} via brain store.*\n`);
   mk('feedback_ssh.v1.md', 'ssh\n## Services'); mk('feedback_ssh.v2.md', 'ssh\n## Services\nconsigne INDEPENDANTE'); mk('feedback_ssh.md', 'ssh INTERDIRE');
-  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\n## Services\nconsigne INDEPENDANTE\n`);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\n## Services\nconsigne INDEPENDANTE\n- [Ssh](feedback_ssh.md) \u2014 ${d} ssh INTERDIRE\n`);
   m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
-  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /consigne INDEPENDANTE/);
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /## Services\nconsigne INDEPENDANTE/);
 });
 
-test('t33-2 : archive monoligne + archive multiligne exactes : ambigu, ligne independante gardee', async () => {
+test('t33-2 : archives mono+multiligne (.V1 majuscule incluse) : ambigu, tout le bloc garde', async () => {
   const b = bac(); const m = await charge(b);
   const d = new Date().toISOString().slice(0, 10);
   const mk = (f, fait) => fs.writeFileSync(path.join(b.mem, f), `---\nname: ssh\n---\n\n${fait}\n\n*Saved ${d} via brain store.*\n`);
-  mk('feedback_ssh.v1.md', 'ssh'); mk('feedback_ssh.v2.md', 'ssh\n## Services'); mk('feedback_ssh.md', 'ssh INTERDIRE');
-  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\n## Services\n`);
+  mk('feedback_ssh.V1.md', 'ssh'); mk('feedback_ssh.v2.md', 'ssh\n## Services\nconsigne INDEPENDANTE'); mk('feedback_ssh.md', 'ssh INTERDIRE');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\n## Services\nconsigne INDEPENDANTE\n- [Ssh](feedback_ssh.md) \u2014 ${d} ssh INTERDIRE\n`);
   m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
-  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /## Services/);
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /## Services\nconsigne INDEPENDANTE/);
 });
