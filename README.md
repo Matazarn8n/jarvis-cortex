@@ -14,6 +14,12 @@ node server.js          # http://127.0.0.1:5210
 
 Prod: systemd user service `jarvis-cortex.service`.
 
+## Composant embarqué
+
+`component/WorkspaceGraph.tsx` monte le Cortex directement dans la coquille React. Il consomme le graphe et les projets déjà chargés par la coquille : aucun serveur Cortex, iframe ou appel réseau propre au composant. Vérification : `node --test tests/network-inventory.test.mjs`.
+
+Le serveur autonome ci-dessous reste disponible pour le développement historique.
+
 ## Layout
 
 - `server.js` — Node server: static files + API (`/api/graph|expand|search|file|open|rescan`)
