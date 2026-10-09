@@ -445,7 +445,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // ne se rapprochent que d'une révision de même date, sinon une archive voisine pourrait
     // prêter ses lignes à une autre entrée.
     const revisions = ancien.split('\u0000').flatMap((t) => {
-      const date = (t.match(/\*Saved (\d{4}-\d{2}-\d{2}) /) || [])[1];
+      const date = (t.match(/\*Saved (\d{4}-\d{2}-\d{2}) via brain store\.\*\s*$/) || [])[1]; // pied FINAL seulement
       return faits(t).filter((f) => f.includes('\n'))
         .map((f) => ({ date, d: (f.length > 110 ? f.slice(0, 107) + '...' : f).split('\n') }));
     });

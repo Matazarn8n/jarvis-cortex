@@ -301,3 +301,12 @@ test('feedback remplace : fait ancien contenant **Why:** (store reel) : continua
   const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
   assert.doesNotMatch(idx, /AUTORISER/);
 });
+
+test('feedback remplace : *Saved date* dans le contenu ne fausse pas la date de revision', async () => {
+  const b = bac(); const m = await charge(b);
+  m.store('credential\n*Saved 2000-01-01 ancienne note*\nAUTORISER credential root', { type: 'feedback', name: 'cred' });
+  const d = new Date().toISOString().slice(0, 10);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Cred](feedback_cred.md) — ${d} credential\n*Saved 2000-01-01 ancienne note*\nAUTORISER credential root\n`);
+  m.store('credential INTERDIRE', { type: 'feedback', name: 'cred' });
+  assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
+});
