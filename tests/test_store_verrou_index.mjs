@@ -332,3 +332,14 @@ test('feedback remplace : format historique REEL (fichier ecrit a la main, descr
   assert.doesNotMatch(idx, /AUTORISER/);
   assert.match(idx, /INTERDIRE/);
 });
+
+test('feedback remplace : entree courante monoligne, section independante homonyme d une archive : section CONSERVEE', async () => {
+  const b = bac(); const m = await charge(b);
+  m.store('ssh\n## Services\nconsigne globale', { type: 'feedback', name: 'ssh' });
+  m.store('ssh', { type: 'feedback', name: 'ssh' });
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '## Services\nconsigne globale\n');
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.match(idx, /## Services\nconsigne globale/);
+  assert.match(idx, /INTERDIRE/);
+});

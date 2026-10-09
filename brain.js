@@ -451,11 +451,18 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // Chaque révision écrit son entrée à SA date (`*Saved AAAA-MM-JJ*`) : le pointeur et son desc
     // ne se rapprochent que d'une révision de même date, sinon une archive voisine pourrait
     // prêter ses lignes à une autre entrée.
-    const revisions = ancien.split('\u0000').flatMap((t) => {
+    const revs = (textes) => textes.flatMap((t) => {
       const date = (t.match(/\*Saved (\d{4}-\d{2}-\d{2}) via brain store\.\*\s*$/) || [])[1]; // pied FINAL seulement
       return faits(t).filter((f) => f.includes('\n'))
         .map((f) => ({ date, d: (f.length > 110 ? f.slice(0, 107) + '...' : f).split('\n') }));
     });
+    const textes = ancien.split('\u0000');
+    const revisions = revs(textes);
+    // La DERNIÈRE entrée pointant ce fichier est celle de sa révision courante : seules ses lignes
+    // (pas celles des archives, indiscernables par la 1re ligne) peuvent être des continuations.
+    // Les entrées antérieures (reliquats d'un index historique append-only) gardent toutes les sources.
+    const courantes = fs.existsSync(file) ? revs(textes.slice(0, 1)) : revisions;
+    const derniere = prev.split('\n').reduce((r, l, i) => (pointe(l) ? i : r), -1);
     const lignes = prev.split('\n');
     const sortie = [];
     for (let i = 0; i < lignes.length; i++) {
@@ -466,7 +473,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // égale à la ligne du desc, ou — pour la dernière — tronquée par '...' / '…'.
       const ENTREE = /^\s*(?:[-*+]|\d+[.)])?\s*\[[^\]]+\]\([^)]+\) — \d{4}-\d{2}-\d{2}\b/;
       let k = 0;
-      for (const { d, date } of revisions) {
+      for (const { d, date } of (i === derniere ? courantes : revisions)) {
         if (!l.endsWith(d[0]) || (date && !l.includes(` — ${date} `))) continue;
         let n = 0;
         for (let q = 1; q < d.length; q++) {
