@@ -71,7 +71,7 @@ test('user/reference (semantique): upsert sans version creee', async () => {
 test('index: une entree trop longue garde son lien intact (parseable par recall)', async () => {
   const b = bac();
   const store = await chargeStore(b);
-  const name = 'n'.repeat(110);
+  const name = 'n'.repeat(100);
   store('x'.repeat(300), { type: 'feedback', name });
   const ligne = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8').trim().split('\n').pop();
   assert.ok(ligne.length <= 200, 'longueur ' + ligne.length);
@@ -85,4 +85,22 @@ test('recall: une regle revoquee (.vN) n est jamais rappelee', async () => {
   m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
   const r = m.recall('suppression', { k: 5 });
   assert.ok(r.hits.every(h => !/\.v\d+\.md$/.test(h.file)), JSON.stringify(r.hits.map(h => h.file)));
+});
+
+test('store: un nom de fichier > 120 caracteres est refuse (le lien d index reste borne)', async () => {
+  const b = bac();
+  const store = await chargeStore(b);
+  assert.throws(() => store('fait', { type: 'feedback', name: 'n'.repeat(220) }), /nom trop long/);
+});
+
+test('recall: pointeur d index et lien suivi vers une archive .vN ignores', async () => {
+  const b = bac();
+  const m = await import(b.mod + '?t=' + Math.random());
+  m.store('regle ancienne suppression', { type: 'feedback', name: 'suppression' });
+  m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '- [Vieux](feedback_suppression.v1.md) — suppression ancienne\n');
+  fs.appendFileSync(path.join(b.mem, 'feedback_suppression.md'), '\nVoir feedback_suppression.v1.md\n');
+  const r = m.recall('suppression', { k: 1 });
+  assert.ok(r.hits.every(h => !/\.v\d+\.md$/.test(h.file)), JSON.stringify(r.hits.map(h => h.file)));
+  assert.ok(r.hits.every(h => !/ancienne/.test(h.slice)));
 });

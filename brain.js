@@ -70,6 +70,10 @@ const ROOT_DOC_HINTS = WS.routing || {
   'CLAUDE.md': ['goal', 'goals', 'rule', 'rules', 'workspace', 'folder', 'folders', 'map'],
 };
 
+// Archives de versionnage feedback (`<nom>.vN.md`) = règles révoquées : jamais
+// rappelées, ni par l'index, ni par balayage de noms, ni par suivi de lien.
+const ARCHIVED = /\.v\d+\.md$/;
+
 // ---------- recall ----------
 function recall(query, opts) {
   opts = opts || {};
@@ -92,12 +96,12 @@ function recall(query, opts) {
         if (lw.includes(w)) score += 3;
         else if (lw.some(x => x.startsWith(w) || w.startsWith(x))) score += 1;
       }
-      if (score > 0) pointers.push({ file: path.resolve(MEM, m[2]), score, line: line.trim() });
+      if (score > 0 && !ARCHIVED.test(m[2])) pointers.push({ file: path.resolve(MEM, m[2]), score, line: line.trim() });
     }
   }
   // 2) filename sweep (names only - no content reads)
   for (const f of fs.readdirSync(MEM)) {
-    if (!f.endsWith('.md') || /\.v\d+\.md$/.test(f)) continue; // archives .vN = règles révoquées, jamais rappelées
+    if (!f.endsWith('.md') || ARCHIVED.test(f)) continue; // archives .vN = règles révoquées, jamais rappelées
     const fw = words(f.replace(/\.md$/, ''));
     let score = 0;
     for (const w of qw) {
@@ -165,7 +169,7 @@ function recall(query, opts) {
   if (hits.length && opts.hop !== false && !found) {
     const m = hits[0].slice.match(/[\w][\w\/.-]*\.md/g);
     for (const cand of (m || [])) {
-      if (/^(MEMORY|memory-)/.test(cand)) continue;
+      if (/^(MEMORY|memory-)/.test(cand) || ARCHIVED.test(cand)) continue;
       const p1 = path.resolve(ROOT, cand);
       const p2 = path.resolve(path.dirname(path.join(ROOT, hits[0].file)), cand);
       const hp = fs.existsSync(p1) ? p1 : (fs.existsSync(p2) ? p2 : null);
@@ -209,6 +213,11 @@ function store(fact, opts) {
   // mort dans CLAUDE.md racine — vérifié le 2026-08-11.
   const base = name.replace(/-/g, '_');
   const file = path.join(dir, (prefix && base.startsWith(prefix) ? '' : prefix) + base + '.md');
+  // Le lien d'index ne se tronque jamais ; sa longueur doit donc être bornée à
+  // la source pour que l'entrée tienne dans ENTRY_MAX (200) sans le couper.
+  if (path.basename(file).length > 120) {
+    throw new Error(`store: nom trop long (${path.basename(file).length} > 120 caractères) — raccourcir --name.`);
+  }
   const today = new Date().toISOString().slice(0, 10);
   const desc = fact.length > 110 ? fact.slice(0, 107) + '...' : fact;
   const body = `---
