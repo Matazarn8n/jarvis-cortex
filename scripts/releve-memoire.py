@@ -134,7 +134,11 @@ def main() -> int:
     lignes += [f"{c}: {m[c]}" for c in sorted(m) if c != "empreinte"]
     lignes.append(f"empreinte: {m['empreinte']}")
     SORTIE.parent.mkdir(parents=True, exist_ok=True)
-    SORTIE.write_text("\n".join(lignes) + "\n", encoding="utf-8")
+    try:  # création exclusive : deux lancements simultanés ne s'écrasent pas
+        with open(SORTIE, "x", encoding="utf-8") as f:
+            f.write("\n".join(lignes) + "\n")
+    except FileExistsError:
+        raise SystemExit(f"ECHEC: un recu de ce jour vient d'etre cree par un autre lancement: {SORTIE}")
     # Sortie réelle, pas un « OK » : ce que l'Owner lit doit être ce qui est écrit.
     print("\n".join(lignes))
     print(f"\n-> {SORTIE} ({SORTIE.stat().st_size} octets)")

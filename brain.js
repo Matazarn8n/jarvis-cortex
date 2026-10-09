@@ -50,7 +50,7 @@ function recall(query, opts) {
   if (fs.existsSync(hub)) {
     for (const line of read(hub).split('\n')) {
       const m = line.match(/\[([^\]]+)\]\(([^)]+)\)/);
-      if (!m) continue;
+      if (!m || /\.v\d+\.md$/.test(m[2])) continue; // archives versionnées : jamais rappelées
       const lw = words(line);
       let score = 0;
       for (const w of qw) {
@@ -172,36 +172,51 @@ function pidVivant(pid) {
   try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
 }
 
+function lisVerrou(f) {
+  try { return { st: fs.statSync(f), owner: fs.readFileSync(f, 'utf8') }; }
+  catch (e) { if (e.code === 'ENOENT') return null; throw e; } // toute autre erreur est remontée
+}
+
+// Reprise d'un verrou périmé : SEUL le détenteur du verrou de reprise (`.reap`, `wx`) a le
+// droit de supprimer le verrou principal, et seulement s'il porte encore le MÊME propriétaire
+// mort. Personne d'autre ne supprime le verrou principal (hors son propre jeton à la sortie),
+// donc un verrou frais ne peut pas être emporté. Un `.reap` abandonné n'est jamais volé : on
+// échoue bruyamment (fenêtre de quelques microsecondes), plutôt que de rouvrir la course.
+function reprendreVerrouPerime(lock, ownerLu) {
+  const reap = lock + '.reap';
+  let fd;
+  try { fd = fs.openSync(reap, 'wx'); }
+  catch (e) { if (e.code === 'EEXIST') return false; throw e; }
+  try {
+    const cur = lisVerrou(lock);
+    if (cur && cur.owner === ownerLu && !pidVivant(Number(ownerLu.split(':')[0]))) fs.unlinkSync(lock);
+    return true;
+  } finally {
+    try { fs.closeSync(fd); } catch (_) {}
+    try { fs.unlinkSync(reap); } catch (_) {}
+  }
+}
+
 function withStoreLock(dir, fn) {
   const lock = path.join(dir, '.store.lock');
   const token = `${process.pid}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
   const t0 = Date.now();
   for (;;) {
+    if (Date.now() - t0 > STORE_LOCK_TIMEOUT_MS) {
+      throw new Error(`store: verrou ${lock} non obtenu en ${STORE_LOCK_TIMEOUT_MS} ms — un autre écrivain n'a pas rendu la main (ou ${lock}.reap abandonné : à supprimer à la main).`);
+    }
     try {
       const fd = fs.openSync(lock, 'wx');
       try { fs.writeSync(fd, token); } finally { fs.closeSync(fd); }
       break;
     } catch (e) {
       if (e.code !== 'EEXIST') throw e;
-      let st, owner;
-      try { st = fs.statSync(lock); owner = fs.readFileSync(lock, 'utf8'); }
-      catch (_) { continue; } // le verrou a disparu entre-temps : on retente l'ouverture, JAMAIS d'unlink
-      const age = Date.now() - st.mtimeMs;
-      const pid = Number(owner.split(':')[0]);
-      // Périmé = vieux ET propriétaire mort. Un propriétaire vivant garde son verrou.
-      if (age > STORE_LOCK_STALE_MS && !pidVivant(pid)) {
-        // Prise atomique par rename : un seul gagnant. Si on a pris un verrou frais d'un
-        // autre (contenu différent), on le remet via link (échoue si le chemin est repris).
-        const vole = `${lock}.stale-${token.replace(/:/g, '_')}`;
-        try {
-          fs.renameSync(lock, vole);
-          if (fs.readFileSync(vole, 'utf8') === owner) fs.unlinkSync(vole);
-          else { try { fs.linkSync(vole, lock); } catch (_) {} fs.unlinkSync(vole); }
-        } catch (_) {}
-        continue;
-      }
-      if (Date.now() - t0 > STORE_LOCK_TIMEOUT_MS) {
-        throw new Error(`store: verrou ${lock} tenu depuis ${Math.round(age)} ms — un autre écrivain n'a pas rendu la main.`);
+      const cur = lisVerrou(lock); // lève sur EACCES etc. : jamais de boucle muette
+      if (cur) {
+        const age = Date.now() - cur.st.mtimeMs;
+        const pid = Number(cur.owner.split(':')[0]);
+        // Périmé = vieux ET propriétaire mort. Un propriétaire vivant garde son verrou.
+        if (age > STORE_LOCK_STALE_MS && !pidVivant(pid) && reprendreVerrouPerime(lock, cur.owner)) continue;
       }
       // Attente SYNCHRONE sans dépendance : `store` est un chemin synchrone de
       // bout en bout, un `await` ici changerait sa signature.
@@ -292,12 +307,21 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
   // 2026-08-11. Un index toujours chargé qui grossit sans plafond finit par
   // coûter plus cher que ce qu'il fait gagner, donc on tronque à l'écriture.
   const ENTRY_MAX = 200;
-  // On ne tronque QUE la description : le lien [titre](fichier) doit rester entier, c'est
-  // le pointeur que le parcours par index exploite.
-  const tete = `- [${title}](${path.basename(file)}) — ${today} `;
+  // Plafond de 200 caractères SANS couper le pointeur [titre](fichier) : on rabote d'abord la
+  // description, puis le titre affiché (lisible, pas un identifiant). Le nom de fichier, lui,
+  // n'est jamais tronqué.
+  const fixe = (t) => `- [${t}](${path.basename(file)}) — ${today} `;
+  let tt = title;
+  let tete = fixe(tt);
+  const reserveDesc = 40;
+  if (tete.length + reserveDesc > ENTRY_MAX - 1 && tt.length > 8) {
+    const surplus = tete.length + reserveDesc - (ENTRY_MAX - 1);
+    tt = tt.slice(0, Math.max(8, tt.length - surplus - 1)).trimEnd() + '…';
+    tete = fixe(tt);
+  }
   const reste = Math.max(0, ENTRY_MAX - 1 - tete.length);
   let entry = tete + desc + '\n';
-  if (entry.length - 1 > ENTRY_MAX) entry = tete + (reste > 0 ? desc.slice(0, reste).trimEnd() + '…' : '…') + '\n';
+  if (entry.length - 1 > ENTRY_MAX) entry = tete + (reste > 1 ? desc.slice(0, reste - 1).trimEnd() + '…' : '…') + '\n';
   if (opts.sandbox && !fs.existsSync(index)) fs.writeFileSync(index, '# Sandbox Memory Index\n\n');
   fs.appendFileSync(index, entry);
   // Le fait n'est jamais perdu (il est dans son fichier) — mais l'index qui

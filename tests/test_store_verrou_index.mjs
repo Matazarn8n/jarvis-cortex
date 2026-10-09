@@ -57,4 +57,39 @@ test('index : troncature garde le lien entier (slug de 100 caracteres)', async (
   const ligne = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8').trim().split('\n').pop();
   assert.match(ligne, /^- \[[^\]]+\]\(feedback_a+\.md\)/);
   assert.ok(ligne.includes(`(${path.basename(r.file)})`));
+  assert.ok(ligne.length <= 200, `entree de ${ligne.length} caracteres`);
+});
+
+test('rappel : un pointeur d index vers une archive .vN.md est ignore', async () => {
+  const b = bac(); const m = await charge(b);
+  fs.writeFileSync(path.join(b.mem, 'feedback_beta.v1.md'), 'ancienne regle revoquee beta');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Beta](feedback_beta.v1.md) — 2026-01-01 beta regle\n');
+  assert.doesNotMatch(JSON.stringify(m.recall('beta')), /v1\.md/);
+});
+
+test('verrou frais pose par un autre : le reap ne l emporte pas', async () => {
+  process.env.BRAIN_LOCK_TIMEOUT_MS = '300';
+  const b = bac(); const m = await charge(b);
+  delete process.env.BRAIN_LOCK_TIMEOUT_MS;
+  const lock = path.join(b.mem, '.store.lock');
+  fs.writeFileSync(lock, '999999999:0:frais'); // proprietaire mort mais verrou FRAIS (< 60 s)
+  assert.throws(() => m.store('regle', { type: 'feedback', name: 'r_frais' }), /verrou/);
+  assert.equal(fs.readFileSync(lock, 'utf8'), '999999999:0:frais');
+});
+
+test('ecritures feedback concurrentes sur verrou perime : aucune perte (8 processus)', async () => {
+  const { spawn } = await import('node:child_process');
+  const b = bac();
+  const lock = path.join(b.mem, '.store.lock');
+  fs.writeFileSync(lock, '999999999:0:mort'); vieux(lock);
+  const top = Date.now() + 600;
+  const code = `const {store}=require(${JSON.stringify(b.mod)});while(Date.now()<${top}){}
+store('version '+process.argv[1],{type:'feedback',name:'course'});`;
+  const rcs = await Promise.all(Array.from({ length: 8 }, (_, i) => new Promise((res) => {
+    const c = spawn(process.execPath, ['-e', code, String(i)], { stdio: 'ignore' });
+    c.on('exit', res);
+  })));
+  assert.deepEqual(rcs, Array(8).fill(0));
+  const fichiers = fs.readdirSync(b.mem).filter((f) => /^feedback_course(\.v\d+)?\.md$/.test(f));
+  assert.equal(fichiers.length, 8, fichiers.join(','));
 });
