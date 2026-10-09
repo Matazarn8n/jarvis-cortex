@@ -97,7 +97,7 @@ function recall(query, opts) {
   }
   // 2) filename sweep (names only - no content reads)
   for (const f of fs.readdirSync(MEM)) {
-    if (!f.endsWith('.md')) continue;
+    if (!f.endsWith('.md') || /\.v\d+\.md$/.test(f)) continue; // archives .vN = règles révoquées, jamais rappelées
     const fw = words(f.replace(/\.md$/, ''));
     let score = 0;
     for (const w of qw) {
@@ -268,8 +268,16 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
   // 2026-08-11. Un index toujours chargé qui grossit sans plafond finit par
   // coûter plus cher que ce qu'il fait gagner, donc on tronque à l'écriture.
   const ENTRY_MAX = 200;
-  let entry = `- [${title}](${path.basename(file)}) — ${today} ${desc}\n`;
-  if (entry.length - 1 > ENTRY_MAX) entry = entry.slice(0, ENTRY_MAX - 1).trimEnd() + '…\n';
+  // Tronquer la description, jamais le lien : un `](fichier.md)` coupé rend la
+  // ligne illisible pour le parseur de recall(). Titre borné d'abord si besoin.
+  const link = path.basename(file);
+  const head = (t) => `- [${t}](${link}) — ${today} `;
+  let t = title;
+  while (t.length > 20 && head(t).length > ENTRY_MAX - 20) t = t.slice(0, -1);
+  if (t !== title) t = t.trimEnd() + '…';
+  let d = desc;
+  if (head(t).length + d.length > ENTRY_MAX - 1) d = d.slice(0, Math.max(0, ENTRY_MAX - 2 - head(t).length)).trimEnd() + '…';
+  const entry = head(t) + d + '\n';
   if (opts.sandbox && !fs.existsSync(index)) fs.writeFileSync(index, '# Sandbox Memory Index\n\n');
   fs.appendFileSync(index, entry);
   // Le fait n'est jamais perdu (il est dans son fichier) — mais l'index qui

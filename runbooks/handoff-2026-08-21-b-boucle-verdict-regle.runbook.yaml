@@ -403,7 +403,7 @@ tickets:
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/verdict_hook.py)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 14
+      && test "$cas" -ge 15
       && echo "$sortie"
       && echo "B-T4 sonde=entree cas_ok=${cas}"
 

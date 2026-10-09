@@ -67,3 +67,22 @@ test('user/reference (semantique): upsert sans version creee', async () => {
   assert.equal(fs.existsSync(path.join(b.mem, 'user_sonde_user.v1.md')), false);
   assert.equal(fs.existsSync(path.join(b.mem, 'reference_sonde_ref.v1.md')), false);
 });
+
+test('index: une entree trop longue garde son lien intact (parseable par recall)', async () => {
+  const b = bac();
+  const store = await chargeStore(b);
+  const name = 'n'.repeat(110);
+  store('x'.repeat(300), { type: 'feedback', name });
+  const ligne = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8').trim().split('\n').pop();
+  assert.ok(ligne.length <= 200, 'longueur ' + ligne.length);
+  assert.match(ligne, /\[[^\]]+\]\([^)]+\.md\)/);
+});
+
+test('recall: une regle revoquee (.vN) n est jamais rappelee', async () => {
+  const b = bac();
+  const m = await import(b.mod + '?t=' + Math.random());
+  m.store('regle ancienne suppression', { type: 'feedback', name: 'suppression' });
+  m.store('regle courante suppression', { type: 'feedback', name: 'suppression' });
+  const r = m.recall('suppression', { k: 5 });
+  assert.ok(r.hits.every(h => !/\.v\d+\.md$/.test(h.file)), JSON.stringify(r.hits.map(h => h.file)));
+});

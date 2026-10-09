@@ -478,7 +478,7 @@ cibles :
 | `contrat`  | 14                | les 6 cas de matrice + les 7 décisions + l'axe du document |
 | `decision` | 6                 | un par verdict du domaine                        |
 | `pont`     | 14                | `oracle:epingle`, `.v1`, `.md`, `.v2` absent, index, `inchangee`, révision du `why`, index après révision (8 séquentiels) + les 5 axes concurrents + `oracle:invoque` |
-| `entree`   | 14                | les 6 cas de matrice, les 6 passes, les 2 CLI, la non-régression |
+| `entree`   | 15                | les 6 cas de matrice, les 6 passes, les 2 CLI, la non-régression |
 | `raccordement` | 5             | parse, modules installés, ancre AST, appel AST après l'ancre, dry-run |
 | `autotest` | 90                | 5 arbres valides + 85 pièges — les 37 énumérés plus bas en sont le noyau |
 
