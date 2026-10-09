@@ -346,7 +346,11 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
   withStoreLock(dir, () => {
     // Contenu de la règle AVANT remplacement : il sert à reconnaître, dans l'index, les lignes de
     // continuation d'une ancienne entrée multiligne (ce sont des lignes de cet ancien fait).
-    const ancien = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+    // ... et de ses archives .vN : les révisions antérieures ont chacune laissé leur entrée (index
+    // historique append-only) avec leurs propres continuations.
+    const racine = path.basename(file, '.md');
+    const sources = [file, ...fs.readdirSync(dir).filter((f) => f.startsWith(racine + '.v') && /\.v0*\d+\.md$/.test(f) && f.slice(racine.length).match(/^\.v0*\d+\.md$/)).map((f) => path.join(dir, f))];
+    const ancien = sources.filter((f) => fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
     // Trois régimes d'écriture, pilotés par `type` (déjà calculé plus haut) :
     //  - user/reference (sémantique)  : upsert, comportement historique inchangé.
     //  - project (épisodique)         : append-only — un fichier existant bloque

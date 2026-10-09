@@ -244,3 +244,15 @@ test('feedback remplace : prefixe sans marque de troncature non supprime ; tronc
   assert.doesNotMatch(idx, /AUTORISER/);
   assert.match(idx, /^## Services$/m);
 });
+
+test('feedback remplace : continuations des revisions anterieures (archives .vN) retirees aussi', async () => {
+  const b = bac(); const m = await charge(b);
+  fs.mkdirSync(b.mem, { recursive: true });
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.v1.md'), '---\nname: ssh\n---\n\nssh\nAUTORISER connexion root\n');
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), '---\nname: ssh\n---\n\nssh\nINTERDIRE connexion root\n');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh](feedback_ssh.md) — 2026-01-01 ssh\nAUTORISER connexion root\n- [Ssh](feedback_ssh.md) — 2026-01-02 ssh\nINTERDIRE connexion root\n');
+  m.store('ssh\nINTERDIRE v3', { type: 'feedback', name: 'ssh' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx, /AUTORISER/);
+  assert.equal(idx.trim().split('\n').length, 1);
+});

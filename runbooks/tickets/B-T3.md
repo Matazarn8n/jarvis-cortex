@@ -193,8 +193,8 @@ versionne le fichier.
 > (écrivain direct pendant la réécriture du pont, `.memory.lock` ≠ `.store.lock`) RESTE OUVERTE, elle n'est pas fermée par le magasin. Le contrat du pont reste INCHANGÉ (`.memory.lock`, réécriture bornée
 > à son slug, quatorze axes, autotest) : c'est une défense en profondeur, le pont ne dépend pas du magasin.
 
-Le point précédent te met dans une situation que `brain.js` ne gère pas pour toi.
-Il ajoute sa ligne d'index **en append-only** (l. 208-220) : tenir *une* ligne
+Le point précédent te met dans une situation que `brain.js` ne gère pas toujours pour toi (le magasin retire désormais l'ancienne entrée d'un `feedback` remplacé, mais pas les doublons déjà présents ni les écrits directs).
+Avant le correctif, il ajoutait sa ligne d'index **en append-only** : tenir *une* ligne
 par règle à travers les révisions t'oblige donc à **relire `MEMORY.md`, le
 dédoublonner, et le réécrire**. C'est un cycle lecture-modification-écriture sur
 un fichier partagé, et la mémoire réelle *est* partagée : deux gates qui
