@@ -463,11 +463,14 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // Chaque révision écrit son entrée à SA date (`*Saved AAAA-MM-JJ*`) : le pointeur et son desc
     // ne se rapprochent que d'une révision de même date, sinon une archive voisine pourrait
     // prêter ses lignes à une autre entrée.
-    const revs = (textes) => textes.flatMap((t) => {
+    const revs = (textes) => textes.flatMap((t0) => {
+      // Fichier CRLF : on analyse en LF puis on rétablit CRLF dans le desc (l'index le contient tel quel).
+      const crlf = t0.includes('\r\n'); const t = t0.replace(/\r\n/g, '\n');
       const date = (t.match(/\*Saved (\d{4}-\d{2}-\d{2}) via brain store\.\*\s*$/) || [])[1]; // pied FINAL seulement
       const aDesc = /^---\nname: [^\n]*\ndescription: /.test(t);
+      const vers = (f) => (crlf ? f.replace(/\n/g, '\r\n') : f);
       // avec `description:` faits() rend déjà le desc final ; sans, c'est le fait brut à tronquer
-      return faits(t).map((f) => (aDesc || f.length <= 110 ? f : f.slice(0, 107) + '...'))
+      return faits(t).map((f) => (aDesc ? vers(f) : (f = vers(f)).length <= 110 ? f : f.slice(0, 107) + '...'))
         .filter((f) => f.includes('\n')).map((f) => ({ date, desc: f }));
     });
     const textes = ancien.split('\u0000');
@@ -476,18 +479,19 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // (pas celles des archives, indiscernables par la 1re ligne) peuvent être des continuations.
     // Les entrées antérieures (reliquats d'un index historique append-only) gardent toutes les sources.
     const courantes = fs.existsSync(file) ? revs(textes.slice(0, 1)) : revisions;
-    const derniere = prev.split('\n').reduce((r, l, i) => (pointe(l) ? i : r), -1);
+    const estEntree = (l) => pointe(l) && /^\s*(?:[-*+]|\d+[.)])?\s*\[[^\]]+\]\([^)]+\) — \d{4}-\d{2}-\d{2} /.test(l);
+    const derniere = prev.split('\n').reduce((r, l, i) => (estEntree(l) ? i : r), -1);
     const lignes = prev.split('\n');
     const sortie = [];
     for (let i = 0; i < lignes.length; i++) {
       const l = lignes[i];
       // Seule une ligne AU FORMAT D'ENTRÉE (`[titre](fichier) — AAAA-MM-JJ …`) est une entrée à retirer :
       // `- [SSH](f.md), sauvegarder…` ou une phrase contenant le lien est une ligne indépendante.
-      if (!pointe(l) || !/^\s*(?:[-*+]|\d+[.)])?\s*\[[^\]]+\]\([^)]+\) — \d{4}-\d{2}-\d{2} /.test(l)) { sortie.push(l); continue; }
+      if (!estEntree(l)) { sortie.push(l); continue; }
       // Une ligne au format d'entrée de store (`[titre](fichier) — AAAA-MM-JJ …`) est une entrée
       // indépendante, jamais une continuation. Une continuation est une ligne de l'ancien fait,
       // égale à la ligne du desc, ou — pour la dernière — tronquée par '...' / '…'.
-      let k = 0; let douteuse = false;
+      let k = 0; let douteuse = 0;
       const mt = l.match(/^(.*\) — (\d{4}-\d{2}-\d{2}) )([^\n]*)$/);
       for (const { desc, date } of (i === derniere ? courantes : revisions)) {
         if (!mt || (date && mt[2] !== date)) continue;
@@ -499,10 +503,14 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
         const E = tete + (tete.length + desc.length > ENTRY_MAX - 1 ? desc.slice(0, Math.max(0, ENTRY_MAX - 2 - tete.length)).trimEnd() + '…' : desc);
         const nl = E.split('\n').length;
         if (lignes.slice(i, i + nl).join('\n') === E) { if (nl - 1 > k) k = nl - 1; }
-        else if (nl > 1 && E.split('\n')[0] === l) douteuse = true; // 1re ligne d'un fait multiligne, suite divergente
+        else if (nl > 1 && E.split('\n')[0] === l) douteuse = Math.max(douteuse, nl); // 1re ligne d'un fait multiligne, suite divergente
       }
       // Doute : entrée multiligne dont la suite ne correspond pas exactement -> RIEN n'est retiré.
-      if (douteuse && k === 0) { sortie.push(l); continue; }
+      if (douteuse && k === 0) {
+        // on garde aussi tout le bloc (douteuse lignes) : il n'est pas réanalysé comme entrées
+        for (let q = 0; q < douteuse && i + q < lignes.length; q++) sortie.push(lignes[i + q]);
+        i += douteuse - 1; continue;
+      }
       i += k;
     }
     const garde = sortie.join('\n').replace(/\n*$/, '');

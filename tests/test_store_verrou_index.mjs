@@ -477,3 +477,36 @@ test('t28-1 : ligne contenant le lien hors format d entree (virgule) : CONSERVEE
   assert.match(idx, /sauvegarder chaque nuit/);
   assert.match(idx, new RegExp(`feedback_ssh\\.md\\) \u2014 ${d} ssh\nautre chose`));
 });
+
+test('t29-1 : pointeur hors format en fin d index ne decale pas la revision courante (section independante conservee)', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.v1.md'), `---\nname: ssh\ndescription: ssh\n## Services\nconsigne INDEPENDANTE\nmetadata:\n  type: feedback\n---\n\nssh\n## Services\nconsigne INDEPENDANTE\n\n*Saved ${d} via brain store.*\n`);
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), `---\nname: ssh\ndescription: ssh\nmetadata:\n  type: feedback\n---\n\nssh\n\n*Saved ${d} via brain store.*\n`);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\n## Services\nconsigne INDEPENDANTE\n- [SSH](feedback_ssh.md), sauvegarder chaque nuit.\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /## Services\nconsigne INDEPENDANTE/);
+});
+
+test('t29-2 : entree multiligne divergente contenant une autre entree vers le meme fichier : bloc entier conserve', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  ancien(b, 'ssh', 'ssh\nancienne consigne');
+  const bloc = `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\n- [Ssh](feedback_ssh.md) \u2014 2026-01-01 note\n`;
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), bloc);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.ok(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8').startsWith(bloc));
+});
+
+test('t29-3 : fichier ancien entierement CRLF, entree divergente : rien retire ; entree exacte : retiree', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), `---\r\nname: ssh\r\ndescription: ssh\r\nAUTORISER root\r\nmetadata:\r\n  type: feedback\r\n---\r\n\r\nssh\r\nAUTORISER root\r\n\r\n*Saved ${d} via brain store.*\r\n`);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\r\nautre chose\r\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.ok(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8').includes('autre chose'));
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\r\nAUTORISER root\n`);
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), `---\r\nname: ssh\r\ndescription: ssh\r\nAUTORISER root\r\nmetadata:\r\n  type: feedback\r\n---\r\n\r\nssh\r\nAUTORISER root\r\n\r\n*Saved ${d} via brain store.*\r\n`);
+  m.store('ssh INTERDIRE root 2', { type: 'feedback', name: 'ssh' });
+  assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
+});
