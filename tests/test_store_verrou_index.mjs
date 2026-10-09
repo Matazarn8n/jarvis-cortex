@@ -540,3 +540,23 @@ test('t30-3 : index entierement CRLF, entree exacte : retiree (\\r final tolere)
   m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
   assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
 });
+
+test('t31-1 : faux bloc metadata dans le fait : ambigu, rien retire (## Services independant garde)', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  const fait = 'ssh\n## Services\nmetadata:\n  type: feedback\n---\n\nssh\n## Services\nancienne consigne';
+  ancien(b, 'ssh', fait);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — ${d} ssh\n## Services\nconsigne INDEPENDANTE\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /## Services\nconsigne INDEPENDANTE/);
+});
+
+test('t31-2 : fait aux fins de ligne mixtes : entree exacte (octets) retiree avec ses continuations', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  const fait = 'ssh\nAUTORISER root\r\nVoir [Guide](reference_guide.md) AUTORISER root';
+  ancien(b, 'ssh', fait);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ${fait}\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
+});

@@ -451,7 +451,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
           if (W(cand).length <= 110 && W(corps).startsWith(W(cand))) out.add(cand);
           else if (W(cand).length === 110 && cand.endsWith('...') && W(corps).length > 110 && W(corps).startsWith(W(cand).slice(0, 107))) out.add(cand);
         }
-        return [...out];
+        return out.size > 1 ? null : [...out]; // plusieurs coupes plausibles (faux bloc metadata dans le fait) : ambigu
       }
       // Fichier sans `description:` (écrit à la main) : le fait est le corps, coupé avant le pied et,
       // faute de mieux, avant chaque `**Why:**` plausible.
@@ -464,14 +464,17 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // Chaque révision écrit son entrée à SA date (`*Saved AAAA-MM-JJ*`) : le pointeur et son desc
     // ne se rapprochent que d'une révision de même date, sinon une archive voisine pourrait
     // prêter ses lignes à une autre entrée.
+    let ambigu = false; // coupe du fait ambiguë : RIEN n'est retiré de l'index
     const revs = (textes) => textes.flatMap((t0) => {
-      // Fichier CRLF : on analyse en LF puis on rétablit CRLF dans le desc (l'index le contient tel quel).
-      const crlf = t0.includes('\r\n'); const t = t0.replace(/\r\n/g, '\n');
+      // Fichier ENTIÈREMENT CRLF : on analyse en LF puis on rétablit CRLF. Fins mixtes (gabarit LF, fait CRLF) : octets bruts, comparaison exacte.
+      const crlf = t0.includes('\r\n') && !/(^|[^\r])\n/.test(t0); const t = crlf ? t0.replace(/\r\n/g, '\n') : t0;
       const date = (t.match(/\*Saved (\d{4}-\d{2}-\d{2}) via brain store\.\*\s*$/) || [])[1]; // pied FINAL seulement
       const aDesc = /^---\nname: [^\n]*\ndescription: /.test(t);
       const vers = (f) => (crlf ? f.replace(/\n/g, '\r\n') : f);
       // avec `description:` faits() rend déjà le desc final ; sans, c'est le fait brut à tronquer
-      return faits(t, crlf).map((f) => (aDesc ? vers(f) : (f = vers(f)).length <= 110 ? f : f.slice(0, 107) + '...'))
+      const fs_ = faits(t, crlf);
+      if (!fs_) { ambigu = true; return []; }
+      return fs_.map((f) => (aDesc ? vers(f) : (f = vers(f)).length <= 110 ? f : f.slice(0, 107) + '...'))
         .filter((f) => f.includes('\n')).map((f) => ({ date, desc: f }));
     });
     const textes = ancien.split('\u0000');
@@ -486,6 +489,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     const sortie = [];
     for (let i = 0; i < lignes.length; i++) {
       const l = lignes[i];
+      if (ambigu) { sortie.push(l); continue; }
       // Seule une ligne AU FORMAT D'ENTRÉE (`[titre](fichier) — AAAA-MM-JJ …`) est une entrée à retirer :
       // `- [SSH](f.md), sauvegarder…` ou une phrase contenant le lien est une ligne indépendante.
       if (!estEntree(l)) { sortie.push(l); continue; }
