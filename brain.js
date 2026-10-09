@@ -421,7 +421,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // Remplacement versionné : l'entrée d'index de la règle précédente est RETIRÉE (sinon le
       // rappel par index transmettrait l'ancienne consigne révoquée à côté de la nouvelle).
       const cible = path.basename(file);
-    const pointe = (l) => { const m = l.match(LINK_RE); return m && path.resolve(dir, m[2]) === file; };
+    const pointe = (l) => { const m = l.match(/^\s*(?:[-*+]|\d+[.)])?\s*\[([^\]]+)\]\(([^)]+)\)/); return m && path.resolve(dir, m[2]) === file; };
     const prev = fs.existsSync(index) ? fs.readFileSync(index, 'utf8') : '';
     // On retire l'entrée dont le pointeur PRINCIPAL est ce fichier, et ses lignes de continuation
     // EXACTES : l'ancien store écrivait `tete + desc` avec desc = fait (tronqué à 107 + '...' au-delà
@@ -435,17 +435,27 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // jusqu'à son bloc `metadata:\n  type:` fixe, pas jusqu'au premier '---'. La fin du fait est
     // ambiguë (le fait peut contenir `**Why:**`) : on retourne TOUTES les coupes plausibles.
     const faits = (t) => {
-      // Début du fait : après CHAQUE bloc `metadata:\n  type:\n---` plausible (la description ou le
-      // fait peuvent en contenir un), à défaut après le premier front matter.
-      const debuts = [];
-      for (const m of t.matchAll(/\nmetadata:\n  type: [^\n]*\n---(?=\n)/g)) debuts.push(m.index + m[0].length + (t.startsWith('\n\n', m.index + m[0].length) ? 2 : 1));
-      if (!debuts.length) { const m = t.match(/^---\n[\s\S]*?\n---\n\n?/); debuts.push(m ? m[0].length : 0); }
-      const coupes = new Set();
-      for (const d of debuts) {
-        const sansPied = t.slice(d).replace(/\n\n?\*Saved [^\n]*\n?$/, '');
-        coupes.add(sansPied.trimEnd());
-        for (let m = sansPied.indexOf('\n\n**Why:**'); m >= 0; m = sansPied.indexOf('\n\n**Why:**', m + 1)) coupes.add(sansPied.slice(0, m).trimEnd());
+      const FIN = /\nmetadata:\n  type: [^\n]*\n---(?=\n)/g;
+      const dm = t.match(/^---\nname: [^\n]*\ndescription: /);
+      if (dm) {
+        // Le desc historique est recopié tel quel dans `description:` PUIS en tête du corps : la
+        // vraie fin du front matter est le bloc metadata après lequel le corps recommence par ce desc.
+        const out = new Set();
+        for (const m of t.slice(dm[0].length).matchAll(FIN)) {
+          const cand = t.slice(dm[0].length, dm[0].length + m.index);
+          const apres = t.slice(dm[0].length + m.index + m[0].length);
+          if (!apres.startsWith('\n\n')) continue;
+          const corps = apres.slice(2);
+          if (corps.startsWith(cand) || (cand.endsWith('...') && corps.startsWith(cand.slice(0, -3)))) out.add(cand);
+        }
+        return [...out];
       }
+      // Fichier sans `description:` (écrit à la main) : le fait est le corps, coupé avant le pied et,
+      // faute de mieux, avant chaque `**Why:**` plausible.
+      const fm = t.match(/^---\n[\s\S]*?\n---\n\n?/);
+      const sansPied = t.slice(fm ? fm[0].length : 0).replace(/\n\n?\*Saved [^\n]*\n?$/, '');
+      const coupes = new Set([sansPied.trimEnd()]);
+      for (let m = sansPied.indexOf('\n\n**Why:**'); m >= 0; m = sansPied.indexOf('\n\n**Why:**', m + 1)) coupes.add(sansPied.slice(0, m).trimEnd());
       return [...coupes];
     };
     // Chaque révision écrit son entrée à SA date (`*Saved AAAA-MM-JJ*`) : le pointeur et son desc
@@ -471,25 +481,25 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // Une ligne au format d'entrée de store (`[titre](fichier) — AAAA-MM-JJ …`) est une entrée
       // indépendante, jamais une continuation. Une continuation est une ligne de l'ancien fait,
       // égale à la ligne du desc, ou — pour la dernière — tronquée par '...' / '…'.
-      const ENTREE = /^\s*(?:[-*+]|\d+[.)])?\s*\[[^\]]+\]\([^)]+\) — \d{4}-\d{2}-\d{2}\b/;
       let k = 0;
       for (const { d, date } of (i === derniere ? courantes : revisions)) {
         // 1re ligne EXACTE : `tete + desc` historique. Une entrée aplatie (store actuel) dont le
-        // texte se termine par d[0] n'est pas une entrée multiligne. Tronquée par '…' : préfixe.
+        // texte se termine par d[0] n'est pas une entrée multiligne.
         const reste = (l.match(/\) — \d{4}-\d{2}-\d{2} (.*)$/) || [])[1];
-        if (reste === undefined || (date && !l.includes(` — ${date} `))) continue;
-        const tr = reste.match(/^(.*?)(\.\.\.|…)$/);
-        if (reste !== d[0] && !(tr && tr[1] !== '' && d[0].startsWith(tr[1]))) continue;
-        let n = 0;
+        if (reste !== d[0] || (date && !l.includes(` — ${date} `))) continue;
+        // Toutes les lignes suivantes du desc doivent être là, à l'identique (une ligne égale gagne
+        // même au format d'entrée) ; seule la dernière ligne présente peut être tronquée par '...'/'…'
+        // (plafond d'index). Une divergence = lignes étrangères : rien n'est retiré.
+        let n = 0; let ok = true;
         for (let q = 1; q < d.length; q++) {
           const x = lignes[i + q];
-          if (x === undefined || ENTREE.test(x)) break;
+          if (x === undefined) { ok = false; break; }
           if (x.trimEnd() === d[q].trimEnd()) { n = q; continue; }
           const m = x.trimEnd().match(/^(.*?)(\.\.\.|…)$/);
-          if (m && m[1] !== '' && d[q].startsWith(m[1])) n = q;
-          break;
+          if (m && m[1] !== '' && d[q].startsWith(m[1])) { n = q; break; }
+          ok = false; break;
         }
-        if (n > k) k = n;
+        if (ok && n > k) k = n;
       }
       i += k;
     }

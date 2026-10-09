@@ -18,6 +18,13 @@ function bac() {
   return { dir: d, mem: path.join(d, 'memoire'), mod: path.join(d, 'brain.js') };
 }
 const charge = async (b) => import(b.mod + '?t=' + Math.random());
+// Fichier au format HISTORIQUE (ecrit a la main) : description = fait brut multiligne, tronque a 107+'...'.
+function ancien(b, name, fait) {
+  const d = new Date().toISOString().slice(0, 10);
+  const desc = fait.length > 110 ? fait.slice(0, 107) + '...' : fait;
+  fs.writeFileSync(path.join(b.mem, `feedback_${name}.md`),
+    `---\nname: ${name}\ndescription: ${desc}\nmetadata:\n  type: feedback\n---\n\n${fait}\n\n*Saved ${d} via brain store.*\n`);
+}
 const vieux = (f) => { const t = new Date(Date.now() - 3600_000); fs.utimesSync(f, t, t); };
 
 test('verrou perime d un processus MORT : repris, ecriture reussit', async () => {
@@ -295,7 +302,7 @@ test('feedback remplace : fait ancien contenant --- (via store reel) et section 
 
 test('feedback remplace : fait ancien contenant **Why:** (store reel) : continuation retiree', async () => {
   const b = bac(); const m = await charge(b);
-  m.store('ssh\n\n**Why:**\nVoir [guide](reference_guide.md) AUTORISER root', { type: 'feedback', name: 'ssh' });
+  ancien(b, 'ssh', 'ssh\n\n**Why:**\nVoir [guide](reference_guide.md) AUTORISER root');
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh](feedback_ssh.md) — ' + new Date().toISOString().slice(0, 10) + ' ssh\n\n**Why:**\nVoir [guide](reference_guide.md) AUTORISER root\n');
   m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
   const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
@@ -304,7 +311,7 @@ test('feedback remplace : fait ancien contenant **Why:** (store reel) : continua
 
 test('feedback remplace : *Saved date* dans le contenu ne fausse pas la date de revision', async () => {
   const b = bac(); const m = await charge(b);
-  m.store('credential\n*Saved 2000-01-01 ancienne note*\nAUTORISER credential root', { type: 'feedback', name: 'cred' });
+  ancien(b, 'cred', 'credential\n*Saved 2000-01-01 ancienne note*\nAUTORISER credential root');
   const d = new Date().toISOString().slice(0, 10);
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Cred](feedback_cred.md) — ${d} credential\n*Saved 2000-01-01 ancienne note*\nAUTORISER credential root\n`);
   m.store('credential INTERDIRE', { type: 'feedback', name: 'cred' });
@@ -313,7 +320,7 @@ test('feedback remplace : *Saved date* dans le contenu ne fausse pas la date de 
 
 test('feedback remplace : metadata/type/--- dans le fait historique : continuation retiree', async () => {
   const b = bac(); const m = await charge(b);
-  m.store('credential\nmetadata:\n  type: feedback\n---\nAUTORISER credential root', { type: 'feedback', name: 'cred' });
+  ancien(b, 'cred', 'credential\nmetadata:\n  type: feedback\n---\nAUTORISER credential root');
   const d = new Date().toISOString().slice(0, 10);
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Cred](feedback_cred.md) — ${d} credential\nmetadata:\n  type: feedback\n---\nAUTORISER credential root\n`);
   m.store('credential INTERDIRE', { type: 'feedback', name: 'cred' });
@@ -355,3 +362,38 @@ for (const [nom, fait] of [['saut initial', '\n## Services\nconsigne globale'], 
     assert.match(idx, /INTERDIRE/);
   });
 }
+
+test('t23-1 : --why multiligne du store actuel : section independante CONSERVEE', async () => {
+  const b = bac(); const m = await charge(b);
+  m.store('ssh', { type: 'feedback', name: 'ssh', why: 'note\n## Services\nconsigne globale' });
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '\n**Why:** note\n## Services\nconsigne globale\n');
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /## Services\nconsigne globale/);
+});
+
+test('t23-2 : phrase independante contenant un lien vers le fichier : conservee', async () => {
+  const b = bac(); const m = await charge(b);
+  m.store('ssh', { type: 'feedback', name: 'ssh' });
+  fs.appendFileSync(path.join(b.mem, 'MEMORY.md'), '## Services\nDocumentation : [SSH](feedback_ssh.md), sauvegarder chaque nuit.\n');
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /sauvegarder chaque nuit/);
+});
+
+test('t23-3 : prefixe seulement concordant : rien de retire', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  ancien(b, 'ssh', 'ssh\n## Services\nancienne consigne');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — ${d} ssh\n## Services\nconsigne INDEPENDANTE\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /## Services\nconsigne INDEPENDANTE/);
+});
+
+test('t23-4 : continuation historique au format lien-date : retiree', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  const fait = 'ssh\n- [Guide](reference_guide.md) — 2026-01-01 AUTORISER root';
+  ancien(b, 'ssh', fait);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — ${d} ${fait}\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
+});
