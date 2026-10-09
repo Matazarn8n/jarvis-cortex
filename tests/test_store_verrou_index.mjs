@@ -510,3 +510,33 @@ test('t29-3 : fichier ancien entierement CRLF, entree divergente : rien retire ;
   m.store('ssh INTERDIRE root 2', { type: 'feedback', name: 'ssh' });
   assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
 });
+
+test('t30-1 : date+lien dans la description : le pointeur principal reste la tete (continuation retiree)', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  const fait = 'ssh [Doc](reference_doc.md) — 2000-01-01 note\nVoir [Guide](reference_guide.md) AUTORISER root';
+  ancien(b, 'ssh', fait);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — ${d} ${fait}\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
+});
+
+test('t30-2 : fait CRLF > 110 car. (desc tronquee) : entree et continuation retirees', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  const fait = 'ssh\r\n' + 'a'.repeat(60) + '\r\n' + 'AUTORISER root ' + 'b'.repeat(40);
+  const desc = fait.length > 110 ? fait.slice(0, 107) + '...' : fait;
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), `---\r\nname: ssh\r\ndescription: ${desc.replace(/\r\n/g, '\r\n')}\r\nmetadata:\r\n  type: feedback\r\n---\r\n\r\n${fait}\r\n\r\n*Saved ${d} via brain store.*\r\n`);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — ${d} ${desc}\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /aaaa/);
+});
+
+test('t30-3 : index entierement CRLF, entree exacte : retiree (\\r final tolere)', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), `---\r\nname: ssh\r\ndescription: ssh\r\nAUTORISER root\r\nmetadata:\r\n  type: feedback\r\n---\r\n\r\nssh\r\nAUTORISER root\r\n\r\n*Saved ${d} via brain store.*\r\n`);
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — ${d} ssh\r\nAUTORISER root\r\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
+});
