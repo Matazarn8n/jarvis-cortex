@@ -130,7 +130,7 @@ function recall(query, opts) {
   if (hits.length && opts.hop !== false && !found) {
     const m = hits[0].slice.match(/[\w][\w\/.-]*\.md/g);
     for (const cand of (m || [])) {
-      if (/^(MEMORY|memory-)/.test(cand)) continue;
+      if (/^(MEMORY|memory-)/.test(cand) || /\.v\d+\.md$/.test(cand)) continue; // jamais d'archive révoquée
       const p1 = path.resolve(ROOT, cand);
       const p2 = path.resolve(path.dirname(path.join(ROOT, hits[0].file)), cand);
       const hp = fs.existsSync(p1) ? p1 : (fs.existsSync(p2) ? p2 : null);
@@ -182,14 +182,24 @@ function lisVerrou(f) {
 // mort. Personne d'autre ne supprime le verrou principal (hors son propre jeton à la sortie),
 // donc un verrou frais ne peut pas être emporté. Un `.reap` abandonné n'est jamais volé : on
 // échoue bruyamment (fenêtre de quelques microsecondes), plutôt que de rouvrir la course.
+function verrouPerime(cur) {
+  // Périmé = ancien (observation FRAÎCHE) ET propriétaire mort. Un contenu vide (écriture du
+  // jeton en cours, ou crash entre open et write) n'est périmé que par son âge seul.
+  const age = Date.now() - cur.st.mtimeMs;
+  if (age <= STORE_LOCK_STALE_MS) return false;
+  const pid = Number(cur.owner.split(':')[0]);
+  return cur.owner === '' || (Number.isInteger(pid) && pid > 0 && !pidVivant(pid));
+}
+
 function reprendreVerrouPerime(lock, ownerLu) {
   const reap = lock + '.reap';
   let fd;
   try { fd = fs.openSync(reap, 'wx'); }
   catch (e) { if (e.code === 'EEXIST') return false; throw e; }
   try {
+    // Réobservation SOUS le verrou de reprise : même propriétaire ET toujours périmé à l'instant T.
     const cur = lisVerrou(lock);
-    if (cur && cur.owner === ownerLu && !pidVivant(Number(ownerLu.split(':')[0]))) fs.unlinkSync(lock);
+    if (cur && cur.owner === ownerLu && verrouPerime(cur)) fs.unlinkSync(lock);
     return true;
   } finally {
     try { fs.closeSync(fd); } catch (_) {}
@@ -212,12 +222,7 @@ function withStoreLock(dir, fn) {
     } catch (e) {
       if (e.code !== 'EEXIST') throw e;
       const cur = lisVerrou(lock); // lève sur EACCES etc. : jamais de boucle muette
-      if (cur) {
-        const age = Date.now() - cur.st.mtimeMs;
-        const pid = Number(cur.owner.split(':')[0]);
-        // Périmé = vieux ET propriétaire mort. Un propriétaire vivant garde son verrou.
-        if (age > STORE_LOCK_STALE_MS && !pidVivant(pid) && reprendreVerrouPerime(lock, cur.owner)) continue;
-      }
+      if (cur && verrouPerime(cur) && reprendreVerrouPerime(lock, cur.owner)) continue;
       // Attente SYNCHRONE sans dépendance : `store` est un chemin synchrone de
       // bout en bout, un `await` ici changerait sa signature.
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
@@ -244,6 +249,7 @@ function store(fact, opts) {
   // convention des memories écrites à la main, et celle des pointeurs [[...]]).
   // Le recoller aveuglément a produit 63 `feedback_feedback_*` et un pointeur
   // mort dans CLAUDE.md racine — vérifié le 2026-08-11.
+  if (name.length > 120) throw new Error(`store: --name de ${name.length} caractères (max 120) — le pointeur d'index doit tenir dans 200 caractères.`);
   const base = name.replace(/-/g, '_');
   const file = path.join(dir, (prefix && base.startsWith(prefix) ? '' : prefix) + base + '.md');
   const today = new Date().toISOString().slice(0, 10);

@@ -93,3 +93,30 @@ store('version '+process.argv[1],{type:'feedback',name:'course'});`;
   const fichiers = fs.readdirSync(b.mem).filter((f) => /^feedback_course(\.v\d+)?\.md$/.test(f));
   assert.equal(fichiers.length, 8, fichiers.join(','));
 });
+
+test('verrou VIDE et frais (jeton en cours d ecriture) : jamais repris', async () => {
+  process.env.BRAIN_LOCK_TIMEOUT_MS = '300';
+  const b = bac(); const m = await charge(b);
+  delete process.env.BRAIN_LOCK_TIMEOUT_MS;
+  const lock = path.join(b.mem, '.store.lock');
+  fs.writeFileSync(lock, '');
+  assert.throws(() => m.store('regle', { type: 'feedback', name: 'r_vide' }), /verrou/);
+  assert.ok(fs.existsSync(lock));
+});
+
+test('rappel : une regle active qui cite son archive .v1.md ne la fait pas lire', async () => {
+  const b = bac(); const m = await charge(b);
+  fs.writeFileSync(path.join(b.mem, 'feedback_gamma.v1.md'), 'ANCIENNE regle revoquee gamma');
+  fs.writeFileSync(path.join(b.mem, 'feedback_gamma.md'), '# gamma\nregle active gamma, ancienne version: feedback_gamma.v1.md\n');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Gamma](feedback_gamma.md) — 2026-01-01 gamma regle\n');
+  assert.doesNotMatch(JSON.stringify(m.recall('gamma')), /ANCIENNE/);
+});
+
+test('--name trop long refuse ; 120 caracteres tient dans 200', async () => {
+  const b = bac(); const m = await charge(b);
+  assert.throws(() => m.store('x', { type: 'user', name: 'b'.repeat(180) }), /max 120/);
+  m.store('y'.repeat(300), { type: 'reference', name: 'c'.repeat(120) });
+  const ligne = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8').trim().split('\n').pop();
+  assert.ok(ligne.length <= 200, `${ligne.length}`);
+  assert.match(ligne, /\(reference_c+\.md\)/);
+});
