@@ -336,7 +336,7 @@ tickets:
     # MAIS DEUX FILS LANCÉS UNE FOIS NE PROUVENT PAS LE VERROU — l'ordonnanceur
     # peut les sérialiser, et un pont sans verrou passe alors. Deux axes de plus,
     # indépendants de l'ordonnancement : la sonde tente elle-même
-# OBSOLÈTE (fix/brain-store-prefixe-et-budget) : le verrou .memory.lock et la réécriture d'index par le pont sont abrogés ; brain.js store() tient memory/.store.lock et gère l'index. Voir B-T3 §3 MISE À JOUR.
+# NOTE (fix/brain-store-prefixe-et-budget) : ces axes RESTENT exigés (quatorze) ; brain.js store() ajoute sa protection, le pont garde la sienne (défense en profondeur).
     # `flock(<racine>/.memory.lock, LOCK_NB)` pendant qu'une écriture est en vol
     # et exige un refus ; puis, le verrou constaté tenu, elle joue l'écrivain
     # DIRECT que le verrou ne lie pas — un `brain.js` lancé à la main — en

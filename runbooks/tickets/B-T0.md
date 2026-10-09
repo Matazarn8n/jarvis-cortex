@@ -249,10 +249,10 @@ Exigences, une par axe :
 - `MEMORY.md` porte **toujours une seule** ligne après le quatrième appel : une
   révision versionne le fichier, elle ne duplique pas l'index.
 
-> **MISE À JOUR (branche fix/brain-store-prefixe-et-budget)** : ce contrat de concurrence décrit l'ancien
-> état (index append-only, pont qui dédoublonne et remplace `MEMORY.md`). `brain.js store()` prend désormais
+> **MISE À JOUR (branche fix/brain-store-prefixe-et-budget)** : `brain.js store()` prend désormais
 > `memory/.store.lock` pour tout le geste et retire lui-même l'ancienne entrée d'index d'un `feedback`
-> remplacé : voir la MISE À JOUR de B-T3 §3, qui fait foi.
+> remplacé. Ce contrat du pont (verrou `.memory.lock`, réécriture bornée, quatorze axes, autotest) reste
+> INCHANGÉ : défense en profondeur, voir la NOTE de B-T3 §3.
 
 **Puis la concurrence — cinq axes de plus, et le trou que l'audit a nommé.**
 `brain.js` indexe en append-only (l. 208-220) : tenir *une* ligne par règle

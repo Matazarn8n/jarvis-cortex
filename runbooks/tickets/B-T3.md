@@ -27,7 +27,6 @@ ici :
 8. l'index tient toujours une seule ligne après cette révision ;
 9. deux écrivains concurrents produisent leurs **deux** `<slug>.md` ;
 10. et leurs **deux** lignes d'index, une par slug ;
-(items 11 à 13 : OBSOLÈTES, voir MISE À JOUR de §3 — verrou et index tenus par `brain.js store()`)
 11. le verrou `<racine>/.memory.lock` est réellement pris (refus observé) ;
 12. une ligne ajoutée par un écrivain **direct** pendant le cycle survit ;
 13. le verrou n'est rendu qu'**après** le `os.replace()` de l'index ; cet axe
@@ -190,9 +189,9 @@ versionne le fichier.
 > **MISE À JOUR (branche fix/brain-store-prefixe-et-budget)** : `brain.js store()` prend désormais
 > lui-même `memory/.store.lock` pour TOUT le geste (corps + index, tous les types) et, pour un
 > remplacement `feedback`, RETIRE l'ancienne entrée d'index avant d'ajouter la nouvelle (une seule
-> ligne par règle). Le pont n'a donc plus à relire/dédoublonner/réécrire `MEMORY.md` ni à prendre
-> `.memory.lock` pour l'index : cette réécriture est supprimée du contrat, et la « dette »
-> ci-dessous est fermée par le magasin. Le texte qui suit décrit l'ancien état (index append-only).
+> ligne par règle). Le magasin ferme donc lui-même la « dette » ci-dessous
+> (écrivain direct concurrent). Le contrat du pont reste INCHANGÉ (`.memory.lock`, réécriture bornée
+> à son slug, quatorze axes, autotest) : c'est une défense en profondeur, le pont ne dépend pas du magasin.
 
 Le point précédent te met dans une situation que `brain.js` ne gère pas pour toi.
 Il ajoute sa ligne d'index **en append-only** (l. 208-220) : tenir *une* ligne
@@ -282,7 +281,7 @@ Elle exige ensuite :
   justification est versionnée, pas avalée ;
 - `MEMORY.md` porte **toujours une seule** ligne après le quatrième appel.
 
-> **OBSOLÈTE (branche fix/brain-store-prefixe-et-budget)** : les exigences ci-dessous sur `.memory.lock`, la réécriture d'index par le pont et le `os.replace()` sont ABROGÉES par la MISE À JOUR de §3 : `brain.js store()` tient `memory/.store.lock` et gère l'index (une ligne par règle). Ne pas les exiger du pont ni de la sonde.
+> **NOTE (branche fix/brain-store-prefixe-et-budget)** : les axes de concurrence ci-dessous (11 à 13, quatorze axes au total) RESTENT exigés du pont : `brain.js store()` ajoute sa propre protection (`.store.lock`, une ligne par règle), le pont garde la sienne (`.memory.lock`) en défense en profondeur.
 
 Puis elle exerce la **concurrence**, ce que les quatre appels séquentiels ne
 peuvent pas faire : dans un sous-dossier neuf du bac à sable — une racine
