@@ -344,6 +344,9 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
   // est partagé, deux écrivains ne doivent jamais s'y croiser.
   let entry;
   withStoreLock(dir, () => {
+    // Contenu de la règle AVANT remplacement : il sert à reconnaître, dans l'index, les lignes de
+    // continuation d'une ancienne entrée multiligne (ce sont des lignes de cet ancien fait).
+    const ancien = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
     // Trois régimes d'écriture, pilotés par `type` (déjà calculé plus haut) :
     //  - user/reference (sémantique)  : upsert, comportement historique inchangé.
     //  - project (épisodique)         : append-only — un fichier existant bloque
@@ -416,15 +419,23 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       const cible = path.basename(file);
     const pointe = (l) => { const m = l.match(LINK_RE); return m && path.resolve(dir, m[2]) === file; };
     const prev = fs.existsSync(index) ? fs.readFileSync(index, 'utf8') : '';
-    // On retire l'entrée dont le pointeur PRINCIPAL est ce fichier, et ses éventuelles lignes de
-    // continuation (anciennes entrées multilignes) jusqu'à la prochaine ENTRÉE d'index (lignes vides, puces ou titres compris : une ancienne
-    // description multiligne peut en contenir, et la laisser garderait la consigne révoquée).
-    const sortie = []; let saute = false;
+    // On retire l'entrée dont le pointeur PRINCIPAL est ce fichier, et ses lignes de continuation :
+    // celles-là seules qui sont des lignes de l'ANCIEN fait (anciennes entrées multilignes ; une
+    // ligne tronquée par '...' compte). Une ligne vide ne part que si une ligne de l'ancien fait la
+    // suit. Titres, puces ou sections étrangères sont conservés.
+    const ancLignes = ancien.split('\n').map((x) => x.trim()).filter(Boolean);
+    const estAncienne = (l) => { const t = l.trim().replace(/\.\.\.$/, ''); return t !== '' && ancLignes.some((a) => a === l.trim() || a.startsWith(t)); };
+    const sortie = []; let saute = false; let blancs = [];
     for (const l of prev.split('\n')) {
-      if (pointe(l)) { saute = true; continue; }
-      if (saute && !LINK_RE.test(l)) continue; // continuation = ligne SANS lien (meme definition que recall)
-      saute = false; sortie.push(l);
+      if (pointe(l)) { saute = true; blancs = []; continue; }
+      if (saute) {
+        if (l.trim() === '') { blancs.push(l); continue; }
+        if (estAncienne(l)) { blancs = []; continue; }
+        saute = false; sortie.push(...blancs); blancs = [];
+      }
+      sortie.push(l);
     }
+    sortie.push(...blancs);
     const garde = sortie.join('\n').replace(/\n*$/, '');
     const tmp = `${index}.tmp-${process.pid}`;
       fs.writeFileSync(tmp, (garde ? garde + '\n' : '') + entry);

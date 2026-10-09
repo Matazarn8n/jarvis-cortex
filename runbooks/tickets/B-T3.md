@@ -189,8 +189,8 @@ versionne le fichier.
 > **MISE À JOUR (branche fix/brain-store-prefixe-et-budget)** : `brain.js store()` prend désormais
 > lui-même `memory/.store.lock` pour TOUT le geste (corps + index, tous les types) et, pour un
 > remplacement `feedback`, RETIRE l'ancienne entrée d'index avant d'ajouter la nouvelle (une seule
-> ligne par règle). Le magasin ferme donc lui-même la « dette » ci-dessous
-> (écrivain direct concurrent). Le contrat du pont reste INCHANGÉ (`.memory.lock`, réécriture bornée
+> ligne par règle). Le magasin ne coordonne que `store()` contre `store()` : la « dette » ci-dessous
+> (écrivain direct pendant la réécriture du pont, `.memory.lock` ≠ `.store.lock`) RESTE OUVERTE, elle n'est pas fermée par le magasin. Le contrat du pont reste INCHANGÉ (`.memory.lock`, réécriture bornée
 > à son slug, quatorze axes, autotest) : c'est une défense en profondeur, le pont ne dépend pas du magasin.
 
 Le point précédent te met dans une situation que `brain.js` ne gère pas pour toi.

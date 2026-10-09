@@ -162,6 +162,7 @@ test('feedback multiligne remplace : plus de continuation de l ancienne consigne
   assert.match(idx, /INTERDIRE/);
   assert.equal(idx.trim().split('\n').length, 1);
   // ancienne entree multiligne deja presente dans l index
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh_ml.md'), '---\nname: ssh_ml\n---\n\nssh\nAUTORISER ancien\n');
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh Ml](feedback_ssh_ml.md) — 2026-01-01 ssh\nAUTORISER ancien\n- [Autre](feedback_autre.md) — 2026-01-01 voir [SSH](feedback_ssh_ml.md)\n');
   m.store('ssh\nINTERDIRE v3', { type: 'feedback', name: 'ssh_ml' });
   const idx2 = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
@@ -173,6 +174,7 @@ test('feedback multiligne remplace : plus de continuation de l ancienne consigne
 test('feedback remplace : ancienne description avec ligne vide, puce, titre retiree', async () => {
   const b = bac(); const m = await charge(b);
   fs.mkdirSync(b.mem, { recursive: true });
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh_ml.md'), '---\nname: ssh_ml\n---\n\nssh\n\nAUTORISER vide\n- AUTORISER puce\n# AUTORISER titre\n');
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh Ml](feedback_ssh_ml.md) — 2026-01-01 ssh\n\nAUTORISER vide\n- AUTORISER puce\n# AUTORISER titre\n- [Autre](feedback_autre.md) — 2026-01-01 garde\n');
   m.store('ssh INTERDIRE', { type: 'feedback', name: 'ssh_ml' });
   const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
@@ -218,4 +220,16 @@ test('feedback remplace : entree numerotee retiree, entree numerotee voisine con
   const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
   assert.doesNotMatch(idx, /AUTORISER/);
   assert.match(idx, /reference_voisin\.md/);
+});
+
+test('feedback remplace : section etrangere et continuation contenant un lien', async () => {
+  const b = bac(); const m = await charge(b);
+  fs.mkdirSync(b.mem, { recursive: true });
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), '---\nname: ssh\n---\n\nssh\nVoir [guide](reference_guide.md) : AUTORISER root\n');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh](feedback_ssh.md) — 2026-01-01 ssh\nVoir [guide](reference_guide.md) : AUTORISER root\n\n## Services\nconsigne globale conservee\n');
+  m.store('INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx, /AUTORISER/);
+  assert.match(idx, /## Services/);
+  assert.match(idx, /consigne globale conservee/);
 });
