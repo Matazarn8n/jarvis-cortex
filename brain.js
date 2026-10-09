@@ -62,7 +62,7 @@ function recall(query, opts) {
   }
   // 2) filename sweep (names only - no content reads)
   for (const f of fs.readdirSync(MEM)) {
-    if (!f.endsWith('.md')) continue;
+    if (!f.endsWith('.md') || /\.v\d+\.md$/.test(f)) continue; // archives versionnées : pas des règles actives
     const fw = words(f.replace(/\.md$/, ''));
     let score = 0;
     for (const w of qw) {
@@ -165,21 +165,41 @@ function recall(query, opts) {
 // se périme : sans ça, un crash figerait le magasin pour toujours, ce qui est
 // pire que la course qu'il ferme.
 const STORE_LOCK_STALE_MS = 60000;
-const STORE_LOCK_TIMEOUT_MS = 10000;
+const STORE_LOCK_TIMEOUT_MS = Number(process.env.BRAIN_LOCK_TIMEOUT_MS) || 10000;
+
+function pidVivant(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
+}
 
 function withStoreLock(dir, fn) {
   const lock = path.join(dir, '.store.lock');
+  const token = `${process.pid}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
   const t0 = Date.now();
-  let fd = null;
   for (;;) {
     try {
-      fd = fs.openSync(lock, 'wx');
+      const fd = fs.openSync(lock, 'wx');
+      try { fs.writeSync(fd, token); } finally { fs.closeSync(fd); }
       break;
     } catch (e) {
       if (e.code !== 'EEXIST') throw e;
-      let age = Infinity;
-      try { age = Date.now() - fs.statSync(lock).mtimeMs; } catch (_) { age = Infinity; }
-      if (age > STORE_LOCK_STALE_MS) { try { fs.unlinkSync(lock); } catch (_) {} continue; }
+      let st, owner;
+      try { st = fs.statSync(lock); owner = fs.readFileSync(lock, 'utf8'); }
+      catch (_) { continue; } // le verrou a disparu entre-temps : on retente l'ouverture, JAMAIS d'unlink
+      const age = Date.now() - st.mtimeMs;
+      const pid = Number(owner.split(':')[0]);
+      // Périmé = vieux ET propriétaire mort. Un propriétaire vivant garde son verrou.
+      if (age > STORE_LOCK_STALE_MS && !pidVivant(pid)) {
+        // Prise atomique par rename : un seul gagnant. Si on a pris un verrou frais d'un
+        // autre (contenu différent), on le remet via link (échoue si le chemin est repris).
+        const vole = `${lock}.stale-${token.replace(/:/g, '_')}`;
+        try {
+          fs.renameSync(lock, vole);
+          if (fs.readFileSync(vole, 'utf8') === owner) fs.unlinkSync(vole);
+          else { try { fs.linkSync(vole, lock); } catch (_) {} fs.unlinkSync(vole); }
+        } catch (_) {}
+        continue;
+      }
       if (Date.now() - t0 > STORE_LOCK_TIMEOUT_MS) {
         throw new Error(`store: verrou ${lock} tenu depuis ${Math.round(age)} ms — un autre écrivain n'a pas rendu la main.`);
       }
@@ -191,8 +211,8 @@ function withStoreLock(dir, fn) {
   try {
     return fn();
   } finally {
-    try { fs.closeSync(fd); } catch (_) {}
-    try { fs.unlinkSync(lock); } catch (_) {}
+    // Ne supprimer QUE son propre verrou (jamais celui d'un autre écrivain).
+    try { if (fs.readFileSync(lock, 'utf8') === token) fs.unlinkSync(lock); } catch (_) {}
   }
 }
 
@@ -272,8 +292,12 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
   // 2026-08-11. Un index toujours chargé qui grossit sans plafond finit par
   // coûter plus cher que ce qu'il fait gagner, donc on tronque à l'écriture.
   const ENTRY_MAX = 200;
-  let entry = `- [${title}](${path.basename(file)}) — ${today} ${desc}\n`;
-  if (entry.length - 1 > ENTRY_MAX) entry = entry.slice(0, ENTRY_MAX - 1).trimEnd() + '…\n';
+  // On ne tronque QUE la description : le lien [titre](fichier) doit rester entier, c'est
+  // le pointeur que le parcours par index exploite.
+  const tete = `- [${title}](${path.basename(file)}) — ${today} `;
+  const reste = Math.max(0, ENTRY_MAX - 1 - tete.length);
+  let entry = tete + desc + '\n';
+  if (entry.length - 1 > ENTRY_MAX) entry = tete + (reste > 0 ? desc.slice(0, reste).trimEnd() + '…' : '…') + '\n';
   if (opts.sandbox && !fs.existsSync(index)) fs.writeFileSync(index, '# Sandbox Memory Index\n\n');
   fs.appendFileSync(index, entry);
   // Le fait n'est jamais perdu (il est dans son fichier) — mais l'index qui
