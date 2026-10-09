@@ -238,7 +238,7 @@ test('feedback remplace : prefixe sans marque de troncature non supprime ; tronc
   const b = bac(); const m = await charge(b);
   fs.mkdirSync(b.mem, { recursive: true });
   fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), '---\nname: ssh\n---\n\nssh\n## Services SSH\nAUTORISER connexion root totale\n');
-  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh](feedback_ssh.md) — 2026-01-01 ssh\nAUTORISER connexion ro…\n## Services\n');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [Ssh](feedback_ssh.md) — 2026-01-01 ssh\n## Services SSH\nAUTORISER connexion ro…\n## Services\n');
   m.store('INTERDIRE root', { type: 'feedback', name: 'ssh' });
   const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
   assert.doesNotMatch(idx, /AUTORISER/);
@@ -266,4 +266,17 @@ test('feedback remplace : entree voisine identique a une ligne d archive conserv
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — 2026-01-01 ssh\n${l}\n`);
   m.store('INTERDIRE', { type: 'feedback', name: 'ssh' });
   assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /reference_services\.md/);
+});
+
+test('feedback remplace : ligne [..](..) — date sans puce voisine conservee ; continuation puce+lien de l ancien fait retiree', async () => {
+  const b = bac(); const m = await charge(b);
+  fs.mkdirSync(b.mem, { recursive: true });
+  const v = '[Services](reference_services.md) — 2026-01-01 needle';
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.v1.md'), `---\nname: ssh\n---\n\nssh\n${v}\n`);
+  fs.writeFileSync(path.join(b.mem, 'feedback_ssh.md'), '---\nname: ssh\n---\n\nssh\n- [Guide](reference_guide.md) AUTORISER root\n');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — 2026-01-01 ssh\n- [Guide](reference_guide.md) AUTORISER root\n- [Ssh](feedback_ssh.md) — 2026-01-02 ssh\n${v}\n`);
+  m.store('INTERDIRE', { type: 'feedback', name: 'ssh' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx, /AUTORISER/);
+  assert.match(idx, /reference_services\.md/);
 });

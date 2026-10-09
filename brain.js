@@ -350,7 +350,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // historique append-only) avec leurs propres continuations.
     const racine = path.basename(file, '.md');
     const sources = [file, ...fs.readdirSync(dir).filter((f) => f.startsWith(racine + '.v') && /\.v0*\d+\.md$/.test(f) && f.slice(racine.length).match(/^\.v0*\d+\.md$/)).map((f) => path.join(dir, f))];
-    const ancien = sources.filter((f) => fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\n');
+    const ancien = sources.filter((f) => fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\u0000');
     // Trois régimes d'écriture, pilotés par `type` (déjà calculé plus haut) :
     //  - user/reference (sémantique)  : upsert, comportement historique inchangé.
     //  - project (épisodique)         : append-only — un fichier existant bloque
@@ -423,30 +423,40 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       const cible = path.basename(file);
     const pointe = (l) => { const m = l.match(LINK_RE); return m && path.resolve(dir, m[2]) === file; };
     const prev = fs.existsSync(index) ? fs.readFileSync(index, 'utf8') : '';
-    // On retire l'entrée dont le pointeur PRINCIPAL est ce fichier, et ses lignes de continuation :
-    // celles-là seules qui sont des lignes de l'ANCIEN fait (anciennes entrées multilignes ; une
-    // ligne tronquée par '...' compte). Une ligne vide ne part que si une ligne de l'ancien fait la
-    // suit. Titres, puces ou sections étrangères sont conservés.
-    const ancLignes = ancien.split('\n').map((x) => x.trim()).filter(Boolean);
-    const estAncienne = (l) => {
-      const brut = l.trim(); if (brut === '') return false;
-      if (ancLignes.includes(brut)) return true;
-      // prefixe SEULEMENT si la ligne porte une marque de troncature ('...' ou '…')
-      const m = brut.match(/^(.*?)(\.\.\.|…)$/);
-      return !!(m && m[1].trim() !== '' && ancLignes.some((a) => a.startsWith(m[1].trimEnd())));
-    };
-    const sortie = []; let saute = false; let blancs = [];
-    for (const l of prev.split('\n')) {
-      if (pointe(l)) { saute = true; blancs = []; continue; }
-      if (saute) {
-        if (l.trim() === '') { blancs.push(l); continue; }
-        // entrée indépendante (puce/numéro + lien en tête de ligne) : JAMAIS une continuation
-        if (!/^\s*(?:[-*+]|\d+[.)])\s+\[[^\]]+\]\([^)]+\)/.test(l) && estAncienne(l)) { blancs = []; continue; }
-        saute = false; sortie.push(...blancs); blancs = [];
+    // On retire l'entrée dont le pointeur PRINCIPAL est ce fichier, et ses lignes de continuation
+    // EXACTES : l'ancien store écrivait `tete + desc` avec desc = fait (tronqué à 107 + '...' au-delà
+    // de 110), retours à la ligne compris. L'étendue de l'ancienne entrée se recalcule donc depuis
+    // les faits de l'ancien fichier et de ses archives .vN : on saute exactement les lignes de ce
+    // desc, pas une ligne de plus — une entrée voisine, une section ou un titre ne sont jamais
+    // pris pour une continuation.
+    const fait = (t) => { const c = t.replace(/^---\n[\s\S]*?\n---\n\n?/, ''); const m = c.search(/\n\n\*\*Why:\*\*|\n\n?\*Saved /); return (m < 0 ? c : c.slice(0, m)).trimEnd(); };
+    const descs = ancien.split('\u0000').map(fait).filter((f) => f.includes('\n'))
+      .map((f) => (f.length > 110 ? f.slice(0, 107) + '...' : f).split('\n'));
+    const lignes = prev.split('\n');
+    const sortie = [];
+    for (let i = 0; i < lignes.length; i++) {
+      const l = lignes[i];
+      if (!pointe(l)) { sortie.push(l); continue; }
+      // Une ligne au format d'entrée de store (`[titre](fichier) — AAAA-MM-JJ …`) est une entrée
+      // indépendante, jamais une continuation. Une continuation est une ligne de l'ancien fait,
+      // égale à la ligne du desc, ou — pour la dernière — tronquée par '...' / '…'.
+      const ENTREE = /^\s*(?:[-*+]|\d+[.)])?\s*\[[^\]]+\]\([^)]+\) — \d{4}-\d{2}-\d{2}\b/;
+      let k = 0;
+      for (const d of descs) {
+        if (!l.endsWith(d[0])) continue;
+        let n = 0;
+        for (let q = 1; q < d.length; q++) {
+          const x = lignes[i + q];
+          if (x === undefined || ENTREE.test(x)) break;
+          if (x.trimEnd() === d[q].trimEnd()) { n = q; continue; }
+          const m = x.trimEnd().match(/^(.*?)(\.\.\.|…)$/);
+          if (m && m[1] !== '' && d[q].startsWith(m[1])) n = q;
+          break;
+        }
+        if (n > k) k = n;
       }
-      sortie.push(l);
+      i += k;
     }
-    sortie.push(...blancs);
     const garde = sortie.join('\n').replace(/\n*$/, '');
     const tmp = `${index}.tmp-${process.pid}`;
       fs.writeFileSync(tmp, (garde ? garde + '\n' : '') + entry);
