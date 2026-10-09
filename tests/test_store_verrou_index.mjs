@@ -209,3 +209,13 @@ test('recall: reference active .v1.md citee par l index reste rappelable (seules
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [needle](reference_opaque.v1.md) — 2026-01-01 needle\n');
   assert.match(JSON.stringify(m.recall('needle')), /reference_opaque\.v1\.md/);
 });
+
+test('feedback remplace : entree numerotee retiree, entree numerotee voisine conservee', async () => {
+  const b = bac(); const m = await charge(b);
+  fs.mkdirSync(b.mem, { recursive: true });
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '1. [SSH](feedback_ssh.md) — 2026-01-01 AUTORISER root\n2. [Voisin](reference_voisin.md) — 2026-01-01 garde voisin\n');
+  m.store('INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx, /AUTORISER/);
+  assert.match(idx, /reference_voisin\.md/);
+});

@@ -482,6 +482,8 @@ tickets:
           tid = t.get("id", "?")
           if not t.get("model"):
               echecs.append("%s: model absent" % tid)
+          if t.get("kind") == "human":
+              continue  # ticket humain (ex. B-TM) : le runner n'execute ni codex_gate, ni prompt_file, ni check
           if t.get("codex_gate") is not True:
               echecs.append("%s: codex_gate n'est pas `true` litteral" % tid)
           pf = t.get("prompt_file")

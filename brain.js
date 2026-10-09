@@ -76,6 +76,9 @@ const ROOT_DOC_HINTS = WS.routing || {
 // sont des règles révoquées ; un document actif `reference_x.v1.md` reste
 // rappelable. Insensible à la casse et à `.v01` ; le chemin ET sa cible réelle
 // (lien symbolique) sont testés.
+// Reconnaissance d'une entrée d'index : UNE seule définition, partagée par recall() et par le
+// nettoyage de store() (sinon un format lu par l'un et ignoré par l'autre fuit ou supprime).
+const LINK_RE = /\[([^\]]+)\]\(([^)]+)\)/;
 const ARCHIVE_RE = /^feedback_.*\.v0*\d+\.md$/i;
 let archiveInodes = null; // remis à null au début de chaque recall()
 function isArchived(p) {
@@ -114,7 +117,7 @@ function recall(query, opts) {
   const hub = path.join(MEM, MEM_INDEX);
   if (fs.existsSync(hub)) {
     for (const line of read(hub).split('\n')) {
-      const m = line.match(/\[([^\]]+)\]\(([^)]+)\)/);
+      const m = line.match(LINK_RE);
       if (!m || ARCHIVE_RE.test(path.basename(m[2]))) continue; // archives feedback versionnées : jamais rappelées
       const lw = words(line);
       let score = 0;
@@ -411,8 +414,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // Remplacement versionné : l'entrée d'index de la règle précédente est RETIRÉE (sinon le
       // rappel par index transmettrait l'ancienne consigne révoquée à côté de la nouvelle).
       const cible = path.basename(file);
-    const ENT = /^\s*[-*+]\s+\[[^\]]*\]\(([^)]+)\)/; // puces -, * ou + : meme lecture que recall()
-    const pointe = (l) => { const m = l.match(ENT); return m && path.resolve(dir, m[1]) === file; };
+    const pointe = (l) => { const m = l.match(LINK_RE); return m && path.resolve(dir, m[2]) === file; };
     const prev = fs.existsSync(index) ? fs.readFileSync(index, 'utf8') : '';
     // On retire l'entrée dont le pointeur PRINCIPAL est ce fichier, et ses éventuelles lignes de
     // continuation (anciennes entrées multilignes) jusqu'à la prochaine ENTRÉE d'index (lignes vides, puces ou titres compris : une ancienne
@@ -420,7 +422,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     const sortie = []; let saute = false;
     for (const l of prev.split('\n')) {
       if (pointe(l)) { saute = true; continue; }
-      if (saute && !ENT.test(l)) continue;
+      if (saute && !LINK_RE.test(l)) continue; // continuation = ligne SANS lien (meme definition que recall)
       saute = false; sortie.push(l);
     }
     const garde = sortie.join('\n').replace(/\n*$/, '');
