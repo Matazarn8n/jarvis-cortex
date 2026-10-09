@@ -435,10 +435,17 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // jusqu'à son bloc `metadata:\n  type:` fixe, pas jusqu'au premier '---'. La fin du fait est
     // ambiguë (le fait peut contenir `**Why:**`) : on retourne TOUTES les coupes plausibles.
     const faits = (t) => {
-      const c = /\nmetadata:\n  type: [^\n]*\n---\n/.test(t) ? t.replace(/^[\s\S]*?\nmetadata:\n  type: [^\n]*\n---\n\n?/, '') : t.replace(/^---\n[\s\S]*?\n---\n\n?/, '');
-      const sansPied = c.replace(/\n\n?\*Saved [^\n]*\n?$/, '');
-      const coupes = new Set([sansPied.trimEnd()]);
-      for (let m = sansPied.indexOf('\n\n**Why:**'); m >= 0; m = sansPied.indexOf('\n\n**Why:**', m + 1)) coupes.add(sansPied.slice(0, m).trimEnd());
+      // Début du fait : après CHAQUE bloc `metadata:\n  type:\n---` plausible (la description ou le
+      // fait peuvent en contenir un), à défaut après le premier front matter.
+      const debuts = [];
+      for (const m of t.matchAll(/\nmetadata:\n  type: [^\n]*\n---\n\n?/g)) debuts.push(m.index + m[0].length);
+      if (!debuts.length) { const m = t.match(/^---\n[\s\S]*?\n---\n\n?/); debuts.push(m ? m[0].length : 0); }
+      const coupes = new Set();
+      for (const d of debuts) {
+        const sansPied = t.slice(d).replace(/\n\n?\*Saved [^\n]*\n?$/, '');
+        coupes.add(sansPied.trimEnd());
+        for (let m = sansPied.indexOf('\n\n**Why:**'); m >= 0; m = sansPied.indexOf('\n\n**Why:**', m + 1)) coupes.add(sansPied.slice(0, m).trimEnd());
+      }
       return [...coupes];
     };
     // Chaque révision écrit son entrée à SA date (`*Saved AAAA-MM-JJ*`) : le pointeur et son desc
