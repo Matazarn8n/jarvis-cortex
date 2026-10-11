@@ -1,0 +1,519 @@
+# Runbook M — Trois régimes d'écriture sur la mémoire (C5).
+#
+# Source : contre-audit du 2026-08-19 (artifact c35f327c). Codex gpt-5.6-sol et
+# Fable 5, sans contact, ont tous deux classé C5 « INTÉGRER » et en tête du
+# classement valeur/effort.
+#
+# LE DÉFAUT, MESURÉ. `brain.js` fait `fs.writeFileSync(file, body)` sans
+# condition. Les fichiers de ~/.claude/projects/-home-nuveo/memory/ sont donc
+# tous écrits en écrasement, quel que soit leur `metadata.type`. Le frontmatter
+# `type:` existe déjà et distingue user|feedback|project|reference — il ne pilote
+# simplement RIEN.
+#
+# LA CORRECTION EST UN BRANCHEMENT, PAS UNE REFONTE :
+#   sémantique  (user, reference) → upsert, l'écrasement reste le comportement.
+#   épisodique  (project)         → append-only : écraser un fichier existant est
+#                                   REFUSÉ (exception + exit non nul), jamais
+#                                   silencieux. `--force` est l'échappatoire
+#                                   explicite.
+#   procédural  (feedback)        → remplacement VERSIONNÉ : l'ancienne version
+#                                   est copiée en <base>.v<N>.md avant écriture.
+#
+# ⚠️ ISOLATION — CORRIGÉE APRÈS L'AUDIT CODEX DU 2026-08-20 (défaut CRITIQUE).
+# La première rédaction faisait tourner la suite ROUGE avant que `store()` ne
+# sache s'isoler : elle aurait écrit `project_evt_1.md`, `feedback_regle_a.md`,
+# `user_fait_a.md` et des lignes d'index dans la VRAIE mémoire, et le `check:`
+# aurait rejoué cette écriture à chaque tentative. L'isolation ne repose plus sur
+# un paramètre que le code ne connaît pas encore : `brain.js` dérive `MEM` de
+# `config/workspace.json` pris à côté de lui (`__dirname`), donc on copie
+# `brain.js` dans un répertoire temporaire AVEC son propre `workspace.json`. Le
+# code d'avant le ticket comme celui d'après écrivent alors dans le bac à sable,
+# sans qu'aucune ligne de brain.js ait à changer pour ça.
+#
+# ⚠️ LA MÉMOIRE N'EST PAS ÉCRIVABLE PAR LES SESSIONS (correction après le 4e tour
+# d'audit Codex, défaut CRITIQUE). Le bac à sable du runner monte `/` en
+# lecture-écriture : tant qu'un ticket garde l'outil Bash, il peut écrire dans le
+# dossier de mémoire pendant toute sa session, et l'empreinte prise autour de
+# `node --test` enregistre alors cette écriture comme référence. Aucun `check:`
+# ne rattrape ça.
+#
+# Les deux tickets déclarent donc `allow_tools` SANS Bash. M-T1 n'en a pas
+# besoin : c'est le `check:` qui exécute la suite, la mutation et la sonde
+# comportementale — la session écrit le code et le test, le contrôle les joue.
+# M-TGEN lit la mémoire avec Read et écrit ses fichiers avec Write ; c'est le
+# `check:` qui compile le runbook B. Ni l'une ni l'autre ne peut commiter : un
+# ticket qui passe laisse un diff local, comme partout ailleurs ici.
+#
+# ⚠️ ANTI FAUX-POSITIF. Le `check:` de M-T1 ne se contente pas de lancer la suite
+# écrite par la session — cette suite est juge et partie. Il exécute en plus une
+# SONDE COMPORTEMENTALE indépendante, écrite ici, qui pilote la CLI et vérifie
+# les trois régimes et le code de sortie ; puis il rejoue la suite de la session
+# contre `brain.js` au sha du branchement (507f278) et exige qu'elle échoue.
+#
+# ⚠️ VIE PRIVÉE. Le constat de M-TGEN ne recopie AUCUN nom de fichier de mémoire
+# dans le dépôt : ces noms portent des clients, des personnes et des projets
+# privés. La preuve de lecture est un condensé recalculé pendant le `check:`.
+#
+# `effort:` est DÉCLARATIF (protocole GSD maison) : l'exécuteur ne le lit pas.
+
+project: jarvis-cortex-m-memoire-regimes
+phase: M
+repo: /home/nuveo/jarvis-cortex-plan-m
+max_sessions_per_day: 4
+
+chain:
+  next_phase: "B"
+  generator_ticket: "M-TGEN"
+  require_codex_go: true
+  max_chain_depth: 2
+  final_gate: human
+
+requires_access:
+  - cmd: "test -f brain.js"
+  - cmd: "test -d /home/nuveo/.claude/projects/-home-nuveo/memory"
+  - cmd: "git -C /home/nuveo/.claude/projects/-home-nuveo/memory rev-parse --is-inside-work-tree"
+  - cmd: "node --version"
+
+tickets:
+  - id: M-T0
+    kind: human
+    why: >-
+      Le corpus de mémoire est écrit EN CONTINU par d'autres sessions : 431 →
+      439 fichiers dans la seule journée du 2026-08-20. Un `check:` qui
+      recalculait en direct comparait donc le constat à un corpus qui avait
+      bougé depuis, et a fait échouer trois tours d'affilée sur cette seule
+      dérive — à ~2,50 USD le tour d'opus — alors que le travail livré était
+      bon. Le relevé sort de la session, comme la capture `ss -tlnp` de S-T0 :
+      il fige la photo une fois, et le commit la rend opposable.
+    gate_reason: >-
+      M — relever le corpus de mémoire. Ce qui va se produire si tu approuves :
+      tu lances toi-même, depuis /home/nuveo/jarvis-cortex-plan-m,
+      `python3 scripts/releve-memoire.py`. Le script LIT
+      ~/.claude/projects/-home-nuveo/memory/ et n'y écrit rien. Sortie fixe :
+      docs/plans/2026-08-20-recu-memoire.txt — neuf agrégats, le nombre de
+      fichiers, une empreinte SHA-256 tronquée et l'horodatage du relevé.
+      AUCUN nom de fichier, AUCUN extrait : un nom de fichier de mémoire
+      recopié dans un dépôt git n'en ressort plus, l'historique le garde même
+      après suppression. Puis commite-le
+      (`git add docs/plans/ && git commit -m "releve du corpus de memoire
+      2026-08-20"`) : c'est le commit qui rend le reçu opposable, M-TGEN ayant
+      Edit et Write. Lis le script avant d'approuver.
+      Lance-le au plus près de M-TGEN : le `check:` refuse un reçu daté d'un
+      autre jour que le 2026-08-20.
+    produces:
+      - docs/plans/2026-08-20-recu-memoire.txt
+
+  - id: M-T1
+    why: >-
+      `brain.js` écrase sans condition. Trois régimes doivent être branchés sur
+      `metadata.type`, et le refus épisodique doit être BRUYANT — un refus
+      silencieux recréerait la classe de panne consignée dans
+      instagram-pipeline-silent-failure. Travail d'implémentation borné à une
+      fonction et à son test : sonnet-5.
+    kind: session
+    model: claude-sonnet-5
+    effort: medium
+    allow_tools: [Read, Grep, Glob, Edit, Write]
+    prompt_file: tickets/M-T1-regimes-ecriture.md
+    produces:
+      - tests/test_store_regimes.mjs
+    check: |-
+      test -s tests/test_store_regimes.mjs \
+      && "$HERMES_CHECK_PYTHON" - <<'PY'
+      import hashlib, json, os, pathlib, shutil, subprocess, sys, tempfile
+
+      REPO = pathlib.Path.cwd()
+      SUITE = REPO / "tests" / "test_store_regimes.mjs"
+      BASE_SHA = "507f278"   # HEAD du worktree au branchement
+
+      def bac_a_sable(src_brain: pathlib.Path, tmp: pathlib.Path) -> pathlib.Path:
+          """Copie brain.js avec SON workspace.json : MEM tombe alors sous tmp.
+          C'est la seule isolation qui vaille AVANT que le ticket soit ecrit,
+          puisque le code d'origine ne connait aucun parametre de repertoire."""
+          d = tmp / "bac"
+          (d / "config").mkdir(parents=True)
+          shutil.copy2(src_brain, d / "brain.js")
+          # brain.js: ROOT = resolve(__dirname, WS.root), MEM = ROOT/WS.memoryDir
+          (d / "config" / "workspace.json").write_text(
+              json.dumps({"root": ".", "memoryDir": "memoire", "memoryIndex": "MEMORY.md"}),
+              encoding="utf-8")
+          return d
+
+      MEMOIRE = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
+
+      def confine(argv):
+          """Le `check:` tourne HORS du bac a sable du runner : sans ca, il
+          executerait le JavaScript ecrit par la session avec les droits du
+          runner, donc avec acces en ecriture aux 431 fichiers de memoire et au
+          reseau (audit Codex 2026-08-20, CRITIQUE — le pire des quatre plans).
+          Pas de repli silencieux : bwrap absent = ticket rouge."""
+          bwrap = shutil.which("bwrap")
+          if not bwrap:
+              raise SystemExit("ECHEC: bwrap introuvable — le code de la session ne peut pas "
+                               "etre execute de maniere confinee, le ticket ne peut pas passer")
+          return [bwrap, "--die-with-parent", "--unshare-net",
+                  "--ro-bind", "/", "/", "--dev", "/dev", "--proc", "/proc",
+                  "--bind", "/tmp", "/tmp",
+                  "--ro-bind", str(MEMOIRE), str(MEMOIRE)] + argv
+
+      def cli(bac: pathlib.Path, *args):
+          return subprocess.run(confine([shutil.which("node") or "node", str(bac / "brain.js"), *args]),
+                                capture_output=True, text=True, cwd=str(bac))
+
+      echecs = []
+      with tempfile.TemporaryDirectory() as t:
+          tmp = pathlib.Path(t)
+
+          # ---- 1. SONDE COMPORTEMENTALE, independante de la suite de la session.
+          bac = bac_a_sable(REPO / "brain.js", tmp)
+          mem = bac / "memoire"
+
+          r1 = cli(bac, "store", "premier evenement", "--type", "project", "--name", "sonde-evt")
+          if r1.returncode != 0:
+              echecs.append("episodique: 1re ecriture refusee (%s)" % (r1.stderr.strip()[:200] or r1.returncode))
+          r2 = cli(bac, "store", "reecriture", "--type", "project", "--name", "sonde-evt")
+          if r2.returncode == 0:
+              echecs.append("episodique: la 2e ecriture a ete ACCEPTEE (exit 0) — pas de refus")
+          else:
+              # Un code non nul peut venir d'un crash generique : le prompt exige
+              # un message qui NOMME le fichier et propose --force (audit Codex).
+              msg = (r2.stderr or "") + (r2.stdout or "")
+              if "project_sonde_evt.md" not in msg:
+                  echecs.append("episodique: le refus ne nomme pas le fichier (%r)" % msg.strip()[:160])
+              if "--force" not in msg:
+                  echecs.append("episodique: le refus ne propose pas --force (%r)" % msg.strip()[:160])
+          f_evt = mem / "project_sonde_evt.md"
+          if not f_evt.is_file():
+              echecs.append("episodique: aucun fichier ecrit a la 1re ecriture")
+          elif "premier evenement" not in f_evt.read_text(encoding="utf-8"):
+              echecs.append("episodique: le contenu d'origine a ete ecrase")
+
+          r3 = cli(bac, "store", "avec force", "--type", "project", "--name", "sonde-evt", "--force")
+          if r3.returncode != 0:
+              echecs.append("episodique: --force n'ouvre pas l'echappatoire explicite")
+          elif not f_evt.is_file() or "avec force" not in f_evt.read_text(encoding="utf-8"):
+              echecs.append("episodique: --force rend 0 mais n'ecrit pas le nouveau contenu")
+
+          rf1 = cli(bac, "store", "regle v1", "--type", "feedback", "--name", "sonde-regle")
+          rf2 = cli(bac, "store", "regle v2", "--type", "feedback", "--name", "sonde-regle")
+          if rf1.returncode != 0 or rf2.returncode != 0:
+              echecs.append("procedural: une ecriture feedback sort en erreur (%s,%s)"
+                            % (rf1.returncode, rf2.returncode))
+          courant = mem / "feedback_sonde_regle.md"
+          versions = sorted(mem.glob("feedback_sonde_regle.v*.md"))
+          if not versions:
+              echecs.append("procedural: aucune version conservee avant remplacement")
+          elif "regle v1" not in versions[0].read_text(encoding="utf-8"):
+              echecs.append("procedural: la version conservee ne porte pas l'ancien contenu")
+          if not courant.is_file():
+              echecs.append("procedural: aucun fichier courant apres remplacement")
+          elif "regle v2" not in courant.read_text(encoding="utf-8"):
+              echecs.append("procedural: le fichier courant ne porte pas la nouvelle version")
+
+          for t_sem in ("user", "reference"):
+              a1 = cli(bac, "store", "fait v1", "--type", t_sem, "--name", "sonde-%s" % t_sem)
+              a2 = cli(bac, "store", "fait v2", "--type", t_sem, "--name", "sonde-%s" % t_sem)
+              # Une 1re ecriture en echec suivie d'une 2e reussie passait.
+              if a1.returncode != 0 or a2.returncode != 0:
+                  echecs.append("semantique(%s): codes de retour %s,%s (0,0 attendus)"
+                                % (t_sem, a1.returncode, a2.returncode))
+              f = mem / ("%s_sonde_%s.md" % (t_sem, t_sem))
+              if not f.is_file() or "fait v2" not in f.read_text(encoding="utf-8"):
+                  echecs.append("semantique(%s): l'upsert ne remplace plus" % t_sem)
+              if list(mem.glob("%s_sonde_%s.v*.md" % (t_sem, t_sem))):
+                  echecs.append("semantique(%s): une version a ete creee, ce n'est pas un upsert" % t_sem)
+
+          # ---- 2. La suite de la session passe sur le code courant, ET n'ecrit
+          # rien dans la vraie memoire. Chercher les seuls noms de la sonde ne
+          # suffisait pas : la suite proposee ecrit `project_evt_1.md` &c. On
+          # compare donc une EMPREINTE COMPLETE du dossier avant / apres
+          # (audit Codex 2026-08-20, HAUTE).
+          vraie = MEMOIRE
+
+          def empreinte():
+              h = hashlib.sha256()
+              for f in sorted(vraie.rglob("*")):
+                  if f.is_file():
+                      h.update(str(f.relative_to(vraie)).encode("utf-8"))
+                      h.update(b"\0")
+                      h.update(str(f.stat().st_size).encode("utf-8"))
+                      h.update(f.read_bytes())
+              return h.hexdigest()
+
+          avant = empreinte()
+          r = subprocess.run(confine([shutil.which("node") or "node", "--test", str(SUITE)]),
+                             capture_output=True, text=True, cwd=str(REPO))
+          if r.returncode != 0:
+              echecs.append("suite de la session ROUGE sur le code courant")
+          if empreinte() != avant:
+              echecs.append("FUITE: la vraie memoire a change pendant `node --test` — "
+                            "l'isolation de la suite est cassee")
+
+          # ---- 3. Mutation : la meme suite doit ECHOUER contre le code d'avant.
+          vieux = tmp / ("brain-%s.js" % BASE_SHA)   # `/` lie plus fort que `%`
+          g = subprocess.run(["git", "show", "%s:brain.js" % BASE_SHA],
+                             capture_output=True, text=True, cwd=str(REPO))
+          if g.returncode != 0:
+              echecs.append("git show %s:brain.js indisponible — mutation non prouvable" % BASE_SHA)
+          else:
+              vieux.write_text(g.stdout, encoding="utf-8")
+              bac_v = bac_a_sable(vieux, tmp / "mutation")
+              suite_v = bac_v / "suite.mjs"
+              suite_v.write_text(SUITE.read_text(encoding="utf-8"), encoding="utf-8")
+              env = dict(os.environ, BRAIN_UNDER_TEST=str(bac_v / "brain.js"))
+              m = subprocess.run(confine([shutil.which("node") or "node", "--test", str(suite_v)]),
+                                 capture_output=True, text=True, cwd=str(bac_v), env=env)
+              if m.returncode == 0:
+                  echecs.append("MUTATION-KO: la suite passe aussi contre brain.js@%s" % BASE_SHA)
+
+      if echecs:
+          for e in echecs:
+              print("ECHEC:", e, file=sys.stderr)
+          sys.exit(1)
+
+      # $HERMES_TICKET_FACTS est une CHAINE JSON injectee dans l'environnement
+      # (json.dumps au lancement), pas un chemin, et elle ne porte que
+      # {"tickets": {...}} — aucun `ticket_id` (audit Codex 2026-08-20).
+      faits = json.loads(os.environ["HERMES_TICKET_FACTS"])
+      print("M_T1 sonde=ok suite=ok mutation=prouvee fuite=aucune tickets_connus=%d"
+            % len(faits.get("tickets") or {}))
+      PY
+    codex_gate: true
+    max_turns: 60
+    max_budget_usd: 4
+    timeout_minutes: 45
+
+  - id: M-TGEN
+    why: >-
+      M-T1 pose les régimes ; il ne dit pas ce que la mémoire EXISTANTE contient
+      de contradictoire. Ce ticket établit ce constat et écrit le maillon B — la
+      boucle verdict de gate → règle — à la lumière de ce qu'il voit, puisque B
+      écrira des fichiers `feedback` au régime procédural défini ici. Écrire le
+      maillon suivant est un ticket du maillon courant, jamais une session
+      humaine (règle du 2026-08-10). Choix d'architecture : opus-5.
+    kind: session
+    depends_on: [M-T1, M-T0]
+    model: claude-opus-5
+    effort: high
+    allow_tools: [Read, Grep, Glob, Edit, Write]
+    prompt_file: tickets/M-TGEN-ecrire-b.md
+    consumes:
+      - tests/test_store_regimes.mjs
+      - docs/plans/2026-08-20-recu-memoire.txt
+    produces:
+      - docs/plans/2026-08-20-m-constat-memoire.md
+      - runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml
+    # Le moteur joint ce chemin sous `<repo>/runbooks` (_generated_runbook_path) :
+    # un `runbooks/...` ici serait cherche sous `runbooks/runbooks/` et rejouerait
+    # la session generatrice payante a chaque approbation (audit Codex 2026-08-20).
+    generates_runbook: handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml
+    check: |-
+      test -s docs/plans/2026-08-20-m-constat-memoire.md \
+      && test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml \
+      && "$HERMES_CHECK_PYTHON" - <<'PY'
+      import hashlib, json, os, pathlib, re, subprocess, sys, yaml
+
+      echecs = []
+      doc = pathlib.Path("docs/plans/2026-08-20-m-constat-memoire.md").read_text(encoding="utf-8")
+
+      # ---- 0. Les neuf metriques viennent d'un RECU COMMITE, plus d'un recalcul
+      # en direct. Motif mesure le 2026-08-20 : le corpus est ecrit en continu par
+      # d'autres sessions (431 -> 439 fichiers dans la journee), donc un recalcul
+      # au moment du check comparait le constat a un corpus qui avait bouge depuis.
+      # Trois tours d'affilee ont echoue sur cette seule derive, a ~2,50 USD le
+      # tour, alors que le travail livre etait bon. Un controle qui ne peut pas
+      # CONVERGER est un blocage, pas une rigueur.
+      #
+      # Ce qui se perd, et il faut le savoir : le check ne re-mesure plus le
+      # corpus lui-meme. La verite sort d'UNE execution de scripts/releve-memoire.py.
+      # Un bug dans ce script graverait des chiffres faux dans un commit que le
+      # check certifierait ensuite pour toujours — constat et recu seraient
+      # toujours d'accord, puisqu'ils sortent du meme code. D'ou la borne de
+      # fraicheur ci-dessous : elle ne supprime pas ce risque, elle borne la
+      # fenetre ou il peut naitre.
+      RECU = "docs/plans/2026-08-20-recu-memoire.txt"
+      if not pathlib.Path(RECU).is_file():
+          echecs.append("recu du corpus absent — M-T0 ne l'a pas produit")
+          recu_txt = ""
+      else:
+          recu_txt = pathlib.Path(RECU).read_text(encoding="utf-8")
+
+      # Le recu vient de M-T0 (humain) et n'est opposable que commite et INCHANGE :
+      # M-TGEN a Edit et Write, un recu pose sur le disque serait reecrivable. La
+      # session, sans Bash, ne peut pas commiter.
+      suivi = subprocess.run(["git", "ls-files", "--error-unmatch", RECU],
+                             capture_output=True, text=True)
+      if suivi.returncode != 0:
+          echecs.append("recu du corpus non suivi par git — M-T0 ne l'a pas commite")
+      else:
+          sale = subprocess.run(["git", "diff", "--name-only", "HEAD", "--", RECU],
+                                capture_output=True, text=True)
+          if sale.returncode != 0:
+              echecs.append("git diff indisponible: %s" % sale.stderr.strip()[:200])
+          elif sale.stdout.strip():
+              echecs.append("recu du corpus MODIFIE depuis son commit")
+
+      # Borne de fraicheur : un recu d'un autre jour decrirait un corpus qui n'est
+      # plus celui que le constat pretend decrire.
+      JOUR = "2026-08-20"
+      mh = re.search(r"^horodatage:\s*(\S+)$", recu_txt, re.M)
+      if not mh:
+          echecs.append("recu sans `horodatage:` — fraicheur invérifiable")
+      elif not mh.group(1).startswith(JOUR):
+          echecs.append("recu date du %s, attendu %s" % (mh.group(1)[:10], JOUR))
+
+      m = {}
+      for ligne in recu_txt.splitlines():
+          mm = re.match(r"^([a-z_]{4,30}):\s*(\d+)\s*$", ligne)
+          if mm:
+              m[mm.group(1)] = int(mm.group(2))
+      ATTENDUES = {"user", "feedback", "project", "reference", "sans_type",
+                   "feedback_revises", "project_multidate", "index_pointeurs_morts",
+                   "fichiers_non_indexes"}
+      manque = sorted(ATTENDUES - set(m))
+      if manque:
+          echecs.append("recu incomplet, metriques absentes: %s" % manque)
+      m = {c: v for c, v in m.items() if c in ATTENDUES}
+
+      # Le constat DOIT porter un bloc `cle: valeur`, une ligne par metrique.
+      declare = {}
+      for ligne in doc.splitlines():
+          mm = re.match(r"^\s*[-*|]?\s*`?([a-z_]{4,30})`?\s*[:|]\s*\|?\s*(\d+)\s*\|?\s*$", ligne)
+          if mm:
+              declare[mm.group(1)] = int(mm.group(2))
+      for cle, val in sorted(m.items()):
+          if cle not in declare:
+              echecs.append("metrique absente du bloc structure du constat: %s (attendu %d)" % (cle, val))
+          elif declare[cle] != val:
+              echecs.append("metrique %s: constat dit %d, recu dit %d" % (cle, declare[cle], val))
+
+      # ---- 1. Les CINQ rubriques du constat, chacune redigee.
+      RUBRIQUES = {
+          "repartition":  r"(r[ée]partition|par\s+`?metadata\.type`?|par type)",
+          "revisions":    r"(r[ée]vision|mis[e]?\s+[àa]\s+jour|R[ÉE]VOQU|CORRECTION)",
+          "dates":        r"(plusieurs dates|deux dates|multidate)",
+          "index":        r"MEMORY\.md",
+          "migration":    r"(migration|migrer|ne rien migrer)",
+      }
+      for nom, motif in RUBRIQUES.items():
+          if not re.search(motif, doc, re.I):
+              echecs.append("rubrique absente du constat: %s" % nom)
+
+      # ---- 2. Preuve de lecture SANS recopier de nom de fichier prive.
+      # Le constat porte un condensé recalculé ici ; les noms restent hors du depot.
+      mem = pathlib.Path.home() / ".claude" / "projects" / "-home-nuveo" / "memory"
+      noms = sorted(p.name for p in mem.glob("*.md"))
+      # L'empreinte AUSSI vient du recu : la recalculer ici rejouerait exactement
+      # la course que la section 0 vient de fermer.
+      me = re.search(r"^empreinte:\s*([0-9a-f]{16})$", recu_txt, re.M)
+      if not me:
+          echecs.append("recu sans `empreinte:` lisible")
+      elif me.group(1) not in doc:
+          echecs.append("empreinte du constat absente ou differente de celle du recu (%s)"
+                        % me.group(1))
+      # MEMORY.md est l'INDEX, pas un fait prive : la rubrique 4 l'exige nommement,
+      # le controle de fuite l'interdisait — contradiction inatteignable (Codex).
+      fuites = [n for n in noms if n != "MEMORY.md" and n in doc]
+      if fuites:
+          echecs.append("noms de fichiers de memoire recopies dans le depot: %d" % len(fuites))
+
+      # Le controle des seuls NOMS autorisait implicitement la copie de CONTENUS
+      # — extraits, noms de clients, exemples « anonymises » a l'appreciation de
+      # la session (audit Codex 2026-08-20). On refuse toute phrase du constat
+      # qui se retrouve telle quelle dans un fichier de memoire.
+      corpus = []
+      for f in sorted(mem.glob("*.md")):
+          if f.name == "MEMORY.md":
+              continue
+          corpus.append(re.sub(r"\s+", " ", f.read_text(encoding="utf-8", errors="ignore")).lower())
+      corpus = "\n".join(corpus)
+      empruntes = 0
+      for phrase in re.split(r"(?<=[.!?])\s+|\n", doc):
+          p_norm = re.sub(r"\s+", " ", phrase).strip().lower()
+          if len(p_norm) >= 60 and p_norm in corpus:
+              empruntes += 1
+      if empruntes:
+          echecs.append("%d phrase(s) du constat recopiees depuis les fichiers de memoire "
+                        "— le livrable se borne aux agregats" % empruntes)
+
+      # ---- 3. Le runbook B est valide STATIQUEMENT. Surtout pas via l'option de
+      # compilation du moteur : le compilateur EXECUTE les `requires_access.cmd`
+      # du runbook qu'on lui donne (plan_runner.py:844). Une session sans Bash
+      # aurait donc pu placer une commande arbitraire dans B et la faire executer
+      # par son propre check, hors bac a sable (audit Codex 2026-08-20, CRITIQUE).
+      # Corollaire : B n'a pas le droit de declarer un `cmd:` du tout.
+      rb_path = pathlib.Path("runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml")
+      rb = yaml.safe_load(rb_path.read_text(encoding="utf-8"))
+      for acces in (rb.get("requires_access") or []):
+          if isinstance(acces, dict) and "cmd" in acces:
+              echecs.append("B declare un requires_access.cmd (%r) — interdit : le compilateur "
+                            "l'executerait" % str(acces.get("cmd"))[:80])
+      if rb.get("phase") != "B":
+          echecs.append("phase de B = %r" % rb.get("phase"))
+      # `project:` et `repo:` sont des champs REQUIS par le moteur
+      # (plan_runner.py:549). Le 2026-08-20, B est ne SANS `project:` : le check
+      # le declarait conforme et `load_runbook` levait
+      # « runbook: champ requis manquant `project` » — B naissait INLANCABLE, et
+      # l'audit adverse ne l'a pas vu non plus (il jugeait la rigueur des checks
+      # de B, pas sa chargeabilite).
+      if not rb.get("project"):
+          echecs.append("B ne declare pas `project:` — champ requis, B serait inlancable")
+      WORKTREE_B = "/home/nuveo/hermes-os-plan-b"
+      if rb.get("repo") != WORKTREE_B:
+          echecs.append("B declare repo=%r, attendu %s (worktree cree et allowliste)"
+                        % (rb.get("repo"), WORKTREE_B))
+      # La branche du worktree DOIT valoir `plan/<project>` : toute autre branche
+      # `plan/...` fait dire au moteur « la branche d'un AUTRE plan » et gare le
+      # ticket au premier tour.
+      br = subprocess.run(["git", "-C", WORKTREE_B, "rev-parse", "--abbrev-ref", "HEAD"],
+                          capture_output=True, text=True)
+      if br.returncode != 0:
+          echecs.append("branche du worktree de B illisible: %s" % br.stderr.strip()[:200])
+      elif rb.get("project") and br.stdout.strip() != "plan/%s" % rb["project"]:
+          echecs.append("branche du worktree de B = %r, attendu plan/%s"
+                        % (br.stdout.strip(), rb["project"]))
+      tks = rb.get("tickets") or []
+      if not tks:
+          echecs.append("B n'a aucun ticket")
+      modeles = {t.get("model") for t in tks}
+      if len(tks) > 1 and len(modeles) == 1:
+          echecs.append("modele identique sur tous les tickets de B: %s" % modeles)
+      for t in tks:
+          tid = t.get("id", "?")
+          if not t.get("model"):
+              echecs.append("%s: model absent" % tid)
+          if t.get("kind") == "human":
+              continue  # ticket humain (ex. B-TM) : le runner n'execute ni codex_gate, ni prompt_file, ni check
+          if t.get("codex_gate") is not True:
+              echecs.append("%s: codex_gate n'est pas `true` litteral" % tid)
+          pf = t.get("prompt_file")
+          if not pf:
+              echecs.append("%s: prompt_file absent" % tid)
+          elif not (rb_path.parent / pf).is_file():
+              # meme resolution que _prompt_file_path : sous le DOSSIER du runbook.
+              echecs.append("%s: prompt_file introuvable sous %s/" % (tid, rb_path.parent))
+          chk = t.get("check") or ""
+          if not chk:
+              echecs.append("%s: check absent" % tid)
+          else:
+              if "HERMES_CHECK_PYTHON" not in chk:
+                  echecs.append("%s: check n'emploie pas $HERMES_CHECK_PYTHON" % tid)
+              if "HERMES_TICKET_FACTS" not in chk:
+                  echecs.append("%s: check ne lit pas $HERMES_TICKET_FACTS" % tid)
+              if "state.json" in chk:
+                  echecs.append("%s: check rouvre un state.json (falsifiable)" % tid)
+
+      if echecs:
+          for e in echecs:
+              print("ECHEC:", e, file=sys.stderr)
+          sys.exit(1)
+
+      faits = json.loads(os.environ["HERMES_TICKET_FACTS"])
+      print("M_TGEN rubriques=5 empreinte=%s recu=%d metriques b_tickets=%d modeles=%d "
+            "tickets_connus=%d"
+            % (me.group(1), len(m), len(tks), len(modeles), len(faits.get("tickets") or {})))
+      PY
+    codex_gate: true
+    max_turns: 80
+    max_budget_usd: 6
+    timeout_minutes: 60
