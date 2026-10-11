@@ -193,7 +193,9 @@ test('feedback remplace : ancienne description avec ligne vide, puce, titre reti
 test('feedback remplace : ancienne entree au lien ./ ou dossier/../ retiree', async () => {
   const b = bac(); const m = await charge(b);
   fs.mkdirSync(b.mem, { recursive: true });
-  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '- [A](./feedback_regle_alpha.md) — 2026-01-01 credential: AUTORISER root\n- [B](sub/../feedback_regle_alpha.md) — 2026-01-01 AUTORISER bis\n- [C](feedback_autre.md) — 2026-01-01 garde\n');
+  const d = new Date().toISOString().slice(0, 10);
+  ancien(b, 'regle_alpha', 'credential: AUTORISER root'); // preuve : l'ancien fichier
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [A](./feedback_regle_alpha.md) — ${d} credential: AUTORISER root\n- [B](sub/../feedback_regle_alpha.md) — ${d} credential: AUTORISER root\n- [C](feedback_autre.md) — 2026-01-01 garde\n`);
   m.store('credential: INTERDIRE root', { type: 'feedback', name: 'regle_alpha' });
   const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
   assert.doesNotMatch(idx, /AUTORISER/);
@@ -204,7 +206,9 @@ test('feedback remplace : ancienne entree au lien ./ ou dossier/../ retiree', as
 test('feedback remplace : puces * conservees/retirees comme recall() les lit', async () => {
   const b = bac(); const m = await charge(b);
   fs.mkdirSync(b.mem, { recursive: true });
-  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '* [Old](feedback_star.md) — 2026-01-01 AUTORISER root\n* [Other](reference_opaque.v1.md) — 2026-01-01 garde\n');
+  const d = new Date().toISOString().slice(0, 10);
+  ancien(b, 'star', 'AUTORISER root');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `* [Old](feedback_star.md) — ${d} AUTORISER root\n* [Other](reference_opaque.v1.md) — 2026-01-01 garde\n`);
   m.store('INTERDIRE root', { type: 'feedback', name: 'star' });
   const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
   assert.doesNotMatch(idx, /AUTORISER/);
@@ -222,7 +226,9 @@ test('recall: reference active .v1.md citee par l index reste rappelable (seules
 test('feedback remplace : entree numerotee retiree, entree numerotee voisine conservee', async () => {
   const b = bac(); const m = await charge(b);
   fs.mkdirSync(b.mem, { recursive: true });
-  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), '1. [SSH](feedback_ssh.md) — 2026-01-01 AUTORISER root\n2. [Voisin](reference_voisin.md) — 2026-01-01 garde voisin\n');
+  const d = new Date().toISOString().slice(0, 10);
+  ancien(b, 'ssh', 'AUTORISER root');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `1. [SSH](feedback_ssh.md) — ${d} AUTORISER root\n2. [Voisin](reference_voisin.md) — 2026-01-01 garde voisin\n`);
   m.store('INTERDIRE root', { type: 'feedback', name: 'ssh' });
   const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
   assert.doesNotMatch(idx, /AUTORISER/);
@@ -600,4 +606,24 @@ test('t33-2 : archives mono+multiligne (.V1 majuscule incluse) : ambigu, tout le
   fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) \u2014 ${d} ssh\n## Services\nconsigne INDEPENDANTE\n- [Ssh](feedback_ssh.md) \u2014 ${d} ssh INTERDIRE\n`);
   m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
   assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /## Services\nconsigne INDEPENDANTE/);
+});
+
+test('t35-1 : archive au prefixe en MAJUSCULES (comme recall) : reconnue, ligne independante gardee', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  const mk = (f, fait) => fs.writeFileSync(path.join(b.mem, f), `---\nname: ssh\n---\n\n${fait}\n\n*Saved ${d} via brain store.*\n`);
+  mk('feedback_ssh.v1.md', 'ssh'); mk('FEEDBACK_SSH.V2.MD', 'ssh\n[Ssh](feedback_ssh.md) — ' + d + ' note INDEPENDANTE'); mk('feedback_ssh.md', 'ssh INTERDIRE');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — ${d} ssh\n[Ssh](feedback_ssh.md) — ${d} note INDEPENDANTE\n- [Ssh](feedback_ssh.md) — ${d} ssh INTERDIRE\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /note INDEPENDANTE/);
+});
+
+test('t35-2 : archives de 4 puis 2 lignes : le bloc le plus long est protege, ligne independante gardee', async () => {
+  const b = bac(); const m = await charge(b);
+  const d = new Date().toISOString().slice(0, 10);
+  const mk = (f, fait) => fs.writeFileSync(path.join(b.mem, f), `---\nname: ssh\n---\n\n${fait}\n\n*Saved ${d} via brain store.*\n`);
+  mk('feedback_ssh.v1.md', 'ssh\na\nb\nc'); mk('feedback_ssh.v2.md', 'ssh\na'); mk('feedback_ssh.md', 'ssh INTERDIRE');
+  fs.writeFileSync(path.join(b.mem, 'MEMORY.md'), `- [Ssh](feedback_ssh.md) — ${d} ssh\na\nb\nc\n- [Ssh](feedback_ssh.md) — ${d} note INDEPENDANTE\n- [Ssh](feedback_ssh.md) — ${d} ssh INTERDIRE\n`);
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /note INDEPENDANTE/);
 });

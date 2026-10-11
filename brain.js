@@ -80,6 +80,7 @@ const ROOT_DOC_HINTS = WS.routing || {
 // nettoyage de store() (sinon un format lu par l'un et ignoré par l'autre fuit ou supprime).
 const LINK_RE = /\[([^\]]+)\]\(([^)]+)\)/;
 const ARCHIVE_RE = /^feedback_.*\.v0*\d+\.md$/i;
+const estArchiveDe = (racine, f) => ARCHIVE_RE.test(f) && f.slice(0, racine.length).toLowerCase() === racine.toLowerCase() && /^\.v0*\d+\.md$/i.test(f.slice(racine.length));
 let archiveInodes = null; // remis à null au début de chaque recall()
 function isArchived(p) {
   let real = p;
@@ -349,7 +350,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     // ... et de ses archives .vN : les révisions antérieures ont chacune laissé leur entrée (index
     // historique append-only) avec leurs propres continuations.
     const racine = path.basename(file, '.md');
-    const sources = [file, ...fs.readdirSync(dir).filter((f) => f.startsWith(racine) && /^\.v0*\d+\.md$/i.test(f.slice(racine.length))).map((f) => path.join(dir, f))];
+    const sources = [file, ...fs.readdirSync(dir).filter((f) => estArchiveDe(racine, f)).map((f) => path.join(dir, f))];
     const ancien = sources.filter((f) => fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\u0000');
     // Trois régimes d'écriture, pilotés par `type` (déjà calculé plus haut) :
     //  - user/reference (sémantique)  : upsert, comportement historique inchangé.
@@ -446,9 +447,10 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
           const apres = t.slice(dm[0].length + m.index + m[0].length);
           if (!apres.startsWith('\n\n')) continue;
           const corps = apres.slice(2);
+          const ouvre = (c) => corps.startsWith(c) || corps.replace(/\s+/g, ' ').startsWith(c); // fait brut (ancien) ou aplati (actuel)
           // Desc historique = fait brut (≤ 110) ou fait tronqué à 107 + '...' (donc EXACTEMENT 110 car.).
-          if (cand.length <= 110 && corps.startsWith(cand)) out.add(cand);
-          else if (cand.length === 110 && cand.endsWith('...') && corps.length > 110 && corps.startsWith(cand.slice(0, 107))) out.add(cand);
+          if (cand.length <= 110 && ouvre(cand)) out.add(cand);
+          else if (cand.length === 110 && cand.endsWith('...') && corps.length > 110 && ouvre(cand.slice(0, 107))) out.add(cand);
         }
         return out.size > 1 ? null : [...out]; // plusieurs coupes plausibles (faux bloc metadata dans le fait) : ambigu
       }
@@ -473,18 +475,19 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // avec `description:` faits() rend déjà le desc final ; sans, c'est le fait brut à tronquer
       const fs_ = faits(t);
       if (!fs_) { ambigu = true; return []; }
-      return fs_.map((f) => (aDesc ? f : f.length <= 110 ? f : f.slice(0, 107) + '...'))
+      const tr = (f) => (f.length <= 110 ? f : f.slice(0, 107) + '...');
+      // sans `description:` : entrée d'un store ancien (fait brut) ou courant (fait aplati)
+      return fs_.flatMap((f) => (aDesc ? [f] : [tr(f), tr(f.replace(/\s+/g, ' ').trim())]))
         .map((f) => ({ date, desc: f }));
     });
     const textes = ancien.split('\u0000');
     const revisions = revs(textes);
-    // La DERNIÈRE entrée pointant ce fichier est celle de sa révision courante : seules ses lignes
-    // (pas celles des archives, indiscernables par la 1re ligne) peuvent être des continuations.
-    // Les entrées antérieures (reliquats d'un index historique append-only) gardent toutes les sources.
+    // La DERNIÈRE entrée pointant ce fichier est celle de sa révision courante : seules ses sources
+    // courantes (pas les archives, indiscernables par la 1re ligne) peuvent la prouver.
     const courantes = fs.existsSync(file) ? revs(textes.slice(0, 1)) : revisions;
     const estEntree = (l) => pointe(l) && /^\s*(?:[-*+]|\d+[.)])?\s*\[[^\]]+\]\([^)]+\) — \d{4}-\d{2}-\d{2} /.test(l);
-    const derniere = prev.split('\n').reduce((r, l, i) => (estEntree(l) ? i : r), -1);
     const lignes = prev.split('\n');
+    const derniere = lignes.reduce((r, l, i) => (estEntree(l) ? i : r), -1);
     const sortie = [];
     for (let i = 0; i < lignes.length; i++) {
       const l = lignes[i];
@@ -495,13 +498,10 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       // Une ligne au format d'entrée de store (`[titre](fichier) — AAAA-MM-JJ …`) est une entrée
       // indépendante, jamais une continuation. Une continuation est une ligne de l'ancien fait,
       // égale à la ligne du desc, ou — pour la dernière — tronquée par '...' / '…'.
-      let k = 0; let douteuse = 0;
       const mt = l.match(/^(\s*(?:[-*+]|\d+[.)])?\s*\[[^\]]+\]\([^)]+\) — (\d{4}-\d{2}-\d{2}) )([^\n]*)$/);
-      // Reproduction EXACTE, octet pour octet, de ce que l'ancien store a écrit : `tete + desc`,
-      // ou `tete + desc.slice(0, 198 - tete.length).trimEnd() + '…'` si tete + desc dépassait 199.
-      // Aucune tolérance : au moindre écart d'une ligne, rien n'est retiré (un doublon vaut mieux
-      // qu'une ligne indépendante perdue). Plusieurs révisions exactes de même 1re ligne mais
-      // d'étendues différentes : ambigu, rien n'est retiré non plus.
+      // Une ligne n'est retirée QUE si elle (et sa suite) est, octet pour octet, l'entrée que l'ancien
+      // store a écrite pour ce nom : `tete + desc`, ou `tete + desc.slice(0, 198 - tete.length).trimEnd() + '…'`.
+      // Tout le reste est conservé (un doublon vaut mieux qu'une ligne indépendante perdue).
       const Es = new Set();
       for (const { desc, date } of (i === derniere ? courantes : revisions)) {
         if (!mt || (date && mt[2] !== date)) continue;
@@ -511,19 +511,10 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       }
       const exact = (E) => { const bl = lignes.slice(i, i + E.split('\n').length).join('\n'); return bl === E || bl === E + '\r'; };
       const ex = [...Es].filter(exact);
-      if (ex.length > 1) { const n = Math.max(...ex.map((E) => E.split('\n').length)); sortie.push(...lignes.slice(i, i + n)); i += n - 1; continue; }
-      for (const E of Es) {
-        const nl = E.split('\n').length;
-        if (exact(E)) k = nl - 1;
-        else if (nl > 1) douteuse = nl; // 1re ligne d'un fait multiligne, suite divergente
-      }
-      // Doute : entrée multiligne dont la suite ne correspond pas exactement -> RIEN n'est retiré.
-      if (douteuse && k === 0) {
-        // on garde aussi tout le bloc (douteuse lignes) : il n'est pas réanalysé comme entrées
-        for (let q = 0; q < douteuse && i + q < lignes.length; q++) sortie.push(lignes[i + q]);
-        i += douteuse - 1; continue;
-      }
-      i += k;
+      if (ex.length === 0) { sortie.push(l); continue; }
+      const n = Math.max(...ex.map((E) => E.split('\n').length));
+      if (ex.length > 1) sortie.push(...lignes.slice(i, i + n)); // plusieurs étendues exactes : ambigu, tout reste
+      i += n - 1;
     }
     const garde = sortie.join('\n').replace(/\n*$/, '');
     const tmp = `${index}.tmp-${process.pid}`;
