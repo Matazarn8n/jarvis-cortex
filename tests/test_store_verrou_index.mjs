@@ -627,3 +627,26 @@ test('t35-2 : archives de 4 puis 2 lignes : le bloc le plus long est protege, li
   m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
   assert.match(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /note INDEPENDANTE/);
 });
+
+test('t36-1 : fait aux espaces/saut de ligne initiaux : ancienne entree retiree', async () => {
+  const b = bac(); const m = await charge(b);
+  m.store('  ssh AUTORISER root', { type: 'feedback', name: 'ssh' });
+  m.store('\nssh AUTORISER bis', { type: 'feedback', name: 'ssh' });
+  m.store('ssh INTERDIRE root', { type: 'feedback', name: 'ssh' });
+  const idx = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8');
+  assert.doesNotMatch(idx, /AUTORISER/);
+  assert.equal(idx.trim().split('\n').length, 1);
+});
+
+test('t36-2 : entree de exactement 200 caracteres (non tronquee par le store actuel) : retiree', async () => {
+  const b = bac(); const m = await charge(b);
+  const nom = 'n'.repeat(60); const d = new Date().toISOString().slice(0, 10);
+  const tete = `- [${nom.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}](feedback_${nom}.md) — ${d} `;
+  const fait = 'AUTORISER ' + 'x'.repeat(200 - tete.length - 10);
+  assert.ok(fait.length <= 110, 'fait court');
+  m.store(fait, { type: 'feedback', name: nom });
+  const l1 = fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8').trim();
+  assert.equal(l1.length, 200); assert.ok(!l1.endsWith('…'));
+  m.store('INTERDIRE', { type: 'feedback', name: nom });
+  assert.doesNotMatch(fs.readFileSync(path.join(b.mem, 'MEMORY.md'), 'utf8'), /AUTORISER/);
+});

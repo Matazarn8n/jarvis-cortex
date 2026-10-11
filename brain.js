@@ -447,7 +447,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
           const apres = t.slice(dm[0].length + m.index + m[0].length);
           if (!apres.startsWith('\n\n')) continue;
           const corps = apres.slice(2);
-          const ouvre = (c) => corps.startsWith(c) || corps.replace(/\s+/g, ' ').startsWith(c); // fait brut (ancien) ou aplati (actuel)
+          const ouvre = (c) => corps.startsWith(c) || corps.replace(/\s+/g, ' ').trim().startsWith(c); // fait brut (ancien) ou aplati (actuel)
           // Desc historique = fait brut (≤ 110) ou fait tronqué à 107 + '...' (donc EXACTEMENT 110 car.).
           if (cand.length <= 110 && ouvre(cand)) out.add(cand);
           else if (cand.length === 110 && cand.endsWith('...') && corps.length > 110 && ouvre(cand.slice(0, 107))) out.add(cand);
@@ -506,8 +506,12 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
       for (const { desc, date } of (i === derniere ? courantes : revisions)) {
         if (!mt || (date && mt[2] !== date)) continue;
         const tete = mt[1];
-        const E = tete + (tete.length + desc.length > ENTRY_MAX - 1 ? desc.slice(0, Math.max(0, ENTRY_MAX - 2 - tete.length)).trimEnd() + '…' : desc);
-        if (E.split('\n')[0] === l) Es.add(E);
+        // store actuel : tronque au-delà de 200 ; ancien store : au-delà de 199 -> les deux formes à 200 exactement
+        const n = tete.length + desc.length;
+        const cands = [];
+        if (n <= ENTRY_MAX) cands.push(tete + desc);
+        if (n > ENTRY_MAX - 1) cands.push(tete + desc.slice(0, Math.max(0, ENTRY_MAX - 2 - tete.length)).trimEnd() + '…');
+        for (const E of cands) if (E.split('\n')[0] === l) Es.add(E);
       }
       const exact = (E) => { const bl = lignes.slice(i, i + E.split('\n').length).join('\n'); return bl === E || bl === E + '\r'; };
       const ex = [...Es].filter(exact);
