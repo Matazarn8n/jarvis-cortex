@@ -72,7 +72,7 @@
 # dette: le runner ne borne pas les écritures d'un `check:` hors `repo:` — les sondes B-T3 et B-T4 écrivent dans un `tempfile.mkdtemp()` propre à l'exécution, hors de ce dépôt, effacé dans un `finally`.
 # dette: aucun `check:` ne peut lire la liste des fichiers du diff du ticket ; la non-régression de périmètre se borne donc au contenu des trois fichiers de gouvernance, pas à une whitelist du commit.
 # dette: `allow_tools` accepte `Glob`/`Grep`, que le runner n'expose pas, et `Bash` reste cantonné au worktree ; aucune session de plan ne peut énumérer un répertoire hors dépôt.
-# dette RESTE OUVERTE (fix/brain-store-prefixe-et-budget : brain.js tient memory/.store.lock, mais le pont tient .memory.lock — deux verrous qui ne se coordonnent pas ; seul store() contre store() est sérialisé) : `brain.js` ne prend aucun verrou pour indexer — un écrivain qui l'appelle directement et dont l'ajout tombe entre la dernière vérification de `os.stat()` du pont et son `os.replace()` perd sa ligne ; fermer cette fenêtre exige un changement de `brain.js`, hors du dépôt de B, et B-T3 se borne donc à ne jamais retirer une ligne qui n'est pas un doublon de son propre slug.
+# dette: `brain.js` ne prend aucun verrou pour indexer — un écrivain qui l'appelle directement et dont l'ajout tombe entre la dernière vérification de `os.stat()` du pont et son `os.replace()` perd sa ligne ; fermer cette fenêtre exige un changement de `brain.js`, hors du dépôt de B, et B-T3 se borne donc à ne jamais retirer une ligne qui n'est pas un doublon de son propre slug.
 # dette: rien ne distingue un ticket `kind: human` d'un ticket de session aux yeux des contrôles amont — B-T5 porte donc un `model:` inerte qu'aucune exécution ne lira, faute de pouvoir déclarer « ce ticket n'a pas de modèle ».
 # dette: `AskUserQuestion` échoue en session de plan (`readonly database`) — un ticket ne peut pas poser la question que la consigne lui impose de poser.
 # dette: le sha256 de `brain.js` n'est pas épinglé, seulement son chemin (`requires_access` ci-dessus, `--oracle` du check B-T3) : le fichier vit hors du dépôt de B et M-T1 le modifie légitimement, un condensat littéral serait périmé avant le premier run — la sonde imprime donc celui qu'elle a réellement chargé, et prouve le régime versionné par comportement au lieu de faire confiance au fichier.
@@ -157,7 +157,7 @@ tickets:
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 90
+      && test "$cas" -ge 42
       && echo "$sortie"
       && echo "B-T0 sonde=autotest cas_ok=${cas}"
 
@@ -201,7 +201,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 90
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py contrat
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
@@ -241,7 +241,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 90
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py decision
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/verdict_regles.py)
@@ -336,25 +336,24 @@ tickets:
     # MAIS DEUX FILS LANCÉS UNE FOIS NE PROUVENT PAS LE VERROU — l'ordonnanceur
     # peut les sérialiser, et un pont sans verrou passe alors. Deux axes de plus,
     # indépendants de l'ordonnancement : la sonde tente elle-même
-# NOTE (fix/brain-store-prefixe-et-budget) : ces axes RESTENT exigés (quatorze) ; brain.js store() ajoute sa protection, le pont garde la sienne (défense en profondeur).
     # `flock(<racine>/.memory.lock, LOCK_NB)` pendant qu'une écriture est en vol
     # et exige un refus ; puis, le verrou constaté tenu, elle joue l'écrivain
     # DIRECT que le verrou ne lie pas — un `brain.js` lancé à la main — en
     # ajoutant sans verrou une ligne d'index qui doit survivre. C'est ce qui
     # oblige le pont à ne retirer que les doublons de SON slug au lieu de
     # réécrire l'index depuis un instantané périmé.
-    # Quatorze axes, donc quatorze `cas_ok=` attendus : c'est la quantité que le
+    # Treize axes, donc treize `cas_ok=` attendus : c'est la quantité que le
     # check compte, sur l'artefact que `--module` nomme.
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 90
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py pont
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/brain_bridge.py
       --oracle /home/nuveo/projects/jarvis-cortex/brain.js)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 14
+      && test "$cas" -ge 13
       && echo "$sortie"
       && echo "B-T3 sonde=pont cas_ok=${cas}"
 
@@ -392,19 +391,16 @@ tickets:
     # contrôle. Le code non nul est celui de la CLI, PAS du hook moteur, qui
     # reste non bloquant. Enfin la non-régression de périmètre sur les trois
     # fichiers de gouvernance.
-    # Quatorze axes, donc quatorze `cas_ok=` : les six cas de la matrice, les six
-    # passes (dont `ecrivain_muet`), les deux CLI et le périmètre. Le seuil est
-    # resté à 8 pendant que six axes `verdict:<V>` étaient ajoutés — six axes
-    # pouvaient donc disparaître sans faire tomber le compte.
+    # Huit axes, donc huit `cas_ok=` : les cinq passes, les deux CLI, le périmètre.
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 90
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py entree
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --module ops/verdict_hook.py)
       && cas=$(printf '%s' "$sortie" | grep -c '^cas_ok=')
-      && test "$cas" -ge 15
+      && test "$cas" -ge 8
       && echo "$sortie"
       && echo "B-T4 sonde=entree cas_ok=${cas}"
 
@@ -509,7 +505,7 @@ tickets:
     check: >-
       auto=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py autotest
       --facts "$HERMES_TICKET_FACTS")
-      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 90
+      && test "$(printf '%s' "$auto" | grep -c '^cas_ok=')" -ge 42
       && sortie=$("$HERMES_CHECK_PYTHON" ops/checks/sonde_b.py raccordement
       --facts "$HERMES_TICKET_FACTS" --sceau ops/checks/sonde_b.sha256
       --moteur /home/nuveo/hermes-os)

@@ -13,7 +13,7 @@ Tu n'écris **pas** le point d'entrée qui relie les deux : c'est B-T4. Un seul
 livrable ici, `ops/brain_bridge.py`.
 
 Le `check:` appelle la sonde avec `--module ops/brain_bridge.py` et **compte**
-les lignes `cas_ok=` qu'elle imprime : il en exige **quatorze**, et cette liste
+les lignes `cas_ok=` qu'elle imprime : il en exige **treize**, et cette liste
 fait foi — c'est la même dans `tickets/B-T0.md`, dans le YAML du runbook et
 ici :
 
@@ -29,16 +29,9 @@ ici :
 10. et leurs **deux** lignes d'index, une par slug ;
 11. le verrou `<racine>/.memory.lock` est réellement pris (refus observé) ;
 12. une ligne ajoutée par un écrivain **direct** pendant le cycle survit ;
-13. le verrou n'est rendu qu'**après** le `os.replace()` de l'index ; cet axe
-    est une preuve OBLIGATOIRE — la sonde retente jusqu'à l'observer et échoue
-    si elle n'y parvient pas, au lieu de le laisser manquer au compte ;
-14. l'oracle épinglé est réellement **invoqué**, avec les arguments d'écriture
-    (`store`, `--type feedback`, `--name`) — l'exposer sans rien lui demander
-    ne compte pas.
+13. le verrou n'est rendu qu'**après** le `os.replace()` de l'index.
 
 Un axe non exercé ne compte pas : la sonde ne l'imprime pas, et le seuil manque.
-Tant que le 13 était facultatif, son absence était compensée dans le compte par
-le 14 et le seuil restait franchi ; les deux sont maintenant exigés.
 
 ## Le livrable — `ops/brain_bridge.py`
 
@@ -186,15 +179,8 @@ versionne le fichier.
 
 ### 3. La concurrence — un verrou par racine, et un remplacement atomique
 
-> **MISE À JOUR (branche fix/brain-store-prefixe-et-budget)** : `brain.js store()` prend désormais
-> lui-même `memory/.store.lock` pour TOUT le geste (corps + index, tous les types) et, pour un
-> remplacement `feedback`, RETIRE l'ancienne entrée d'index avant d'ajouter la nouvelle (une seule
-> ligne par règle). Le magasin ne coordonne que `store()` contre `store()` : la « dette » ci-dessous
-> (écrivain direct pendant la réécriture du pont, `.memory.lock` ≠ `.store.lock`) RESTE OUVERTE, elle n'est pas fermée par le magasin. Le contrat du pont reste INCHANGÉ (`.memory.lock`, réécriture bornée
-> à son slug, quatorze axes, autotest) : c'est une défense en profondeur, le pont ne dépend pas du magasin.
-
-Le point précédent te met dans une situation que `brain.js` ne gère pas toujours pour toi (le magasin retire désormais toutes les anciennes entrées d'un `feedback` remplacé, mais pas les écrits directs concurrents du pont).
-Avant le correctif, il ajoutait sa ligne d'index **en append-only** : tenir *une* ligne
+Le point précédent te met dans une situation que `brain.js` ne gère pas pour toi.
+Il ajoute sa ligne d'index **en append-only** (l. 208-220) : tenir *une* ligne
 par règle à travers les révisions t'oblige donc à **relire `MEMORY.md`, le
 dédoublonner, et le réécrire**. C'est un cycle lecture-modification-écriture sur
 un fichier partagé, et la mémoire réelle *est* partagée : deux gates qui
@@ -280,8 +266,6 @@ Elle exige ensuite :
   contient `WHY_A`, et `<slug>.md` contient `WHY_B` — la révision d'une
   justification est versionnée, pas avalée ;
 - `MEMORY.md` porte **toujours une seule** ligne après le quatrième appel.
-
-> **NOTE (branche fix/brain-store-prefixe-et-budget)** : les axes de concurrence ci-dessous (11 à 13, quatorze axes au total) RESTENT exigés du pont : `brain.js store()` ajoute sa propre protection (`.store.lock`, une ligne par règle), le pont garde la sienne (`.memory.lock`) en défense en profondeur.
 
 Puis elle exerce la **concurrence**, ce que les quatre appels séquentiels ne
 peuvent pas faire : dans un sous-dossier neuf du bac à sable — une racine

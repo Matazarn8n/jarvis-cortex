@@ -12,8 +12,8 @@ runner monte le systeme en lecture-ecriture : un ticket qui garde Bash peut
 ecrire dans les 431 fichiers personnels de l'Owner pendant toute sa session, et
 aucun controle a posteriori ne le rattrape.
 
-C'est le `check:` qui compare les metriques et l'empreinte au recu commite et valide
-le runbook B statiquement (structure, modeles, gates). Ce que tu ecris reste un diff local, c'est normal
+C'est le `check:` qui recalcule les metriques, verifie l'empreinte et **compile**
+le runbook B avec le moteur. Ce que tu ecris reste un diff local, c'est normal
 ici.
 
 ## Pourquoi ce ticket existe
@@ -34,7 +34,7 @@ jamais écrite après G3).
 `/home/nuveo/.claude/projects/-home-nuveo/memory/*.md`.
 
 **Le document ouvre par un bloc de métriques structuré**, une ligne `clé: valeur`
-par métrique. Le `check:` compare les neuf valeurs au reçu commité (`docs/plans/2026-08-20-recu-memoire.txt`, produit par `scripts/releve-memoire.py`) et refuse toute divergence :
+par métrique. Le `check:` recalcule les neuf valeurs et refuse toute divergence :
 
 ```markdown
 user: 12
@@ -86,7 +86,7 @@ ligne, tronque aux **16 premiers caracteres hexadecimaux**. Inscris-la dans le
 document sous la forme `empreinte: <16 hex>`, avec le nombre de fichiers.
 
 Tu n'as pas Bash pour la calculer : etablis-la depuis la liste que `Glob` te
-rend. Le `check:` la compare à celle du reçu commité et exige de la retrouver — elle prouve que tu as
+rend. Le `check:` la recalcule et exige de la retrouver — elle prouve que tu as
 enumere le dossier entier sans en divulguer le contenu. Une empreinte fausse fait
 echouer le ticket, donc trie et joins exactement comme decrit.
 

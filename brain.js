@@ -12,41 +12,6 @@
 */
 'use strict';
 const fs = require('fs');
-
-//: Délai d'attente du verrou d'écriture, en millisecondes. Réglable pour les
-//: tests seulement — un humain n'a aucune raison de le toucher.
-const LOCK_TIMEOUT_MS = Number(process.env.BRAIN_LOCK_TIMEOUT_MS || 5000);
-
-/**
- * Sérialise `fn()` sur `file` par un fichier `<file>.lock` créé en `wx`.
- *
- * ponytail: trois appels stdlib. `proper-lockfile` ferait la même chose avec
- * une dépendance, un `package.json` et un cycle de mise à jour ; Node n'expose
- * pas `flock`, mais `O_EXCL` sur un fichier local est exactement la primitive
- * dont on a besoin ici.
- *
- * Verrou tenu au-delà du délai : on REFUSE, on ne reprend pas. Un verrou
- * périmé se reprend en le supprimant à la main, geste rare et visible ; le
- * reprendre tout seul rouvrirait la course qu'on vient de fermer, et cette
- * fonction garde un fait que personne ne peut relire.
- */
-function withFileLock(file, fn) {
-  const lock = file + '.lock';
-  const limite = Date.now() + LOCK_TIMEOUT_MS;
-  let fd;
-  for (;;) {
-    try { fd = fs.openSync(lock, 'wx'); break; }
-    catch (err) {
-      if (err.code !== 'EEXIST') throw err;
-      if (Date.now() >= limite) {
-        throw new Error(`store: ${path.basename(lock)} est tenu depuis plus de ${LOCK_TIMEOUT_MS} ms — écriture REFUSÉE plutôt que concurrente. Si aucun autre \`brain store\` ne tourne, supprimez ce fichier à la main.`);
-      }
-      // Seul sommeil synchrone de Node : `fn` et ses appelants sont synchrones.
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
-    }
-  }
-  try { return fn(); } finally { fs.closeSync(fd); fs.unlinkSync(lock); }
-}
 const path = require('path');
 const { performance } = require('perf_hooks');
 
@@ -70,41 +35,8 @@ const ROOT_DOC_HINTS = WS.routing || {
   'CLAUDE.md': ['goal', 'goals', 'rule', 'rules', 'workspace', 'folder', 'folders', 'map'],
 };
 
-// Archives de versionnage feedback (`<nom>.vN.md`) = règles révoquées : jamais
-// rappelées, ni par l'index, ni par balayage de noms, ni par suivi de lien.
-// Seules les archives de feedback (`feedback_<nom>.vN.md`, écrites par store())
-// sont des règles révoquées ; un document actif `reference_x.v1.md` reste
-// rappelable. Insensible à la casse et à `.v01` ; le chemin ET sa cible réelle
-// (lien symbolique) sont testés.
-// Reconnaissance d'une entrée d'index : UNE seule définition, partagée par recall() et par le
-// nettoyage de store() (sinon un format lu par l'un et ignoré par l'autre fuit ou supprime).
-const LINK_RE = /\[([^\]]+)\]\(([^)]+)\)/;
-const ARCHIVE_RE = /^feedback_.*\.v0*\d+\.md$/i;
-let archiveInodes = null; // remis à null au début de chaque recall()
-function isArchived(p) {
-  let real = p;
-  try { real = fs.realpathSync(p); } catch { /* absent : on teste le nom seul */ }
-  if (ARCHIVE_RE.test(path.basename(p)) || ARCHIVE_RE.test(path.basename(real))) return true;
-  // lien physique : un autre nom pour le même inode qu'une archive du dossier
-  // mémoire (ensemble construit UNE fois par rappel, pas par candidat)
-  try {
-    if (!archiveInodes) {
-      archiveInodes = new Set();
-      for (const f of fs.readdirSync(MEM)) {
-        if (!ARCHIVE_RE.test(f)) continue;
-        const a = fs.statSync(path.join(MEM, f));
-        archiveInodes.add(a.dev + ':' + a.ino);
-      }
-    }
-    const st = fs.statSync(p);
-    if (archiveInodes.has(st.dev + ':' + st.ino)) return true;
-  } catch { /* fichier absent : rien à comparer */ }
-  return false;
-}
-
 // ---------- recall ----------
 function recall(query, opts) {
-  archiveInodes = null;
   opts = opts || {};
   const t0 = performance.now();
   let bytes = 0;
@@ -117,21 +49,20 @@ function recall(query, opts) {
   const hub = path.join(MEM, MEM_INDEX);
   if (fs.existsSync(hub)) {
     for (const line of read(hub).split('\n')) {
-      const m = line.match(LINK_RE);
-      if (!m || ARCHIVE_RE.test(path.basename(m[2]))) continue; // archives feedback versionnées : jamais rappelées
+      const m = line.match(/\[([^\]]+)\]\(([^)]+)\)/);
+      if (!m) continue;
       const lw = words(line);
       let score = 0;
       for (const w of qw) {
         if (lw.includes(w)) score += 3;
         else if (lw.some(x => x.startsWith(w) || w.startsWith(x))) score += 1;
       }
-      const target = path.resolve(MEM, m[2]); // filtrer le chemin RÉSOLU : `x.v1.md/.` se normalise en l'archive
-      if (score > 0 && !isArchived(target)) pointers.push({ file: target, score, line: line.trim() });
+      if (score > 0) pointers.push({ file: path.resolve(MEM, m[2]), score, line: line.trim() });
     }
   }
   // 2) filename sweep (names only - no content reads)
   for (const f of fs.readdirSync(MEM)) {
-    if (!f.endsWith('.md') || isArchived(path.join(MEM, f))) continue; // archives .vN = règles révoquées, jamais rappelées
+    if (!f.endsWith('.md')) continue;
     const fw = words(f.replace(/\.md$/, ''));
     let score = 0;
     for (const w of qw) {
@@ -153,7 +84,7 @@ function recall(query, opts) {
   // dedupe by file
   const seen = new Set(), top = [];
   for (const p of pointers) {
-    if (seen.has(p.file) || isArchived(p.file)) continue; // point de passage unique : toute source (index, noms, docs racine) est filtrée
+    if (seen.has(p.file)) continue;
     seen.add(p.file); top.push(p);
     if (top.length >= (opts.k || 3)) break;
   }
@@ -199,11 +130,11 @@ function recall(query, opts) {
   if (hits.length && opts.hop !== false && !found) {
     const m = hits[0].slice.match(/[\w][\w\/.-]*\.md/g);
     for (const cand of (m || [])) {
-      if (/^(MEMORY|memory-)/.test(cand) || ARCHIVE_RE.test(path.basename(cand))) continue; // jamais d'archive feedback révoquée
+      if (/^(MEMORY|memory-)/.test(cand)) continue;
       const p1 = path.resolve(ROOT, cand);
       const p2 = path.resolve(path.dirname(path.join(ROOT, hits[0].file)), cand);
       const hp = fs.existsSync(p1) ? p1 : (fs.existsSync(p2) ? p2 : null);
-      if (!hp || isArchived(hp) || hits.some(h => path.resolve(ROOT, h.file) === hp)) continue;
+      if (!hp || hits.some(h => path.resolve(ROOT, h.file) === hp)) continue;
       const body = read(hp);
       if (opts.answerRe && opts.answerRe.test(body)) found = true;
       // we arrived via an explicit pointer, so serve the document generously:
@@ -234,64 +165,24 @@ function recall(query, opts) {
 // se périme : sans ça, un crash figerait le magasin pour toujours, ce qui est
 // pire que la course qu'il ferme.
 const STORE_LOCK_STALE_MS = 60000;
-const STORE_LOCK_TIMEOUT_MS = Number(process.env.BRAIN_LOCK_TIMEOUT_MS) || 10000;
-
-function pidVivant(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) return false;
-  try { process.kill(pid, 0); return true; } catch (e) { return e.code === 'EPERM'; }
-}
-
-function lisVerrou(f) {
-  try { return { st: fs.statSync(f), owner: fs.readFileSync(f, 'utf8') }; }
-  catch (e) { if (e.code === 'ENOENT') return null; throw e; } // toute autre erreur est remontée
-}
-
-// Reprise d'un verrou périmé : SEUL le détenteur du verrou de reprise (`.reap`, `wx`) a le
-// droit de supprimer le verrou principal, et seulement s'il porte encore le MÊME propriétaire
-// mort. Personne d'autre ne supprime le verrou principal (hors son propre jeton à la sortie),
-// donc un verrou frais ne peut pas être emporté. Un `.reap` abandonné n'est jamais volé : on
-// échoue bruyamment (fenêtre de quelques microsecondes), plutôt que de rouvrir la course.
-function verrouPerime(cur) {
-  // Périmé = ancien (observation FRAÎCHE) ET propriétaire mort. Un contenu vide (écriture du
-  // jeton en cours, ou crash entre open et write) n'est périmé que par son âge seul.
-  const age = Date.now() - cur.st.mtimeMs;
-  if (age <= STORE_LOCK_STALE_MS) return false;
-  const pid = Number(cur.owner.split(':')[0]);
-  return cur.owner === '' || (Number.isInteger(pid) && pid > 0 && !pidVivant(pid));
-}
-
-function reprendreVerrouPerime(lock, ownerLu) {
-  const reap = lock + '.reap';
-  let fd;
-  try { fd = fs.openSync(reap, 'wx'); }
-  catch (e) { if (e.code === 'EEXIST') return false; throw e; }
-  try {
-    // Réobservation SOUS le verrou de reprise : même propriétaire ET toujours périmé à l'instant T.
-    const cur = lisVerrou(lock);
-    if (cur && cur.owner === ownerLu && verrouPerime(cur)) fs.unlinkSync(lock);
-    return true;
-  } finally {
-    try { fs.closeSync(fd); } catch (_) {}
-    try { fs.unlinkSync(reap); } catch (_) {}
-  }
-}
+const STORE_LOCK_TIMEOUT_MS = 10000;
 
 function withStoreLock(dir, fn) {
   const lock = path.join(dir, '.store.lock');
-  const token = `${process.pid}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
   const t0 = Date.now();
+  let fd = null;
   for (;;) {
-    if (Date.now() - t0 > STORE_LOCK_TIMEOUT_MS) {
-      throw new Error(`store: verrou ${lock} non obtenu en ${STORE_LOCK_TIMEOUT_MS} ms — un autre écrivain n'a pas rendu la main (ou ${lock}.reap abandonné : à supprimer à la main).`);
-    }
     try {
-      const fd = fs.openSync(lock, 'wx');
-      try { fs.writeSync(fd, token); } finally { fs.closeSync(fd); }
+      fd = fs.openSync(lock, 'wx');
       break;
     } catch (e) {
       if (e.code !== 'EEXIST') throw e;
-      const cur = lisVerrou(lock); // lève sur EACCES etc. : jamais de boucle muette
-      if (cur && verrouPerime(cur) && reprendreVerrouPerime(lock, cur.owner)) continue;
+      let age = Infinity;
+      try { age = Date.now() - fs.statSync(lock).mtimeMs; } catch (_) { age = Infinity; }
+      if (age > STORE_LOCK_STALE_MS) { try { fs.unlinkSync(lock); } catch (_) {} continue; }
+      if (Date.now() - t0 > STORE_LOCK_TIMEOUT_MS) {
+        throw new Error(`store: verrou ${lock} tenu depuis ${Math.round(age)} ms — un autre écrivain n'a pas rendu la main.`);
+      }
       // Attente SYNCHRONE sans dépendance : `store` est un chemin synchrone de
       // bout en bout, un `await` ici changerait sa signature.
       Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 25);
@@ -300,8 +191,8 @@ function withStoreLock(dir, fn) {
   try {
     return fn();
   } finally {
-    // Ne supprimer QUE son propre verrou (jamais celui d'un autre écrivain).
-    try { if (fs.readFileSync(lock, 'utf8') === token) fs.unlinkSync(lock); } catch (_) {}
+    try { fs.closeSync(fd); } catch (_) {}
+    try { fs.unlinkSync(lock); } catch (_) {}
   }
 }
 
@@ -318,17 +209,10 @@ function store(fact, opts) {
   // convention des memories écrites à la main, et celle des pointeurs [[...]]).
   // Le recoller aveuglément a produit 63 `feedback_feedback_*` et un pointeur
   // mort dans CLAUDE.md racine — vérifié le 2026-08-11.
-  if (name.length > 120) throw new Error(`store: nom trop long (--name de ${name.length} caractères, max 120) — le pointeur d'index doit tenir dans 200 caractères.`);
   const base = name.replace(/-/g, '_');
   const file = path.join(dir, (prefix && base.startsWith(prefix) ? '' : prefix) + base + '.md');
-  // Le lien d'index ne se tronque jamais ; sa longueur doit donc être bornée à
-  // la source pour que l'entrée tienne dans ENTRY_MAX (200) sans le couper.
-  if (path.basename(file).length > 120) {
-    throw new Error(`store: nom trop long (${path.basename(file).length} > 120 caractères) — raccourcir --name.`);
-  }
   const today = new Date().toISOString().slice(0, 10);
-  const flat = fact.replace(/\s+/g, ' ').trim(); // l'entrée d'index tient sur UNE ligne
-  const desc = flat.length > 110 ? flat.slice(0, 107) + '...' : flat;
+  const desc = fact.length > 110 ? fact.slice(0, 107) + '...' : fact;
   const body = `---
 name: ${name}
 description: ${desc}
@@ -340,162 +224,65 @@ ${fact}
 ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
 *Saved ${today} via brain store.*
 `;
-  // UN seul verrou pour tout le geste (corps + index) et pour TOUS les types : l'index
-  // est partagé, deux écrivains ne doivent jamais s'y croiser.
-  let entry;
-  withStoreLock(dir, () => {
-    // Contenu de la règle AVANT remplacement : il sert à reconnaître, dans l'index, les lignes de
-    // continuation d'une ancienne entrée multiligne (ce sont des lignes de cet ancien fait).
-    // ... et de ses archives .vN : les révisions antérieures ont chacune laissé leur entrée (index
-    // historique append-only) avec leurs propres continuations.
-    const racine = path.basename(file, '.md');
-    const sources = [file, ...fs.readdirSync(dir).filter((f) => f.startsWith(racine + '.v') && /\.v0*\d+\.md$/.test(f) && f.slice(racine.length).match(/^\.v0*\d+\.md$/)).map((f) => path.join(dir, f))];
-    const ancien = sources.filter((f) => fs.existsSync(f)).map((f) => fs.readFileSync(f, 'utf8')).join('\u0000');
-    // Trois régimes d'écriture, pilotés par `type` (déjà calculé plus haut) :
-    //  - user/reference (sémantique)  : upsert, comportement historique inchangé.
-    //  - project (épisodique)         : append-only — un fichier existant bloque
-    //    l'écriture (perte de fait silencieuse sinon), sauf --force explicite.
-    //  - feedback (procédural)        : remplacement versionné — l'ancien
-    //    contenu part dans <base>.vN.md avant d'être remplacé, jamais perdu.
-    // Un type inconnu garde l'écrasement inconditionnel d'origine.
-    // Réserves HAUTE 3d906ce7d7f9 et 6e708b04ecfa (audit 2026-08-21, arbitrées
-    // FIX le 2026-08-22). Les deux régimes non triviaux tenaient leur promesse par
-    // un `existsSync` suivi d'une écriture : entre les deux, un autre processus
-    // passe. `project` perdait le fait qu'il jure de ne jamais perdre, et
-    // `feedback` pouvait archiver deux fois le MÊME contenu sous deux `.vN`
-    // différents, puis laisser une des deux écritures disparaître sans archive.
-    if (type === 'project' && !opts.force) {
-      // Création EXCLUSIVE : c'est le noyau qui tranche, pas nous. `wx` échoue en
-      // EEXIST si le fichier apparaît entre-temps, ce qu'aucun test préalable ne
-      // peut garantir. `--force` retombe sur l'écrasement demandé explicitement.
-      try {
-        fs.writeFileSync(file, body, { flag: 'wx' });
-      } catch (e) {
-        if (e.code !== 'EEXIST') throw e;
-        throw new Error(`store refuse d'écraser "${path.basename(file)}" (type project = append-only, le fait existant serait perdu) — relancez avec --force pour l'autoriser explicitement.`);
+  // Trois régimes d'écriture, pilotés par `type` (déjà calculé plus haut) :
+  //  - user/reference (sémantique)  : upsert, comportement historique inchangé.
+  //  - project (épisodique)         : append-only — un fichier existant bloque
+  //    l'écriture (perte de fait silencieuse sinon), sauf --force explicite.
+  //  - feedback (procédural)        : remplacement versionné — l'ancien
+  //    contenu part dans <base>.vN.md avant d'être remplacé, jamais perdu.
+  // Un type inconnu garde l'écrasement inconditionnel d'origine.
+  // Réserves HAUTE 3d906ce7d7f9 et 6e708b04ecfa (audit 2026-08-21, arbitrées
+  // FIX le 2026-08-22). Les deux régimes non triviaux tenaient leur promesse par
+  // un `existsSync` suivi d'une écriture : entre les deux, un autre processus
+  // passe. `project` perdait le fait qu'il jure de ne jamais perdre, et
+  // `feedback` pouvait archiver deux fois le MÊME contenu sous deux `.vN`
+  // différents, puis laisser une des deux écritures disparaître sans archive.
+  if (type === 'project' && !opts.force) {
+    // Création EXCLUSIVE : c'est le noyau qui tranche, pas nous. `wx` échoue en
+    // EEXIST si le fichier apparaît entre-temps, ce qu'aucun test préalable ne
+    // peut garantir. `--force` retombe sur l'écrasement demandé explicitement.
+    try {
+      fs.writeFileSync(file, body, { flag: 'wx' });
+    } catch (e) {
+      if (e.code !== 'EEXIST') throw e;
+      throw new Error(`store refuse d'écraser "${path.basename(file)}" (type project = append-only, le fait existant serait perdu) — relancez avec --force pour l'autoriser explicitement.`);
+    }
+  } else if (type === 'feedback') {
+    // Le choix du `.vN`, la copie et le remplacement forment UN geste : les
+    // séparer laissait deux écrivains choisir le même numéro, ou archiver le
+    // même original deux fois avant que l'un des deux corps ne soit écrasé sans
+    // jamais avoir été archivé. Verrou exclusif de fichier, du même dossier.
+    withStoreLock(dir, () => {
+      if (fs.existsSync(file)) {
+        let n = 1;
+        while (fs.existsSync(file.replace(/\.md$/, `.v${n}.md`))) n++;
+        fs.copyFileSync(file, file.replace(/\.md$/, `.v${n}.md`));
       }
-    } else if (type === 'feedback') {
-      // Le choix du `.vN`, la copie et le remplacement forment UN geste : les
-      // séparer laissait deux écrivains choisir le même numéro, ou archiver le
-      // même original deux fois avant que l'un des deux corps ne soit écrasé sans
-      // jamais avoir été archivé. Verrou exclusif de fichier, du même dossier.
-      // Verrou par fichier (contrat de #2 : écriture REFUSÉE si `<fichier>.lock` est tenu) en plus du
-      // verrou de magasin.
-      withFileLock(file, () => {
-        if (fs.existsSync(file)) {
-          let n = 1;
-          while (fs.existsSync(file.replace(/\.md$/, `.v${n}.md`))) n++;
-          fs.copyFileSync(file, file.replace(/\.md$/, `.v${n}.md`));
-        }
-        fs.writeFileSync(file, body);
-      });
-    } else {
       fs.writeFileSync(file, body);
-    }
-    // one index line - append-only, no reads needed beyond the index itself
-    const index = path.join(dir, MEM_INDEX);
-    const title = name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-    // Budget d'index EXÉCUTOIRE. memory-gc porte déjà la règle « une entrée ≤ 200
-    // caractères, le détail vit dans les fichiers » — mais en audit sur demande,
-    // que personne ne lance : 30 des 134 lignes de MEMORY.md la violaient au
-    // 2026-08-11. Un index toujours chargé qui grossit sans plafond finit par
-    // coûter plus cher que ce qu'il fait gagner, donc on tronque à l'écriture.
-    const ENTRY_MAX = 200;
-    // Plafond de 200 caractères SANS couper le pointeur [titre](fichier) : on rabote d'abord la
-    // description, puis le titre affiché (lisible, pas un identifiant). Le nom de fichier, lui,
-    // n'est jamais tronqué.
-    const fixe = (t) => `- [${t}](${path.basename(file)}) — ${today} `;
-    let tt = title;
-    let tete = fixe(tt);
-    const reserveDesc = 40;
-    if (tete.length + reserveDesc > ENTRY_MAX - 1 && tt.length > 8) {
-      const surplus = tete.length + reserveDesc - (ENTRY_MAX - 1);
-      tt = tt.slice(0, Math.max(8, tt.length - surplus - 1)).trimEnd() + '…';
-      tete = fixe(tt);
-    }
-    const reste = Math.max(0, ENTRY_MAX - 1 - tete.length);
-    entry = tete + desc + '\n';
-    if (entry.length - 1 > ENTRY_MAX) entry = tete + (reste > 1 ? desc.slice(0, reste - 1).trimEnd() + '…' : '…') + '\n';
-    if (opts.sandbox && !fs.existsSync(index)) fs.writeFileSync(index, '# Sandbox Memory Index\n\n');
-    if (type === 'feedback') {
-      // Remplacement versionné : l'entrée d'index de la règle précédente est RETIRÉE (sinon le
-      // rappel par index transmettrait l'ancienne consigne révoquée à côté de la nouvelle).
-      const cible = path.basename(file);
-    const pointe = (l) => { const m = l.match(LINK_RE); return m && path.resolve(dir, m[2]) === file; };
-    const prev = fs.existsSync(index) ? fs.readFileSync(index, 'utf8') : '';
-    // On retire l'entrée dont le pointeur PRINCIPAL est ce fichier, et ses lignes de continuation
-    // EXACTES : l'ancien store écrivait `tete + desc` avec desc = fait (tronqué à 107 + '...' au-delà
-    // de 110), retours à la ligne compris. L'étendue de l'ancienne entrée se recalcule donc depuis
-    // les faits de l'ancien fichier et de ses archives .vN : on saute exactement les lignes de ce
-    // desc, pas une ligne de plus — une entrée voisine, une section ou un titre ne sont jamais
-    // pris pour une continuation.
-    // Le front matter recopie `description: ${desc}` (qui peut contenir des '---') : on le saute
-    // jusqu'à son bloc `metadata:\n  type:` fixe, pas jusqu'au premier '---'.
-    // Le front matter recopie `description: ${desc}` (qui peut contenir des '---') : on le saute
-    // jusqu'à son bloc `metadata:\n  type:` fixe, pas jusqu'au premier '---'. La fin du fait est
-    // ambiguë (le fait peut contenir `**Why:**`) : on retourne TOUTES les coupes plausibles.
-    const faits = (t) => {
-      // Début du fait : après CHAQUE bloc `metadata:\n  type:\n---` plausible (la description ou le
-      // fait peuvent en contenir un), à défaut après le premier front matter.
-      const debuts = [];
-      for (const m of t.matchAll(/\nmetadata:\n  type: [^\n]*\n---\n\n?/g)) debuts.push(m.index + m[0].length);
-      if (!debuts.length) { const m = t.match(/^---\n[\s\S]*?\n---\n\n?/); debuts.push(m ? m[0].length : 0); }
-      const coupes = new Set();
-      for (const d of debuts) {
-        const sansPied = t.slice(d).replace(/\n\n?\*Saved [^\n]*\n?$/, '');
-        coupes.add(sansPied.trimEnd());
-        for (let m = sansPied.indexOf('\n\n**Why:**'); m >= 0; m = sansPied.indexOf('\n\n**Why:**', m + 1)) coupes.add(sansPied.slice(0, m).trimEnd());
-      }
-      return [...coupes];
-    };
-    // Chaque révision écrit son entrée à SA date (`*Saved AAAA-MM-JJ*`) : le pointeur et son desc
-    // ne se rapprochent que d'une révision de même date, sinon une archive voisine pourrait
-    // prêter ses lignes à une autre entrée.
-    const revisions = ancien.split('\u0000').flatMap((t) => {
-      const date = (t.match(/\*Saved (\d{4}-\d{2}-\d{2}) via brain store\.\*\s*$/) || [])[1]; // pied FINAL seulement
-      return faits(t).filter((f) => f.includes('\n'))
-        .map((f) => ({ date, d: (f.length > 110 ? f.slice(0, 107) + '...' : f).split('\n') }));
     });
-    const lignes = prev.split('\n');
-    const sortie = [];
-    for (let i = 0; i < lignes.length; i++) {
-      const l = lignes[i];
-      if (!pointe(l)) { sortie.push(l); continue; }
-      // Une ligne au format d'entrée de store (`[titre](fichier) — AAAA-MM-JJ …`) est une entrée
-      // indépendante, jamais une continuation. Une continuation est une ligne de l'ancien fait,
-      // égale à la ligne du desc, ou — pour la dernière — tronquée par '...' / '…'.
-      const ENTREE = /^\s*(?:[-*+]|\d+[.)])?\s*\[[^\]]+\]\([^)]+\) — \d{4}-\d{2}-\d{2}\b/;
-      let k = 0;
-      for (const { d, date } of revisions) {
-        if (!l.endsWith(d[0]) || (date && !l.includes(` — ${date} `))) continue;
-        let n = 0;
-        for (let q = 1; q < d.length; q++) {
-          const x = lignes[i + q];
-          if (x === undefined || ENTREE.test(x)) break;
-          if (x.trimEnd() === d[q].trimEnd()) { n = q; continue; }
-          const m = x.trimEnd().match(/^(.*?)(\.\.\.|…)$/);
-          if (m && m[1] !== '' && d[q].startsWith(m[1])) n = q;
-          break;
-        }
-        if (n > k) k = n;
-      }
-      i += k;
-    }
-    const garde = sortie.join('\n').replace(/\n*$/, '');
-    const tmp = `${index}.tmp-${process.pid}`;
-      fs.writeFileSync(tmp, (garde ? garde + '\n' : '') + entry);
-      fs.renameSync(tmp, index);
-    } else {
-      fs.appendFileSync(index, entry);
-    }
-    // Le fait n'est jamais perdu (il est dans son fichier) — mais l'index qui
-    // déborde doit se voir, sinon la dérive reprend. Alerte, pas exception.
-    const indexBytes = fs.statSync(index).size;
-    const INDEX_MAX = 16000;
-    if (indexBytes > INDEX_MAX) {
-      console.error(`[brain] MEMORY.md ${indexBytes} c > budget ${INDEX_MAX} c — lancer la skill memory-gc`);
-    }
-  });
+  } else {
+    fs.writeFileSync(file, body);
+  }
+  // one index line - append-only, no reads needed beyond the index itself
+  const index = path.join(dir, MEM_INDEX);
+  const title = name.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  // Budget d'index EXÉCUTOIRE. memory-gc porte déjà la règle « une entrée ≤ 200
+  // caractères, le détail vit dans les fichiers » — mais en audit sur demande,
+  // que personne ne lance : 30 des 134 lignes de MEMORY.md la violaient au
+  // 2026-08-11. Un index toujours chargé qui grossit sans plafond finit par
+  // coûter plus cher que ce qu'il fait gagner, donc on tronque à l'écriture.
+  const ENTRY_MAX = 200;
+  let entry = `- [${title}](${path.basename(file)}) — ${today} ${desc}\n`;
+  if (entry.length - 1 > ENTRY_MAX) entry = entry.slice(0, ENTRY_MAX - 1).trimEnd() + '…\n';
+  if (opts.sandbox && !fs.existsSync(index)) fs.writeFileSync(index, '# Sandbox Memory Index\n\n');
+  fs.appendFileSync(index, entry);
+  // Le fait n'est jamais perdu (il est dans son fichier) — mais l'index qui
+  // déborde doit se voir, sinon la dérive reprend. Alerte, pas exception.
+  const indexBytes = fs.statSync(index).size;
+  const INDEX_MAX = 16000;
+  if (indexBytes > INDEX_MAX) {
+    console.error(`[brain] MEMORY.md ${indexBytes} c > budget ${INDEX_MAX} c — lancer la skill memory-gc`);
+  }
   const bytes = Buffer.byteLength(body) + Buffer.byteLength(entry);
   return { file: path.relative(ROOT, file), indexLine: entry.trim(), bytes, ms: +(performance.now() - t0).toFixed(2) };
 }

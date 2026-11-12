@@ -1,6 +1,2 @@
 .cache/
 node_modules/
-.hermes/branch-claim.*
-.hermes/session.lock
-__pycache__/
-*.pyc

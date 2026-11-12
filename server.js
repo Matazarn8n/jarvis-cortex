@@ -1,7 +1,6 @@
 /* jarvis-cortex server - local engine for the JARVIS Cortex workspace graph.
    Zero dependencies. Serves the two visual options + the graph API over the
    real workspace. Run:  node server.js   ->  http://localhost:5210
-   Check : node open-file.js
    Endpoints:
      GET  /api/graph[?fresh=1]  default-visible graph + all md links
      GET  /api/expand?path=rel  children of a folded folder
@@ -14,7 +13,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { openFile } = require('./open-file');
+const { spawn } = require('child_process');
 const scan = require('./scan');
 
 const PORT = Number(process.env.PORT) || 5210;
@@ -133,8 +132,8 @@ const handle = async (req, res) => {
       const abs = safeResolve(body.path || '');
       if (!abs || !fs.existsSync(abs)) return sendJSON(res, { error: 'Not found' }, 404);
       const ext = path.extname(abs).toLowerCase();
-      try { await openFile(abs, ext === '.html' || ext === '.htm'); }
-      catch (e) { console.error('[open] failed:', e.message); return sendJSON(res, { error: 'Open failed: ' + e.message }, 500); }
+      if (ext === '.html' || ext === '.htm') spawn('cmd', ['/c', 'start', 'chrome', abs], { detached: true, stdio: 'ignore' }).unref();
+      else spawn('cmd', ['/c', 'start', '', abs], { detached: true, stdio: 'ignore' }).unref();
       return sendJSON(res, { ok: true });
     }
 
