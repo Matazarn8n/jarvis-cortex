@@ -278,7 +278,12 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
   let entry = `- [${cleanTitle}](${path.basename(file)}) — ${hook}\n`;
   if (entry.length - 1 > ENTRY_MAX) entry = entry.slice(0, ENTRY_MAX - 1).trimEnd() + '…\n';
   if (opts.sandbox && !fs.existsSync(index)) fs.writeFileSync(index, '# Sandbox Memory Index\n\n');
-  fs.appendFileSync(index, entry);
+  // Plafond exécutoire (Owner 2026-11-12) : hub au-delà de 14 000 o ⇒ une ligne project_ va dans
+  // index-chantiers.md (lu à la demande, compté par reconcilier_index_memoire.py) ; feedback reste au hub.
+  const chantiers = path.join(dir, 'index-chantiers.md');
+  const cible = type === 'project' && fs.existsSync(chantiers) && fs.existsSync(index)
+    && fs.statSync(index).size > 14000 ? chantiers : index;
+  fs.appendFileSync(cible, entry);
   // Le fait n'est jamais perdu (il est dans son fichier) — mais l'index qui
   // déborde doit se voir, sinon la dérive reprend. Alerte, pas exception.
   const indexBytes = fs.statSync(index).size;
@@ -287,7 +292,7 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
     console.error(`[brain] MEMORY.md ${indexBytes} c > budget ${INDEX_MAX} c — lancer la skill memory-gc`);
   }
   const bytes = Buffer.byteLength(body) + Buffer.byteLength(entry);
-  return { file: path.relative(ROOT, file), indexLine: entry.trim(), bytes, ms: +(performance.now() - t0).toFixed(2) };
+  return { file: path.relative(ROOT, file), indexFile: path.basename(cible), indexLine: entry.trim(), bytes, ms: +(performance.now() - t0).toFixed(2) };
 }
 
 // builds the one-turn prompt (question + recall evidence). NO LLM here -
@@ -338,7 +343,7 @@ if (require.main === module) {
       process.exit(1);
     }
     console.log(`[brain] stored -> ${r.file}`);
-    console.log(`[brain] index += ${r.indexLine}`);
+    console.log(`[brain] ${r.indexFile} += ${r.indexLine}`);
     console.log(`[brain] ${r.bytes.toLocaleString()} bytes written · ${r.ms}ms · zero exploration reads`);
   } else if (cmd === 'ask') {
     // ZERO-LLM by design (Jay): builds the one-turn prompt and copies it to
