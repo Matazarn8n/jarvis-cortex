@@ -1,0 +1,1619 @@
+{
+  "tickets": {
+    "M-T1": {
+      "status": "done",
+      "history": [
+        {
+          "at": "2026-08-20T09:22:39.509214+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-sonnet-5",
+          "base_sha": "ccd41dd8989a4a81ecb6bdcee4aef0372590c867"
+        },
+        {
+          "at": "2026-08-20T09:24:51.384895+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 0.6122092000000001,
+          "is_error": false,
+          "written": 2,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T09:24:52.865033+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s tests/test_store_regimes.mjs\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nTraceback (most recent call last):\\n  File \"<stdin>\", line 131, in <module>\\nTypeError: unsupported operand type(s) for %: \\'PosixPath\\' and \\'str\\'\\n'"
+        },
+        {
+          "at": "2026-08-20T09:24:52.865058+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-sonnet-5",
+          "base_sha": "ccd41dd8989a4a81ecb6bdcee4aef0372590c867"
+        },
+        {
+          "at": "2026-08-20T09:27:30.113033+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 0.8443717000000001,
+          "is_error": false,
+          "written": 0,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T09:27:31.128155+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s tests/test_store_regimes.mjs\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nTraceback (most recent call last):\\n  File \"<stdin>\", line 131, in <module>\\nTypeError: unsupported operand type(s) for %: \\'PosixPath\\' and \\'str\\'\\n'"
+        },
+        {
+          "at": "2026-08-20T09:27:31.128181+00:00",
+          "event": "session_start",
+          "attempt": 3,
+          "model": "claude-sonnet-5",
+          "base_sha": "ccd41dd8989a4a81ecb6bdcee4aef0372590c867"
+        },
+        {
+          "at": "2026-08-20T09:29:43.853574+00:00",
+          "event": "session_end",
+          "attempt": 3,
+          "cost_usd": 0.43093599999999993,
+          "is_error": false,
+          "written": 0,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T09:29:44.876268+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s tests/test_store_regimes.mjs\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nTraceback (most recent call last):\\n  File \"<stdin>\", line 131, in <module>\\nTypeError: unsupported operand type(s) for %: \\'PosixPath\\' and \\'str\\'\\n'"
+        },
+        {
+          "at": "2026-08-20T09:29:44.876291+00:00",
+          "event": "session_start",
+          "attempt": 4,
+          "model": "claude-sonnet-5",
+          "base_sha": "ccd41dd8989a4a81ecb6bdcee4aef0372590c867"
+        },
+        {
+          "at": "2026-08-20T09:31:51.096665+00:00",
+          "event": "session_end",
+          "attempt": 4,
+          "cost_usd": 0.3296536,
+          "is_error": false,
+          "written": 0,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T09:31:52.141349+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s tests/test_store_regimes.mjs\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nTraceback (most recent call last):\\n  File \"<stdin>\", line 131, in <module>\\nTypeError: unsupported operand type(s) for %: \\'PosixPath\\' and \\'str\\'\\n'"
+        },
+        {
+          "at": "2026-08-20T09:41:47.802010+00:00",
+          "event": "human_resume_reset"
+        },
+        {
+          "at": "2026-08-20T09:41:48.696327+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-sonnet-5",
+          "base_sha": "ccd41dd8989a4a81ecb6bdcee4aef0372590c867"
+        },
+        {
+          "at": "2026-08-20T09:44:10.872414+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 0.5487954999999999,
+          "is_error": false,
+          "written": 0,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T09:44:12.016957+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T09:45:20.879885+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 2 HAUTE et 0 mineure(s) consignées après 0 tour(s) correctif(s)",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-T1-a1-20260820T094520.md"
+        },
+        {
+          "at": "2026-08-20T09:45:20.879904+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 1,
+          "codex_correction_rounds": 0,
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-T1-a1-20260820T094520.md"
+        }
+      ],
+      "attempts": 1,
+      "base_sha": "ccd41dd8989a4a81ecb6bdcee4aef0372590c867",
+      "last_session": {
+        "exit": 0,
+        "is_error": false,
+        "session_id": "b9430827-f9f2-4240-85f5-d8f14d3b994c",
+        "subtype": "success",
+        "total_cost_usd": 0.5487954999999999,
+        "num_turns": 14,
+        "writes_declared": true,
+        "written_files": [],
+        "opaque_writes": false
+      },
+      "written_files": [
+        "/home/nuveo/jarvis-cortex-plan-m/brain.js",
+        "/home/nuveo/jarvis-cortex-plan-m/tests/test_store_regimes.mjs"
+      ],
+      "check_output": "M_T1 sonde=ok suite=ok mutation=prouvee fuite=aucune tickets_connus=2",
+      "codex_reports": [
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-T1-a1-20260820T094520.md"
+      ],
+      "codex_verdict": "GO_AVEC_RESERVES",
+      "verdict_motif": "0 CRITIQUE, 2 HAUTE et 0 mineure(s) consignées après 0 tour(s) correctif(s)",
+      "evidence": "[GO_AVEC_RESERVES accepté au tour 1/4, réserves traitées en session — rapport /home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-T1-a1-20260820T094520.md] M_T1 sonde=ok suite=ok mutation=prouvee fuite=aucune tickets_connus=2"
+    },
+    "M-TGEN": {
+      "status": "done",
+      "history": [
+        {
+          "at": "2026-08-20T09:45:51.042047+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T10:00:19.726551+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 3.772185650000001,
+          "is_error": false,
+          "written": 5,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T10:00:20.496753+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='nteurs_morts (attendu 0)\\nECHEC: metrique absente du bloc structure du constat: project (attendu 279)\\nECHEC: metrique absente du bloc structure du constat: project_multidate (attendu 89)\\nECHEC: metrique absente du bloc structure du constat: reference (attendu 30)\\nECHEC: metrique absente du bloc structure du constat: sans_type (attendu 4)\\nECHEC: metrique absente du bloc structure du constat: user (attendu 2)\\nECHEC: empreinte de lecture absente ou fausse (attendu ed3a"
+        },
+        {
+          "at": "2026-08-20T10:00:20.496779+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T10:09:01.463640+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 1.4520439500000002,
+          "is_error": false,
+          "written": 2,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T10:09:01.478592+00:00",
+          "event": "governance_violation",
+          "files": [
+            "/home/nuveo/hermes-os/ops/plan_runner.py"
+          ]
+        },
+        {
+          "at": "2026-08-20T10:09:02.312482+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s docs/plans/2026-08-20-m-constat-memoire.md\\n+ test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nECHEC: metrique feedback_revises: constat dit 58, recalcul dit 34\\n'"
+        },
+        {
+          "at": "2026-08-20T10:09:02.312515+00:00",
+          "event": "session_start",
+          "attempt": 3,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T10:10:30.122608+00:00",
+          "event": "session_end",
+          "attempt": 3,
+          "cost_usd": 0.3525179,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T10:10:30.759667+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T10:13:48.312233+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE mais 5 HAUTE — UN tour correctif, pas quatre",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a3-20260820T101348.md"
+        },
+        {
+          "at": "2026-08-20T10:13:48.314274+00:00",
+          "event": "daily_cap_hit",
+          "attempt": 4
+        },
+        {
+          "at": "2026-08-20T10:36:35.732529+00:00",
+          "event": "session_start",
+          "attempt": 4,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T10:42:12.604808+00:00",
+          "event": "session_end",
+          "attempt": 4,
+          "cost_usd": 0.9922065999999999,
+          "is_error": false,
+          "written": 6,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T10:42:12.618787+00:00",
+          "event": "governance_violation",
+          "files": [
+            "/home/nuveo/hermes-os/.env",
+            "/home/nuveo/hermes-os/ops/plan_runner.py"
+          ]
+        },
+        {
+          "at": "2026-08-20T10:42:13.238054+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s docs/plans/2026-08-20-m-constat-memoire.md\\n+ test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nECHEC: metrique feedback_revises: constat dit 34, recalcul dit 35\\nECHEC: metrique project: constat dit 279, recalcul dit 280\\nECHEC: empreinte de lecture absente ou fausse (attendu f870424f1bb06ce0 sur 433 fichiers)\\n'"
+        },
+        {
+          "at": "2026-08-20T10:43:15.673795+00:00",
+          "event": "human_resume_reset"
+        },
+        {
+          "at": "2026-08-20T10:43:16.646428+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T10:44:39.407245+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 0.3798473,
+          "is_error": false,
+          "written": 0,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T10:44:40.061764+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s docs/plans/2026-08-20-m-constat-memoire.md\\n+ test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nECHEC: metrique feedback_revises: constat dit 34, recalcul dit 35\\nECHEC: metrique project: constat dit 279, recalcul dit 280\\nECHEC: empreinte de lecture absente ou fausse (attendu f870424f1bb06ce0 sur 433 fichiers)\\n'"
+        },
+        {
+          "at": "2026-08-20T10:44:40.061803+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T10:47:11.626966+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 0.7987267999999998,
+          "is_error": false,
+          "written": 2,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T10:47:12.256795+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T10:50:16.218458+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE mais 6 HAUTE — UN tour correctif, pas quatre",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T105016.md"
+        },
+        {
+          "at": "2026-08-20T10:50:16.220543+00:00",
+          "event": "session_start",
+          "attempt": 3,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T10:56:48.677170+00:00",
+          "event": "session_end",
+          "attempt": 3,
+          "cost_usd": 1.2769683,
+          "is_error": false,
+          "written": 6,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T10:56:49.364178+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T11:00:26.979980+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 5 HAUTE et 4 mineure(s) consignées après 1 tour(s) correctif(s)",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a3-20260820T110026.md"
+        },
+        {
+          "at": "2026-08-20T11:00:26.980000+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 3,
+          "codex_correction_rounds": 1,
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a3-20260820T110026.md"
+        },
+        {
+          "at": "2026-08-20T11:42:57.616663+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T11:54:23.710095+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 1.8533761499999999,
+          "is_error": false,
+          "written": 5,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T11:54:24.395690+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s docs/plans/2026-08-20-m-constat-memoire.md\\n+ test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nECHEC: metrique feedback: constat dit 116, recalcul dit 117\\nECHEC: metrique project: constat dit 280, recalcul dit 281\\nECHEC: empreinte de lecture absente ou fausse (attendu 4b713b1127ea8c35 sur 435 fichiers)\\n'"
+        },
+        {
+          "at": "2026-08-20T11:54:24.395724+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T11:56:47.148480+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 0.7290075,
+          "is_error": false,
+          "written": 2,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T11:56:47.158357+00:00",
+          "event": "governance_violation",
+          "files": [
+            "/home/nuveo/hermes-os/.env"
+          ]
+        },
+        {
+          "at": "2026-08-20T11:56:47.724111+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T12:01:18.558136+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE mais 6 HAUTE — UN tour correctif, pas quatre",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T120118.md"
+        },
+        {
+          "at": "2026-08-20T12:01:18.559704+00:00",
+          "event": "session_start",
+          "attempt": 3,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T12:08:58.514697+00:00",
+          "event": "session_end",
+          "attempt": 3,
+          "cost_usd": 1.4393568999999995,
+          "is_error": false,
+          "written": 7,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T12:08:59.395323+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T12:14:01.365097+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 5 HAUTE et 1 mineure(s) consignées après 1 tour(s) correctif(s)",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a3-20260820T121401.md"
+        },
+        {
+          "at": "2026-08-20T12:14:01.365110+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 3,
+          "codex_correction_rounds": 1,
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a3-20260820T121401.md"
+        },
+        {
+          "at": "2026-08-20T12:35:23.514655+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T12:43:08.252886+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 2.0081724,
+          "is_error": false,
+          "written": 6,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T12:43:08.275596+00:00",
+          "event": "governance_violation",
+          "files": [
+            "/home/nuveo/hermes-os/ops/gate_arbiter.py",
+            "/home/nuveo/hermes-os/ops/plan_doctor.py",
+            "/home/nuveo/hermes-os/ops/plan_runner.py"
+          ]
+        },
+        {
+          "at": "2026-08-20T12:43:09.000796+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s docs/plans/2026-08-20-m-constat-memoire.md\\n+ test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nECHEC: metrique feedback: constat dit 117, recalcul dit 118\\nECHEC: empreinte de lecture absente ou fausse (attendu 837c473ab7852f24 sur 436 fichiers)\\n'"
+        },
+        {
+          "at": "2026-08-20T12:43:09.000827+00:00",
+          "event": "daily_cap_hit",
+          "attempt": 2
+        },
+        {
+          "at": "2026-08-20T12:45:20.957366+00:00",
+          "event": "daily_cap_hit",
+          "attempt": 2
+        },
+        {
+          "at": "2026-08-20T13:00:44.324011+00:00",
+          "event": "daily_cap_hit",
+          "attempt": 2
+        },
+        {
+          "at": "2026-08-20T13:16:33.396417+00:00",
+          "event": "daily_cap_hit",
+          "attempt": 2
+        },
+        {
+          "at": "2026-08-20T13:31:27.585998+00:00",
+          "event": "daily_cap_hit",
+          "attempt": 2
+        },
+        {
+          "at": "2026-08-20T13:46:52.620841+00:00",
+          "event": "daily_cap_hit",
+          "attempt": 2
+        },
+        {
+          "at": "2026-08-20T13:57:03.446423+00:00",
+          "event": "daily_cap_hit",
+          "attempt": 2
+        },
+        {
+          "at": "2026-08-20T13:58:30.998037+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T14:00:00.412749+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 0.5072306999999999,
+          "is_error": false,
+          "written": 0,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T14:00:01.449452+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s docs/plans/2026-08-20-m-constat-memoire.md\\n+ test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nECHEC: metrique feedback: constat dit 117, recalcul dit 119\\nECHEC: empreinte de lecture absente ou fausse (attendu aa4954b13b2d1a3b sur 437 fichiers)\\n'"
+        },
+        {
+          "at": "2026-08-20T14:00:01.449491+00:00",
+          "event": "session_start",
+          "attempt": 3,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T14:01:22.685850+00:00",
+          "event": "session_end",
+          "attempt": 3,
+          "cost_usd": 0.41366440000000004,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T14:01:23.437760+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T14:07:18.035421+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE mais 5 HAUTE — UN tour correctif, pas quatre",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a3-20260820T140718.md"
+        },
+        {
+          "at": "2026-08-20T14:07:18.036860+00:00",
+          "event": "session_start",
+          "attempt": 4,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T14:12:57.132148+00:00",
+          "event": "session_end",
+          "attempt": 4,
+          "cost_usd": 1.3517485,
+          "is_error": false,
+          "written": 5,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T14:12:57.955098+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s docs/plans/2026-08-20-m-constat-memoire.md\\n+ test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nECHEC: metrique feedback: constat dit 119, recalcul dit 120\\nECHEC: empreinte de lecture absente ou fausse (attendu 43e95bffc256940a sur 438 fichiers)\\n'"
+        },
+        {
+          "at": "2026-08-20T14:46:36.191316+00:00",
+          "event": "human_resume_reset"
+        },
+        {
+          "at": "2026-08-20T14:47:29.490219+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T14:50:20.050296+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 0.6409163,
+          "is_error": false,
+          "written": 0,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T14:50:20.784094+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s docs/plans/2026-08-20-m-constat-memoire.md\\n+ test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nECHEC: metrique feedback: constat dit 119, recu dit 120\\nECHEC: metrique feedback_revises: constat dit 35, recu dit 36\\nECHEC: metrique reference: constat dit 30, recu dit 31\\nECHEC: empreinte du constat absente ou differente de celle du recu (f2b9b2a100fa845f)\\n'"
+        },
+        {
+          "at": "2026-08-20T14:50:20.784138+00:00",
+          "event": "daily_cap_hit",
+          "attempt": 2
+        },
+        {
+          "at": "2026-08-20T14:52:08.774128+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T14:54:00.095462+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 0.42721249999999994,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T14:54:00.876054+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T14:57:47.804045+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 2 HAUTE et 3 mineure(s) consignées après 0 tour(s) correctif(s)",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T145747.md"
+        },
+        {
+          "at": "2026-08-20T14:57:47.804066+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 2,
+          "codex_correction_rounds": 0,
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T145747.md"
+        },
+        {
+          "at": "2026-08-20T15:10:06.727058+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T15:18:01.257943+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 2.0274589,
+          "is_error": false,
+          "written": 4,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T15:18:01.262867+00:00",
+          "event": "governance_violation",
+          "files": [
+            "/home/nuveo/hermes-os/.env"
+          ]
+        },
+        {
+          "at": "2026-08-20T15:18:02.952874+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T15:22:58.211080+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE mais 4 HAUTE — UN tour correctif, pas quatre",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a1-20260820T152258.md"
+        },
+        {
+          "at": "2026-08-20T15:22:58.213031+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T15:28:13.540344+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 1.3018991000000004,
+          "is_error": false,
+          "written": 4,
+          "writes_opaque": false
+        },
+        {
+          "at": "2026-08-20T15:28:14.303193+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T15:32:56.204317+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 3 HAUTE et 1 mineure(s) consignées après 1 tour(s) correctif(s)",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T153256.md"
+        },
+        {
+          "at": "2026-08-20T15:32:56.204344+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 2,
+          "codex_correction_rounds": 1,
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T153256.md"
+        },
+        {
+          "at": "2026-08-20T16:01:38.755380+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T16:05:52.885839+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 1.0574966,
+          "is_error": true,
+          "written": 0,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-20T16:05:52.885856+00:00",
+          "event": "session_error",
+          "exit": 1,
+          "subtype": "success",
+          "num_turns": 28,
+          "timeout": false,
+          "lease_busy": false,
+          "stderr_tail": "last):\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 643, in <module>\n    raise SystemExit(main())\n                     ^^^^^^\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 639, in main\n    return asyncio.run(run(args))\n           ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/runners.py\", line 194, in run\n    return runner.run(main)\n           ^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/runners.py\", line 118, in run\n    return self._loop.run_until_complete(task)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/base_events.py\", line 687, in run_until_complete\n    return future.result()\n           ^^^^^^^^^^^^^^^\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 475, in run\n    return await _boucle(args, options, ledger, human_wait, terminer, _perimetre)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 550, in _boucle\n    message = await asyncio.wait_for(asyncio.shield(en_cours), TICK)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/tasks.py\", line 520, in wai"
+        },
+        {
+          "at": "2026-08-20T16:05:55.576796+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T16:12:23.772428+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE mais 3 HAUTE — UN tour correctif, pas quatre",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a1-20260820T161223.md"
+        },
+        {
+          "at": "2026-08-20T16:12:23.773726+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T16:12:25.910840+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 0,
+          "is_error": true,
+          "written": 0,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-20T16:12:25.910858+00:00",
+          "event": "session_error",
+          "exit": 1,
+          "subtype": "success",
+          "num_turns": 1,
+          "timeout": false,
+          "lease_busy": false,
+          "stderr_tail": "last):\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 643, in <module>\n    raise SystemExit(main())\n                     ^^^^^^\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 639, in main\n    return asyncio.run(run(args))\n           ^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/runners.py\", line 194, in run\n    return runner.run(main)\n           ^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/runners.py\", line 118, in run\n    return self._loop.run_until_complete(task)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/base_events.py\", line 687, in run_until_complete\n    return future.result()\n           ^^^^^^^^^^^^^^^\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 475, in run\n    return await _boucle(args, options, ledger, human_wait, terminer, _perimetre)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/nuveo/hermes-os/ops/sdk_session.py\", line 550, in _boucle\n    message = await asyncio.wait_for(asyncio.shield(en_cours), TICK)\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/lib/python3.12/asyncio/tasks.py\", line 520, in wai"
+        },
+        {
+          "at": "2026-08-20T16:12:26.731742+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T16:18:11.838177+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 5 HAUTE et 2 mineure(s) consignées après 1 tour(s) correctif(s)",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T161811.md"
+        },
+        {
+          "at": "2026-08-20T16:18:11.838197+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 2,
+          "codex_correction_rounds": 1,
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T161811.md"
+        },
+        {
+          "at": "2026-08-20T19:13:01.092353+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T19:14:51.078285+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 0.53143,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-20T19:14:52.145887+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T19:20:15.274843+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE mais 3 HAUTE — UN tour correctif, pas quatre",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a1-20260820T192015.md"
+        },
+        {
+          "at": "2026-08-20T19:20:15.276774+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-20T19:30:35.480088+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 2.9648610999999994,
+          "is_error": false,
+          "written": 5,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-20T19:30:36.215869+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-20T19:36:44.423124+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 6 HAUTE et 1 mineure(s) consignées après 1 tour(s) correctif(s)",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T193644.md"
+        },
+        {
+          "at": "2026-08-20T19:36:44.423146+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 2,
+          "codex_correction_rounds": 1,
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T193644.md"
+        },
+        {
+          "at": "2026-08-20T19:44:08.498977+00:00",
+          "event": "daily_cap_hit",
+          "attempt": 1
+        },
+        {
+          "at": "2026-08-21T10:15:30.351600+00:00",
+          "event": "session_start",
+          "attempt": 1,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-21T10:17:06.126397+00:00",
+          "event": "session_end",
+          "attempt": 1,
+          "cost_usd": 0.5726393000000001,
+          "is_error": false,
+          "written": 0,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T10:17:06.673449+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-21T10:21:35.299871+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE mais 6 HAUTE — UN tour correctif, pas quatre",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a1-20260821T102135.md"
+        },
+        {
+          "at": "2026-08-21T10:21:35.301895+00:00",
+          "event": "session_start",
+          "attempt": 2,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-21T10:30:34.407315+00:00",
+          "event": "session_end",
+          "attempt": 2,
+          "cost_usd": 2.0617525999999993,
+          "is_error": false,
+          "written": 7,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T10:30:34.983682+00:00",
+          "event": "check_failed",
+          "detail": "exit=1 stdout='' stderr='+ test -s docs/plans/2026-08-20-m-constat-memoire.md\\n+ test -s runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml\\n+ /home/nuveo/hermes-os/.venv/bin/python -\\nECHEC: B-T5: model absent\\n'"
+        },
+        {
+          "at": "2026-08-21T10:30:34.983721+00:00",
+          "event": "session_start",
+          "attempt": 3,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-21T10:31:42.317125+00:00",
+          "event": "session_end",
+          "attempt": 3,
+          "cost_usd": 0.32060180000000005,
+          "is_error": false,
+          "written": 1,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T10:31:42.925627+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-21T10:35:59.718007+00:00",
+          "event": "codex_verdict",
+          "verdict": "NO_GO",
+          "rendu": "NO_GO",
+          "motif": "2 CRITIQUE maintenu(s)",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a3-20260821T103559.md"
+        },
+        {
+          "at": "2026-08-21T10:35:59.720027+00:00",
+          "event": "session_start",
+          "attempt": 4,
+          "model": "claude-opus-5",
+          "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9"
+        },
+        {
+          "at": "2026-08-21T10:45:40.172523+00:00",
+          "event": "session_end",
+          "attempt": 4,
+          "cost_usd": 3.0717619999999997,
+          "is_error": false,
+          "written": 8,
+          "writes_opaque": true
+        },
+        {
+          "at": "2026-08-21T10:45:40.754725+00:00",
+          "event": "check_passed"
+        },
+        {
+          "at": "2026-08-21T10:53:32.012647+00:00",
+          "event": "codex_verdict",
+          "verdict": "GO_AVEC_RESERVES",
+          "rendu": "NO_GO",
+          "motif": "0 CRITIQUE, 3 HAUTE et 0 mineure(s) consignées après 2 tour(s) correctif(s)",
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a4-20260821T105332.md"
+        },
+        {
+          "at": "2026-08-21T10:53:32.012670+00:00",
+          "event": "codex_reserves_accepted",
+          "rounds": 4,
+          "codex_correction_rounds": 2,
+          "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a4-20260821T105332.md"
+        }
+      ],
+      "attempts": 4,
+      "base_sha": "c9426d095ff3e85b028c7af311fefed98c5388e9",
+      "last_session": {
+        "exit": 0,
+        "is_error": false,
+        "session_id": "66e686c8-83c3-4c6b-905e-b45c95ffa15e",
+        "subtype": "success",
+        "total_cost_usd": 3.0717619999999997,
+        "num_turns": 66,
+        "writes_declared": true,
+        "written_files": [
+          "/home/nuveo/jarvis-cortex-plan-m/docs/plans/2026-08-20-m-constat-memoire.md",
+          "/home/nuveo/jarvis-cortex-plan-m/runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T0.md",
+          "/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T1.md",
+          "/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T4.md",
+          "/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T5.md",
+          "/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T6.md",
+          "/home/nuveo/jarvis-cortex-plan-m/scripts/releve-memoire.py"
+        ],
+        "opaque_writes": false
+      },
+      "written_files": [
+        "/home/nuveo/jarvis-cortex-plan-m/docs/plans/2026-08-20-m-constat-memoire.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T0.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T1.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T2.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T3.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T4.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T5.md",
+        "/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T6.md",
+        "/home/nuveo/jarvis-cortex-plan-m/scripts/releve-memoire.py"
+      ],
+      "check_output": "M_TGEN rubriques=5 empreinte=f2b9b2a100fa845f recu=9 metriques b_tickets=7 modeles=3 tickets_connus=3",
+      "governance_violation": [
+        "/home/nuveo/hermes-os/.env"
+      ],
+      "codex_reports": [
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a3-20260820T101348.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T105016.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a3-20260820T110026.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T120118.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a3-20260820T121401.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a3-20260820T140718.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T145747.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a1-20260820T152258.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T153256.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a1-20260820T161223.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T161811.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a1-20260820T192015.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a2-20260820T193644.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a1-20260821T102135.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a3-20260821T103559.md",
+        "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a4-20260821T105332.md"
+      ],
+      "codex_verdict": "GO_AVEC_RESERVES",
+      "verdict_motif": "0 CRITIQUE, 3 HAUTE et 0 mineure(s) consignées après 2 tour(s) correctif(s)",
+      "evidence": "[GO_AVEC_RESERVES accepté au tour 4/4, réserves traitées en session — rapport /home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-M-TGEN-a4-20260821T105332.md] M_TGEN rubriques=5 empreinte=f2b9b2a100fa845f recu=9 metriques b_tickets=7 modeles=3 tickets_connus=3",
+      "writes_opaque": true
+    },
+    "M-T0": {
+      "status": "done",
+      "history": [
+        {
+          "at": "2026-08-20T14:46:37.162844+00:00",
+          "event": "gate_requested",
+          "gate_id": "gate-5f4dee03f602"
+        },
+        {
+          "at": "2026-08-20T14:46:59.452452+00:00",
+          "event": "gate_approved",
+          "decided_by": "api:unknown",
+          "governed": {
+            "ops/plan_runner.py": "absent",
+            "ops/plan_doctor.py": "absent",
+            "ops/plan_factory.py": "absent",
+            "ops/sdk_session.py": "absent",
+            "hermes_core/ponytail.py": "absent",
+            "scripts/applique_patch_ancres.py": "absent",
+            "ops/gate_arbiter.py": "absent",
+            "ops/bac_scelle.py": "absent",
+            "runbooks/arbitrages.yaml": "absent",
+            "runbooks/codex-waivers.md": "absent",
+            ".env": "absent"
+          }
+        }
+      ],
+      "gate_id": "gate-5f4dee03f602",
+      "evidence": "gate gate-5f4dee03f602 approved by api:unknown",
+      "governed_at_approval": {
+        "ops/plan_runner.py": "absent",
+        "ops/plan_doctor.py": "absent",
+        "ops/plan_factory.py": "absent",
+        "ops/sdk_session.py": "absent",
+        "hermes_core/ponytail.py": "absent",
+        "scripts/applique_patch_ancres.py": "absent",
+        "ops/gate_arbiter.py": "absent",
+        "ops/bac_scelle.py": "absent",
+        "runbooks/arbitrages.yaml": "absent",
+        "runbooks/codex-waivers.md": "absent",
+        ".env": "absent"
+      }
+    }
+  },
+  "day": "2026-08-21",
+  "sessions_today": 0,
+  "runbook_sha": "a9cf37e8a7b0fa8108291306244e29262101adbc3953555baa993ed8f0256930",
+  "preflight": {
+    "history": [
+      {
+        "at": "2026-08-20T09:22:39.487906+00:00",
+        "event": "integration_undeclared",
+        "provenance": "absente"
+      }
+    ]
+  },
+  "work_branch": "plan/jarvis-cortex-m-memoire-regimes",
+  "work_branch_base": "22419eaf318960d8233ec91e3bca01f6a2364fad",
+  "block_commit": {
+    "history": [
+      {
+        "at": "2026-08-20T09:44:12.030908+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 3,
+        "sha": "c9426d095ff3",
+        "paths": [
+          "brain.js",
+          ".hermes/",
+          "tests/"
+        ]
+      },
+      {
+        "at": "2026-08-20T10:10:30.774779+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 2,
+        "sha": "30d700772cdf",
+        "paths": [
+          "docs/",
+          "runbooks/"
+        ]
+      },
+      {
+        "at": "2026-08-20T10:47:12.273474+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 6,
+        "sha": "fbce9bb12c81",
+        "paths": [
+          "docs/plans/2026-08-20-m-constat-memoire.md",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "runbooks/tickets/B-T1.md",
+          "runbooks/tickets/B-T2.md",
+          "runbooks/tickets/B-T3.md",
+          "runbooks/tickets/B-T4.md"
+        ]
+      },
+      {
+        "at": "2026-08-20T10:56:49.380201+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 6,
+        "sha": "5f142e60eef2",
+        "paths": [
+          "docs/plans/2026-08-20-m-constat-memoire.md",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "runbooks/tickets/B-T1.md",
+          "runbooks/tickets/B-T2.md",
+          "runbooks/tickets/B-T3.md",
+          "runbooks/tickets/B-T4.md"
+        ]
+      },
+      {
+        "at": "2026-08-20T11:00:57.013940+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T11:42:27.282982+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T11:56:47.748359+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 6,
+        "sha": "6744866fce10",
+        "paths": [
+          "docs/plans/2026-08-20-m-constat-memoire.md",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "runbooks/tickets/B-T1.md",
+          "runbooks/tickets/B-T2.md",
+          "runbooks/tickets/B-T3.md",
+          "runbooks/tickets/B-T4.md"
+        ]
+      },
+      {
+        "at": "2026-08-20T12:08:59.414328+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 7,
+        "sha": "6f19755cd985",
+        "paths": [
+          "docs/plans/2026-08-20-m-constat-memoire.md",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "runbooks/tickets/B-T1.md",
+          "runbooks/tickets/B-T2.md",
+          "runbooks/tickets/B-T3.md",
+          "runbooks/tickets/B-T4.md",
+          "runbooks/tickets/B-T0.md"
+        ]
+      },
+      {
+        "at": "2026-08-20T12:14:31.394109+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T12:29:22.268950+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T12:29:52.600418+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T12:34:53.194334+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T14:01:23.461381+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 7,
+        "sha": "7ac46216b7b1",
+        "paths": [
+          "docs/plans/2026-08-20-m-constat-memoire.md",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "runbooks/tickets/B-T0.md",
+          "runbooks/tickets/B-T1.md",
+          "runbooks/tickets/B-T2.md",
+          "runbooks/tickets/B-T3.md",
+          "runbooks/tickets/B-T4.md"
+        ]
+      },
+      {
+        "at": "2026-08-20T14:54:00.901539+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 6,
+        "sha": "dae726f4dd3b",
+        "paths": [
+          "docs/plans/2026-08-20-m-constat-memoire.md",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "runbooks/tickets/B-T0.md",
+          "runbooks/tickets/B-T1.md",
+          "runbooks/tickets/B-T3.md",
+          "runbooks/tickets/B-T4.md"
+        ]
+      },
+      {
+        "at": "2026-08-20T14:58:17.832254+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T15:18:02.971222+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 4,
+        "sha": "dc707b70f0e1",
+        "paths": [
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "runbooks/tickets/B-T0.md",
+          "runbooks/tickets/B-T1.md",
+          "runbooks/tickets/B-T3.md"
+        ]
+      },
+      {
+        "at": "2026-08-20T15:28:14.322640+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 4,
+        "sha": "0e7ea7fbeecf",
+        "paths": [
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "runbooks/tickets/B-T0.md",
+          "runbooks/tickets/B-T1.md",
+          "runbooks/tickets/B-T3.md"
+        ]
+      },
+      {
+        "at": "2026-08-20T15:33:26.312832+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T15:52:49.390577+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T15:53:19.806518+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T16:05:55.595022+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 3,
+        "sha": "9ed149cdb280",
+        "paths": [
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "runbooks/tickets/B-T0.md",
+          "runbooks/tickets/B-T4.md"
+        ]
+      },
+      {
+        "at": "2026-08-20T16:12:26.735540+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T16:18:41.867760+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T19:12:30.749377+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-20T19:14:52.164772+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 1,
+        "sha": "7774de9c92cf",
+        "paths": [
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml"
+        ]
+      },
+      {
+        "at": "2026-08-20T19:30:36.234699+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 5,
+        "sha": "f8fe8a41b118",
+        "paths": [
+          "docs/plans/2026-08-20-m-constat-memoire.md",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "runbooks/tickets/B-T0.md",
+          "runbooks/tickets/B-T3.md",
+          "scripts/releve-memoire.py"
+        ]
+      },
+      {
+        "at": "2026-08-20T19:37:14.542119+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T10:17:06.676550+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T10:31:42.942851+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 7,
+        "sha": "11a8cc3b2453",
+        "paths": [
+          "docs/plans/2026-08-20-m-constat-memoire.md",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "runbooks/tickets/B-T0.md",
+          "runbooks/tickets/B-T3.md",
+          "runbooks/tickets/B-T4.md",
+          "scripts/releve-memoire.py",
+          "runbooks/tickets/B-T5.md"
+        ]
+      },
+      {
+        "at": "2026-08-21T10:45:40.781362+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 8,
+        "sha": "2160fa730b83",
+        "paths": [
+          "docs/plans/2026-08-20-m-constat-memoire.md",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+          "runbooks/tickets/B-T0.md",
+          "runbooks/tickets/B-T1.md",
+          "runbooks/tickets/B-T4.md",
+          "runbooks/tickets/B-T5.md",
+          "scripts/releve-memoire.py",
+          "runbooks/tickets/B-T6.md"
+        ]
+      },
+      {
+        "at": "2026-08-21T10:54:02.077504+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T15:13:15.679008+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T15:13:45.992106+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T15:30:11.784269+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-21T15:30:42.078356+00:00",
+        "event": "block_commit_noop",
+        "raison": "rien à committer"
+      },
+      {
+        "at": "2026-08-22T20:11:25.434509+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 4,
+        "sha": "7d6342aabe5c",
+        "paths": [
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.doctor.json",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.lock",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.state.json",
+          "runbooks/runner-reports/"
+        ]
+      },
+      {
+        "at": "2026-08-24T17:23:33.881532+00:00",
+        "event": "block_work_committed",
+        "branch": "plan/jarvis-cortex-m-memoire-regimes",
+        "files": 4,
+        "sha": "1bf4d0a1d0f6",
+        "paths": [
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.doctor.json",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.state.json",
+          "runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.livraison.json",
+          "runbooks/runner-reports/merge-plan_b-boucle-verdict-regle-2026-08-21-20260824T171349.md"
+        ]
+      }
+    ]
+  },
+  "merge_report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/merge-plan_jarvis-cortex-m-memoire-regimes-20260824T172334.md",
+  "merge_report_sha": "1bf4d0a1d0f64b063c7dcbb5e86adfaebf0db043",
+  "chain_state": {
+    "status": "handed_off",
+    "history": [
+      {
+        "at": "2026-08-20T11:00:57.608663+00:00",
+        "event": "escalated_to_human",
+        "gate_id": "gate-3a6481b9c191",
+        "reason": "■ BLOCAGE — plan jarvis-cortex-m-memoire-regimes, étape chain, tour 0\n\nChaîne → B : plan_factory rejette handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml — B-T1: se termine par `\"$HERMES_CHECK_PYTHON\"`, dont on ne sait pas s'il écrit quoi que ce soit; `why:` absent — le diagramme affichera un nœud muet | B-T2: se termine par `\"$HERMES_CHECK_PYTHON\"`, dont on ne sait pas s'il écrit quoi que ce soit; `why:` absent — le diagramme affichera un nœud muet | B-T3: se termine par `\"$HERMES_CHECK_PYTHON\"`, dont on ne sait pas s'il écrit quoi que ce soit; demande d'écrire dans le règlement de l'exécuteur (ligne 13: Tu n'écris **pas** le branchement dans `plan_runner.py` : c'est B-T4. Un seul) — ops/plan_runner.py, ops/plan_doctor.py et ops/plan_factory.py se modifient à la main, jamais par un plan : un plan qui édite le code qui le gouverne peut desserrer ses propres garde-fous; `why:` absent — le diagramme affichera un nœud muet | B-T4: se termine par `\"$HERMES_CHECK_PYTHON\"`, dont on ne sait pas s'il écrit quoi que ce soit; `why:` absent — le diagramme affichera un nœud muet\n⚠️ APPROUVER = relancer le ticket GÉNÉRATEUR : nouvelle session LLM payante, RÉÉCRITURE du runbook généré et de ses prompt_files (toute correction manuelle non commitée peut être écrasée), et compteur audit_rounds remis à 0. REJETER = bloquer le plan."
+      },
+      {
+        "at": "2026-08-20T11:42:27.586946+00:00",
+        "event": "chain_gate_approved_generator_rearm",
+        "decided_by": "auto:arbitre:gpt-5.6-sol",
+        "generator": "M-TGEN"
+      },
+      {
+        "at": "2026-08-20T12:14:31.573353+00:00",
+        "event": "escalated_to_human",
+        "gate_id": "gate-e0f11e586333",
+        "reason": "■ BLOCAGE — plan jarvis-cortex-m-memoire-regimes, étape chain, tour 0\n\nChaîne → B : le MOTEUR a changé depuis le démarrage de ce runner (.env, plan_runner.py) — armer l'enfant reviendrait à lancer un moteur que personne n'a audité. La cause est indifférente ici : commit d'une session ou merge d'un plan voisin, un humain relit le diff puis relance. Aucun tour d'audit n'est consommé.\n⚠️ APPROUVER = relancer le ticket GÉNÉRATEUR : nouvelle session LLM payante, RÉÉCRITURE du runbook généré et de ses prompt_files (toute correction manuelle non commitée peut être écrasée), et compteur audit_rounds remis à 0. REJETER = bloquer le plan."
+      },
+      {
+        "at": "2026-08-20T12:29:22.580428+00:00",
+        "event": "chain_gate_dismissed",
+        "decided_by": "api:unknown",
+        "motif": "approuver relancerait le générateur et RÉÉCRIRAIT B — or B est maintenant bon. Approuver le casserait pour rien, en payant une session opus. Écarter coûte zéro et la chaîne repart sans régénérer.",
+        "audit_rounds": null
+      },
+      {
+        "at": "2026-08-20T12:29:53.167458+00:00",
+        "event": "escalated_to_human",
+        "gate_id": "gate-00c1b12ba3ac",
+        "reason": "■ BLOCAGE — plan jarvis-cortex-m-memoire-regimes, étape chain, tour 0\n\nChaîne → B : plan_factory rejette handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml — B-T0: se termine par `\"$HERMES_CHECK_PYTHON\"`, dont on ne sait pas s'il écrit quoi que ce soit; produit du code (ops/checks/sonde_b.py) mais ne mesure jamais de quantité : ni `produces:` (E-T1 `count:`/`at_least:`), ni `check:` — aucun compteur (`wc`/`grep -c`/`len(`), aucune comparaison numérique, et aucune exécution assertée de l'artefact produit — l'existence d'un fichier ne prouve pas qu'un travail a eu lieu (énoncé E-T3, 2026-08-12) | B-T1: se termine par `\"$HERMES_CHECK_PYTHON\"`, dont on ne sait pas s'il écrit quoi que ce soit | B-T2: se termine par `\"$HERMES_CHECK_PYTHON\"`, dont on ne sait pas s'il écrit quoi que ce soit; produit du code (ops/verdict_regles.py) mais ne mesure jamais de quantité : ni `produces:` (E-T1 `count:`/`at_least:`), ni `check:` — aucun compteur (`wc`/`grep -c`/`len(`), aucune comparaison numérique, et aucune exécution assertée de l'artefact produit — l'existence d'un fichier ne prouve pas qu'un travail a eu lieu (énoncé E-T3, 2026-08-12) | B-T3: se termine par `\"$HERMES_CHECK_PYTHON\"`, dont on ne sait pas s'il écrit quoi que ce soit; produit du code (ops/brain_bridge.py) mais ne mesure jamais de quantité : ni `produces:` (E-T1 `count:`/`at_least:`), ni `check:` — aucun compteur (`wc`/`grep -c`/`len(`), aucune comparaison numérique, et aucune exécution assertée de l'artefact produit — l'existence d'un fichier ne prouve pas qu'un travail a eu lieu (énoncé E-T3, 2026-08-12) | B-T4: se termine par `\"$HERMES_CHECK_PYTHON\"`, dont on ne sait pas s'il écrit quoi que ce soit; produit du code (ops/verdict_hook.py) mais ne mesure jamais de quantité : ni `produces:` (E-T1 `count:`/`at_least:`), ni `check:` — aucun compteur (`wc`/`grep -c`/`len(`), aucune comparaison numérique, et aucune exécution assertée de l'artefact produit — l'existence d'un fichier ne prouve pas qu'un travail a eu lieu (énoncé E-T3, 2026-08-12)\n⚠️ APPROUVER = relancer le ticket GÉNÉRATEUR : nouvelle session LLM payante, RÉÉCRITURE du runbook généré et de ses prompt_files (toute correction manuelle non commitée peut être écrasée), et compteur audit_rounds remis à 0. REJETER = bloquer le plan."
+      },
+      {
+        "at": "2026-08-20T12:34:53.479212+00:00",
+        "event": "chain_gate_approved_generator_rearm",
+        "decided_by": "kiosk",
+        "generator": "M-TGEN"
+      },
+      {
+        "at": "2026-08-20T15:09:36.481201+00:00",
+        "event": "chain_audit_repair_round",
+        "round": 1,
+        "verdict": "NO_GO",
+        "generator": "M-TGEN",
+        "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-chain-M-TGEN-20260820T150936.md"
+      },
+      {
+        "at": "2026-08-20T15:33:26.491607+00:00",
+        "event": "escalated_to_human",
+        "gate_id": "gate-58dc5b306ef8",
+        "reason": "■ BLOCAGE — plan jarvis-cortex-m-memoire-regimes, étape chain, tour 1\n  Verdict NO_GO rendu par codex.\n\nChaîne → B : le MOTEUR a changé depuis le démarrage de ce runner (.env) — armer l'enfant reviendrait à lancer un moteur que personne n'a audité. La cause est indifférente ici : commit d'une session ou merge d'un plan voisin, un humain relit le diff puis relance. Aucun tour d'audit n'est consommé.\n⚠️ APPROUVER = relancer le ticket GÉNÉRATEUR : nouvelle session LLM payante, RÉÉCRITURE du runbook généré et de ses prompt_files (toute correction manuelle non commitée peut être écrasée), et compteur audit_rounds remis à 0. REJETER = bloquer le plan."
+      },
+      {
+        "at": "2026-08-20T15:52:49.767893+00:00",
+        "event": "chain_gate_dismissed",
+        "decided_by": "api:unknown",
+        "motif": "erdict déjà GO_AVEC_RESERVES, zéro tour consommé. Approuver rejetterait ça à la poubelle et réécrirait P4",
+        "audit_rounds": 1
+      },
+      {
+        "at": "2026-08-20T16:01:08.718150+00:00",
+        "event": "verdict_recalibre",
+        "rendu": "NO_GO",
+        "retenu": "GO_AVEC_RESERVES",
+        "motif": "0 CRITIQUE, 0 HAUTE et 3 mineure(s) consignées après 1 tour(s) correctif(s)",
+        "rounds": 2
+      },
+      {
+        "at": "2026-08-20T16:01:08.722488+00:00",
+        "event": "chain_audit_repair_round",
+        "round": 2,
+        "verdict": "GO_AVEC_RESERVES",
+        "generator": "M-TGEN",
+        "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-chain-M-TGEN-20260820T160108.md"
+      },
+      {
+        "at": "2026-08-20T16:24:01.358649+00:00",
+        "event": "verdict_recalibre",
+        "rendu": "NO_GO",
+        "retenu": "GO_AVEC_RESERVES",
+        "motif": "0 CRITIQUE, 2 HAUTE et 2 mineure(s) consignées après 2 tour(s) correctif(s)",
+        "rounds": 3
+      },
+      {
+        "at": "2026-08-20T16:24:01.452007+00:00",
+        "event": "escalated_to_human",
+        "gate_id": "gate-d74697774c09",
+        "reason": "■ BLOCAGE — plan jarvis-cortex-m-memoire-regimes, étape chain, tour 3\n  Verdict GO_AVEC_RESERVES rendu par codex.\n\nChaîne → B : l'audit NE CONVERGE PAS — 0 finding(s) bloquant(s) au tour précédent, 2 à celui-ci (tour 3). Un tour de plus coûterait une session qui réécrit handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml sans rapprocher du GO. Issues : `accept_as_is` avec la dette nommée, ou bloquer.\n⚠️ APPROUVER = relancer le ticket GÉNÉRATEUR : nouvelle session LLM payante, RÉÉCRITURE du runbook généré et de ses prompt_files (toute correction manuelle non commitée peut être écrasée), et compteur audit_rounds remis à 0. REJETER = bloquer le plan."
+      },
+      {
+        "at": "2026-08-20T19:12:31.059251+00:00",
+        "event": "chain_gate_approved_generator_rearm",
+        "decided_by": "auto:arbitre:claude-opus-5",
+        "generator": "M-TGEN"
+      },
+      {
+        "at": "2026-08-20T19:43:38.463331+00:00",
+        "event": "verdict_recalibre",
+        "rendu": "NO_GO",
+        "retenu": "GO_AVEC_RESERVES",
+        "motif": "0 CRITIQUE, 2 HAUTE et 3 mineure(s) consignées après 0 tour(s) correctif(s)",
+        "rounds": 1
+      },
+      {
+        "at": "2026-08-20T19:43:38.474626+00:00",
+        "event": "chain_audit_repair_round",
+        "round": 1,
+        "verdict": "GO_AVEC_RESERVES",
+        "generator": "M-TGEN",
+        "report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-chain-M-TGEN-20260820T194338.md"
+      },
+      {
+        "at": "2026-08-21T10:54:02.201089+00:00",
+        "event": "escalated_to_human",
+        "gate_id": "gate-6da2a6a39d6b",
+        "reason": "■ BLOCAGE — plan jarvis-cortex-m-memoire-regimes, étape chain, tour 1\n  Verdict GO_AVEC_RESERVES rendu par codex.\n\nChaîne → B : le MOTEUR a changé depuis le démarrage de ce runner (plan_factory.py) — armer l'enfant reviendrait à lancer un moteur que personne n'a audité. La cause est indifférente ici : commit d'une session ou merge d'un plan voisin, un humain relit le diff puis relance. Aucun tour d'audit n'est consommé.\n⚠️ APPROUVER = relancer le ticket GÉNÉRATEUR : nouvelle session LLM payante, RÉÉCRITURE du runbook généré et de ses prompt_files (toute correction manuelle non commitée peut être écrasée), et compteur audit_rounds remis à 0. REJETER = bloquer le plan."
+      },
+      {
+        "at": "2026-08-21T15:13:15.968655+00:00",
+        "event": "chain_gate_dismissed",
+        "decided_by": "owner",
+        "motif": "Garde de fraicheur, pas un desaccord d'audit. Diff moteur relu : dbd2f88 + 8e4edad ne touchent que l'heuristique de calibration de plan_factory (reconnaitre `from pkg import mod`, ne pas decouper une ligne repliee). Ni le format des runbooks, ni le contrat des check:, ni la semantique/ordre des tickets, ni les faits moteur. Reconnaissance ELARGIE, jamais durcie. Preuve : plan_factory de cette version valide le runbook B — 8 tickets, 0 a corriger, 0 motif faible. Ecarte plutot qu'approuve pour ne pas rearmer le generateur, qui reecrirait le runbook et effacerait les correctifs 2413cc6 et 9a4397f.",
+        "audit_rounds": 1
+      },
+      {
+        "at": "2026-08-21T15:22:20.105304+00:00",
+        "event": "verdict_recalibre",
+        "rendu": "NO_GO",
+        "retenu": "GO_AVEC_RESERVES",
+        "motif": "0 CRITIQUE, 2 HAUTE et 1 mineure(s) consignées après 1 tour(s) correctif(s)",
+        "rounds": 2
+      },
+      {
+        "at": "2026-08-21T15:22:20.237213+00:00",
+        "event": "escalated_to_human",
+        "gate_id": "gate-8e7594bad74e",
+        "reason": "■ BLOCAGE — plan jarvis-cortex-m-memoire-regimes, étape chain, tour 2\n  Verdict GO_AVEC_RESERVES rendu par codex.\n\nChaîne → B : l'audit NE CONVERGE PAS — 2 finding(s) bloquant(s) au tour précédent, 2 à celui-ci (tour 2). Un tour de plus coûterait une session qui réécrit handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml sans rapprocher du GO. Issues : `accept_as_is` avec la dette nommée, ou bloquer.\n⚠️ APPROUVER = relancer le ticket GÉNÉRATEUR : nouvelle session LLM payante, RÉÉCRITURE du runbook généré et de ses prompt_files (toute correction manuelle non commitée peut être écrasée), et compteur audit_rounds remis à 0. REJETER = bloquer le plan."
+      },
+      {
+        "at": "2026-08-21T15:30:12.058380+00:00",
+        "event": "chain_gate_accepted_as_is",
+        "decided_by": "owner",
+        "sha": "fc70a715ce111076c38798faa763c7594cad905728899597d363807f5110edb0",
+        "verdict_passe_outre": "GO_AVEC_RESERVES",
+        "rapport": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-chain-M-TGEN-20260821T152220.md"
+      },
+      {
+        "at": "2026-08-21T15:30:42.091257+00:00",
+        "event": "chain_audit_overridden",
+        "sha": "fc70a715ce111076c38798faa763c7594cad905728899597d363807f5110edb0",
+        "last_verdict": "GO_AVEC_RESERVES"
+      },
+      {
+        "at": "2026-08-21T15:30:42.580162+00:00",
+        "event": "chain_handed_off",
+        "next_runbook": "/home/nuveo/jarvis-cortex-plan-m/runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+        "log": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/chain-handoff-2026-08-21-b-boucle-verdict-regle.runbook-20260821T153042.log"
+      }
+    ],
+    "audited_sha": "fc70a715ce111076c38798faa763c7594cad905728899597d363807f5110edb0",
+    "taille_refus_precedent": 9884,
+    "verdict_motif": "0 CRITIQUE, 2 HAUTE et 1 mineure(s) consignées après 1 tour(s) correctif(s)",
+    "codex_verdict": "GO_AVEC_RESERVES",
+    "codex_report": "/home/nuveo/projects/jarvis-cortex/runbooks/runner-reports/codex-chain-M-TGEN-20260821T152220.md",
+    "reviewer": "codex",
+    "audit_rounds": 2,
+    "blocking_precedent": 2,
+    "human_override_sha": "fc70a715ce111076c38798faa763c7594cad905728899597d363807f5110edb0",
+    "next_runbook": "/home/nuveo/jarvis-cortex-plan-m/runbooks/handoff-2026-08-21-b-boucle-verdict-regle.runbook.yaml",
+    "log": "/home/nuveo/jarvis-cortex-plan-m/runbooks/runner-reports/chain-handoff-2026-08-21-b-boucle-verdict-regle.runbook-20260821T153042.log"
+  },
+  "chain_visited": [
+    "/home/nuveo/projects/jarvis-cortex/runbooks/handoff-2026-08-20-m-memoire-regimes.runbook.yaml"
+  ]
+}

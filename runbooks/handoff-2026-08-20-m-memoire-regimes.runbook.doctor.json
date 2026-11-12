@@ -1,0 +1,16 @@
+{
+  "repaired_fingerprint": "failed:M-T1:905cc97e5398589b",
+  "repair_at": "2026-08-20T09:39:22.354894+00:00",
+  "repair_exit": 1,
+  "repair_tail": "",
+  "notified_fingerprint": "runbook_error:chaînage autonome SUPPRIMÉ (décision Owner du 2026-09-03) — ce runbook déclare un bloc `chain:` et `generates_runbook` sur M-TGEN.\nMesuré sur le parc : 781 $ et 227 sessions de générateur pour 12 maillons transmis (60 % de la dépense), et une boucle générateur↔linter qui ne converge pas.\nREMÈDE : retirer le bloc `chain:` et le champ `generates_runbook`, puis écrire le maillon suivant en session interactive à partir des reçus du maillon courant (`evidence/*.json`, rapports de `runner-reports/`). Un runbook EST un handoff : il s'écrit en fin de phase, avec le dépôt sous les yeux.",
+  "notified_at": "2026-09-03T00:05:50.370460+00:00",
+  "merge_refused_at": "2026-09-02T23:50:10.054073+00:00",
+  "merge_refused": "1 réserve(s) CRITIQUE/HAUTE non arbitrée(s) — inscrire leur empreinte dans 2026-08-14-arbitrage-objections-codex.md (et la commiter) : 3a85908a773e",
+  "merge_pending_arbitration": [
+    {
+      "empreinte": "3a85908a773e",
+      "reserve": "HAUTE | [B-T0.md:443](/home/nuveo/jarvis-cortex-plan-m/runbooks/tickets/B-T0.md:443) | La nouvelle sonde admet explicitement qu’un appel placé dans une branche morte passe. Plus réaliste encore, l’Owner peut placer l’appel après un retour ou sous la mauvaise condition : AST, fonction, ordre et arguments sont corrects, mais aucun verdict utile ne l’exécute. Le contrôle verdit sans boucle réelle; ici le faux vert coûte davantage qu’un contrôle structurel plus strict. | Exiger que l’import tolérant et l’appel soient dans le bloc exécutable directement rattaché à l’affectation de `ts[\"verdict_motif\"]`, ou exercer ce chemin dans une copie isolée du moteur."
+    }
+  ]
+}

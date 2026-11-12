@@ -271,8 +271,11 @@ ${opts.why ? `\n**Why:** ${opts.why}\n` : ''}
   // que personne ne lance : 30 des 134 lignes de MEMORY.md la violaient au
   // 2026-08-11. Un index toujours chargé qui grossit sans plafond finit par
   // coûter plus cher que ce qu'il fait gagner, donc on tronque à l'écriture.
-  const ENTRY_MAX = 200;
-  let entry = `- [${title}](${path.basename(file)}) — ${today} ${desc}\n`;
+  const ENTRY_MAX = 150;
+  // titre sans date finale (la date est dans le hook) ; pas de date en double si desc commence déjà par une date
+  const cleanTitle = title.replace(/\s+\d{4} \d{2} \d{2}$/, '');
+  const hook = /^\d{4}-\d{2}-\d{2}\b/.test(desc) ? desc : `${today} ${desc}`;
+  let entry = `- [${cleanTitle}](${path.basename(file)}) — ${hook}\n`;
   if (entry.length - 1 > ENTRY_MAX) entry = entry.slice(0, ENTRY_MAX - 1).trimEnd() + '…\n';
   if (opts.sandbox && !fs.existsSync(index)) fs.writeFileSync(index, '# Sandbox Memory Index\n\n');
   fs.appendFileSync(index, entry);

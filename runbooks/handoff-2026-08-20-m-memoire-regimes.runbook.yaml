@@ -66,7 +66,14 @@ chain:
   generator_ticket: "M-TGEN"
   require_codex_go: true
   max_chain_depth: 2
-  final_gate: human
+  # `notify` est le défaut du moteur depuis le 2026-07-29 (objectif 99 %
+  # d'autonomie) ; ce plan avait pris `human` en opt-in. Repassé à `notify` sur
+  # décision Owner du 2026-08-21 : la fin de chaîne est ANNONCÉE, pas soumise à
+  # validation. Les audits, les `check:` et la notification restent — ce qui
+  # tombe est le seul arrêt qui attendait un humain sans rien mesurer.
+  # NE CHANGE RIEN POUR B : il a hérité `human` dans son état au hand-off, et
+  # `chain_inherited_final_gate` se lit dans l'état, pas dans ce fichier.
+  final_gate: notify
 
 requires_access:
   - cmd: "test -f brain.js"
